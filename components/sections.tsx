@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { productHref } from "@/lib/content";
 import { AccessPass, splitName } from "./pass";
 import { useStore } from "./store";
+import { useAccount } from "./account";
 
 /** Fades sections in on scroll. */
 export function useReveal() {
@@ -26,6 +27,7 @@ export function useReveal() {
 
 export function Header() {
   const { cart, openSearch, setView } = useStore();
+  const { user } = useAccount();
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
     const on = () => setScrolled(scrollY > 20);
@@ -43,7 +45,7 @@ export function Header() {
         <div className="sp" />
         <div className="tools">
           <button onClick={openSearch} aria-label="جست‌وجو"><Icon id="search" /><span className="tx">جست‌وجو</span></button>
-          <a href="/#shield" aria-label="پیگیری سفارش"><Icon id="user" /><span className="tx">سفارش‌ها</span></a>
+          <Link href={user ? "/account" : "/login"} aria-label={user ? "داشبورد" : "ورود"}><Icon id="user" /><span className="tx">{user ? (user.name.split(" ")[0] || "حساب من") : "ورود / ثبت‌نام"}</span></Link>
           <button onClick={() => setView("cart")} aria-label="سبد خرید"><Icon id="bag" /><span className="num">({fa(cart.length)})</span></button>
         </div>
       </div>
@@ -240,6 +242,8 @@ export function DropSection() {
 
 export function Shield() {
   const [tracked, setTracked] = useState<string | null>(null);
+  const router = useRouter();
+  const { orderByCode } = useAccount();
   const promises: [string, string][] = [
     ["قطع شد؟ جایگزین می‌کنیم.", "تا روز آخر اشتراک. اگر نشد، پول روزهای باقی‌مانده برمی‌گردد."],
     ["فقط ایمیل، نه رمز.", "اشتراک روی اکانت خودت فعال می‌شود."],
@@ -251,12 +255,11 @@ export function Shield() {
         <div className="reveal">
           <Eyebrow dotColor="var(--ink)">AccDrop Shield</Eyebrow>
           <p className="big-quote" style={{ marginTop: 28 }}>پاس تو،<br /><b>تا روز آخر بیمه است.</b></p>
-          <form className="track" onSubmit={(e) => { e.preventDefault(); const v = new FormData(e.currentTarget).get("code"); setTracked(String(v || "AD-48213").toUpperCase()); }}>
+          <form className="track" onSubmit={(e) => { e.preventDefault(); const v = String(new FormData(e.currentTarget).get("code") || "").trim().toUpperCase(); if (v && orderByCode(v)) { router.push(`/orders/${v}`); return; } setTracked(v || "AD-48213"); }}>
             <input name="code" placeholder="AD-48213" aria-label="کد سفارش" />
             <button>پیگیری <Icon id="arrow" className="arrow" style={{ width: 14, height: 14, verticalAlign: -2 }} /></button>
           </form>
-          {/* Sample status; wire to the orders API. */}
-          <div className={`status ${tracked ? "on" : ""}`}><span className="pulse" /><span>سفارش <b className="en">{tracked}</b> در حال فعال‌سازی است · حدود ۸ دقیقه</span></div>
+          <div className={`status ${tracked ? "on" : ""}`}><span className="pulse" /><span>سفارش <b className="en">{tracked}</b> در این مرورگر پیدا نشد. <Link className="link" href="/login?next=/account/orders">وارد حسابت شو</Link></span></div>
         </div>
         <ol className="promises reveal">
           {promises.map(([h, p], i) => (
@@ -345,7 +348,7 @@ export function Footer() {
         <div className="fg">
           <div><h5>PASSES</h5><ul className="f-products">{PRODUCTS.map((p) => <li key={p.id}><Link href={productHref(p)} className="en">{p.name}</Link></li>)}</ul></div>
           <div><h5>ACCDROP</h5><ul><li><a href="/#drop">دراپ‌ها</a></li><li><a href="/#club">کلاب</a></li><li><a href="/#shield">شیلد</a></li></ul></div>
-          <div><h5>SUPPORT</h5><ul><li><a href="/#shield">پیگیری سفارش</a></li><li><a href="#">شرایط گارانتی</a></li><li><a href="/#concierge">سؤالات پرتکرار</a></li></ul></div>
+          <div><h5>SUPPORT</h5><ul><li><Link href="/account/orders">پیگیری سفارش</Link></li><li><a href="#">شرایط گارانتی</a></li><li><a href="/#concierge">سؤالات پرتکرار</a></li></ul></div>
           <div><h5>CONTACT</h5><ul><li><a href="#">تلگرام</a></li><li><a href="#">اینستاگرام</a></li><li><a href="#" className="en">hello@accdrop.ir</a></li></ul></div>
         </div>
         <Wordmark className="f-wm" />
@@ -357,11 +360,12 @@ export function Footer() {
 
 export function MobileBar() {
   const { cart, openSearch, setView } = useStore();
+  const { user } = useAccount();
   return (
     <nav className="mbar" aria-label="ناوبری موبایل">
       <a href="/#collection"><Icon id="grid" />مجموعه</a>
       <button onClick={openSearch}><Icon id="search" />جست‌وجو</button>
-      <a href="/#shield"><Icon id="box" />سفارش‌ها</a>
+      <Link href={user ? "/account" : "/login"}><Icon id="user" />{user ? "حساب من" : "ورود"}</Link>
       <button onClick={() => setView("cart")}><Icon id="bag" /><span>سبد <span className="num">({fa(cart.length)})</span></span></button>
     </nav>
   );

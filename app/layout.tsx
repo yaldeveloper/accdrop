@@ -4,6 +4,7 @@ import "@fontsource-variable/inter";
 import "./globals.css";
 import { Sprites } from "@/components/brand";
 import { StoreProvider } from "@/components/store";
+import { AccountProvider } from "@/components/account";
 import { SiteChrome } from "@/components/chrome";
 
 export const metadata: Metadata = {
@@ -21,7 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="fa" dir="rtl">
       <body>
         <Sprites />
-        <StoreProvider><SiteChrome>{children}</SiteChrome></StoreProvider>
+        <AccountProvider><StoreProvider><SiteChrome>{children}</SiteChrome></StoreProvider></AccountProvider>
       </body>
     </html>
   );

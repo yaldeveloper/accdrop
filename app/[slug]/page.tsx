@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { CATEGORIES, PRODUCTS, deliveryTypes, minPrice, planKeys, type Product } from "@/lib/catalog";
 import { CONTENT, contentOf } from "@/lib/content";
 import { fa, money } from "@/lib/format";
-import { BrandLogo, Eyebrow, Icon } from "@/components/brand";
+import { BrandLogo, Dots, Eyebrow, Icon } from "@/components/brand";
 import { ToolCard } from "@/components/sections";
 import { BuyPanel } from "@/components/buy-panel";
 import { splitName } from "@/components/pass";
@@ -92,6 +92,12 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               <span className="pdp-brand"><span className="pdp-logo"><BrandLogo id={p.id} size={30} /></span><span className="en">{p.maker}</span></span>
               <h1><span className="sr">خرید اکانت </span><span className="en pdp-tool">{tool}{tier && <small> {tier}</small>}</span></h1>
               <p className="pdp-use">{p.use}</p>
+              <ul className="pdp-badges">
+                <li><Dots size={3} />فعال در حدود {fa(p.etaMinutes)} دقیقه</li>
+                <li><Dots size={3} />پرداخت تومانی</li>
+                <li><Dots size={3} />گارانتی تا روز آخر</li>
+                <li><span className="live" />آماده تحویل</li>
+              </ul>
             </div>
           </BuyPanel>
         </div>
@@ -107,6 +113,42 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           <div>
             <ul className="pdp-list">{p.includes.map((x, i) => <li key={x}><span className="en k">0{i + 1}</span><span>{x}</span></li>)}</ul>
             <div className="pdp-for"><small>مناسب برای</small><div>{c.forWho.map((w) => <span key={w}>{w}</span>)}</div></div>
+          </div>
+        </div>
+      </section>
+
+
+      <section className="pdp-sec">
+        <div className="wrap">
+          <Eyebrow>Delivery</Eyebrow>
+          <h2 className="pdp-h" style={{ marginBottom: 44 }}>از پرداخت تا استفاده،<br /><b>حدود {fa(p.etaMinutes)} دقیقه.</b></h2>
+          <ol className="flow">
+            <li><span className="en">00:00</span><b>پرداخت تومانی</b><small>با هر کارت شتابی، از درگاه امن.</small></li>
+            <li><span className="en">00:01</span><b>{deliveryTypes(p).includes("own") ? "ثبت ایمیل اکانت" : "ساخت اکانت"}</b><small>{deliveryTypes(p).includes("own") ? `ایمیل اکانت ${p.maker} خودت؛ بدون رمز.` : "یک اکانت تازه فقط برای تو."}</small></li>
+            <li><span className="en">~{String(p.etaMinutes).padStart(2, "0")}:00</span><b>فعال‌سازی</b><small>هر مرحله را در داشبورد زنده می‌بینی.</small></li>
+            <li><span className="en">✓</span><b>شروع استفاده</b><small>پیامک تأیید و یادآوری قبل از تمام شدن.</small></li>
+          </ol>
+        </div>
+      </section>
+
+      <section className="light pdp-sec">
+        <div className="wrap pdp-two">
+          <div>
+            <Eyebrow dotColor="var(--ink)">Why AccDrop</Eyebrow>
+            <h2 className="pdp-h">خرید مستقیم<br /><b>یا اک‌دراپ؟</b></h2>
+            <p className="pdp-intro">همان اشتراک رسمی {p.maker}؛ بدون دردسر کارت ارزی.</p>
+          </div>
+          <div className="cmp" role="table" aria-label="مقایسه">
+            <div className="cmp-r cmp-h" role="row"><span role="columnheader" /><span role="columnheader" className="en">{p.maker}</span><span role="columnheader">اک‌دراپ</span></div>
+            {([
+              ["پرداخت", "کارت ارزی بین‌المللی", "کارت بانکی، به تومان"],
+              ["قیمت", "دلاری، با کارمزد و نوسان", "تومانی و نهایی"],
+              ["تحویل", "نیاز به حساب و آدرس خارجی", `حدود ${fa(p.etaMinutes)} دقیقه`],
+              ["گارانتی", "ندارد", "تا روز آخر اشتراک"],
+              ["پشتیبانی", "ایمیلی، انگلیسی", "فارسی و انسانی، ۹ تا ۲۴"],
+            ] as const).map(([k, a, b]) => (
+              <div className="cmp-r" role="row" key={k}><span role="cell" className="muted">{k}</span><span role="cell" className="muted">{a}</span><span role="cell"><Dots size={3} color="var(--ink)" />{b}</span></div>
+            ))}
           </div>
         </div>
       </section>

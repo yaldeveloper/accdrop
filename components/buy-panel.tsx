@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { CURRENT_DROP, DELIVERY, deliveryTypes, planKeys, priceOf, type DeliveryType, type Months, type Product, type Selection } from "@/lib/catalog";
 import { duration, fa, money } from "@/lib/format";
 import { Dots, Icon } from "./brand";
+import { useRouter } from "next/navigation";
 import { AccessPass } from "./pass";
 import { useStore } from "./store";
 
@@ -20,7 +21,8 @@ const lowest = (p: Product, m: Months) => Math.min(...(Object.values(p.plans[m] 
  * The Access Pass on the side mirrors the choice live.
  */
 export function BuyPanel({ product: p, children }: { product: Product; children: ReactNode }) {
-  const { addLine, setView, notify } = useStore();
+  const { addLine, notify } = useStore();
+  const router = useRouter();
   const [sel, setSel] = useState<Selection>(() => initial(p));
   const months = planKeys(p);
   const types = deliveryTypes(p);
@@ -34,6 +36,12 @@ export function BuyPanel({ product: p, children }: { product: Product; children:
     if (!o[next.type]) next.type = Object.keys(o)[0] as DeliveryType;
     return next;
   });
+  // Renewal links from the dashboard carry ?plan=&type=.
+  useEffect(() => {
+    const q = new URLSearchParams(location.search);
+    const plan = q.get("plan") as Months | null, type = q.get("type") as DeliveryType | null;
+    if (plan && p.plans[plan] && type && p.plans[plan]?.[type]) setSel({ id: p.id, plan, type });
+  }, [p]);
   const cta = useRef<HTMLButtonElement>(null);
   const [ctaVisible, setCtaVisible] = useState(true);
   useEffect(() => {
@@ -43,7 +51,7 @@ export function BuyPanel({ product: p, children }: { product: Product; children:
     io.observe(el);
     return () => io.disconnect();
   }, []);
-  const buy = () => { addLine(sel); setView("checkout"); };
+  const buy = () => { addLine(sel); router.push("/checkout"); };
   const add = () => { addLine(sel); notify(`${p.name} به سبد اضافه شد`); };
 
   return (
@@ -61,6 +69,7 @@ export function BuyPanel({ product: p, children }: { product: Product; children:
                     {save > 0 && <span className="sv">{fa(save)}٪ تخفیف</span>}
                     <b>{duration(m)}</b>
                     <small className="num">{money(lowest(p, m))}</small>
+                    {Number(m) > 1 && <small className="pm num">ماهی {money(Math.round(perMonth[i] / 1000) * 1000)}</small>}
                   </button>
                 );
               })}
