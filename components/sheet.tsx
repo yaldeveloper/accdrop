@@ -26,7 +26,7 @@ function ProductView() {
       </div>
       <div className="s-b">
         <div className="grp">
-          <h4>DURATION</h4>
+          <h4>چه مدت؟</h4>
           <div className="opts h" style={{ "--n": months.length } as CSSProperties}>
             {months.map((m: Months, i) => {
               const save = i > 0 ? Math.round((1 - perMonth[i] / perMonth[0]) * 100) : 0;
@@ -41,7 +41,7 @@ function ProductView() {
           </div>
         </div>
         <div className="grp">
-          <h4>DELIVERY</h4>
+          <h4>کجا فعال شود؟</h4>
           <div className="opts v">
             {deliveryTypes(p).map((t) => {
               const amount = offers[t];
@@ -55,14 +55,14 @@ function ProductView() {
           </div>
         </div>
         <div className="grp">
-          <h4>INCLUDED</h4>
+          <h4>چه می‌گیری</h4>
           <ul className="incl">
-            {[...p.includes, "گارانتی شیلد تا آخرین روز اشتراک"].map((x) => <li key={x}><Dots size={3} /><span>{x}</span></li>)}
+            {[...p.includes, "گارانتی تا روز آخر"].map((x) => <li key={x}><Dots size={3} /><span>{x}</span></li>)}
           </ul>
         </div>
         <p className="assure">
-          تحویل حدود <b>{fa(p.etaMinutes)} دقیقه</b> پس از پرداخت.{" "}
-          {selection.type === "own" ? "فقط ایمیل اکانتت لازم است؛ رمز عبور هرگز پرسیده نمی‌شود." : "اطلاعات ورود به ایمیل و پیامکت ارسال می‌شود."}
+          فعال در حدود <b>{fa(p.etaMinutes)} دقیقه</b>.{" "}
+          {selection.type === "own" ? "فقط ایمیلت را می‌خواهیم، نه رمز." : "ایمیل و رمز را پیامک می‌کنیم."}
         </p>
       </div>
       <div className="s-f">
@@ -72,7 +72,7 @@ function ProductView() {
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: 10 }}>
           <button className="btn btn-ghost" onClick={() => { addSelection(); close(); notify(`${p.name} به سبد اضافه شد`); }}>افزودن به سبد</button>
-          <button className="btn btn-paper" onClick={() => { addSelection(); setView("checkout"); }}>خرید <Arrow /></button>
+          <button className="btn btn-paper" onClick={() => { addSelection(); setView("checkout"); }}>همین الان بخر <Arrow /></button>
         </div>
       </div>
     </>
@@ -133,22 +133,22 @@ function CheckoutView() {
     <>
       <div className="s-h">
         <button className="x" style={{ margin: 0 }} onClick={() => setView("cart")} aria-label="بازگشت"><Icon id="back" /></button>
-        <b className="t" style={{ fontFamily: "inherit" }}>تکمیل سفارش</b>
+        <b className="t" style={{ fontFamily: "inherit" }}>پرداخت</b>
         <button className="x" onClick={close} aria-label="بستن"><Icon id="x" /></button>
       </div>
       <div className="steps"><i className="on" /><i className="on" /><i /></div>
       <form className="s-b" noValidate onSubmit={(e) => { e.preventDefault(); pay(); }}>
         {needsEmail && (
           <div className="fld">
-            <label htmlFor="em">ایمیل اکانتی که اشتراک رویش فعال شود</label>
+            <label htmlFor="em">ایمیل اکانتت</label>
             <input id="em" type="email" className={`ltr ${bad === "email" ? "bad" : ""}`} placeholder="you@gmail.com" value={email} onChange={(e) => { setEmail(e.target.value); setBad(null); }} />
-            <small>فقط ایمیل. هرگز رمز عبور نمی‌خواهیم.</small>
+            <small>فقط ایمیل، نه رمز.</small>
           </div>
         )}
         <div className="fld">
           <label htmlFor="ph">شماره موبایل</label>
           <input id="ph" type="tel" inputMode="numeric" className={`ltr ${bad === "phone" ? "bad" : ""}`} placeholder="09xx xxx xxxx" value={phone} onChange={(e) => { setPhone(e.target.value); setBad(null); }} />
-          <small>کد پیگیری و اطلاعات تحویل پیامک می‌شود.</small>
+          <small>کد پیگیری را پیامک می‌کنیم.</small>
         </div>
         <div className="lines">
           {cart.map((l, i) => (
@@ -158,7 +158,7 @@ function CheckoutView() {
       </form>
       <div className="s-f">
         <div className="total"><small>قابل پرداخت</small><div><b className="num">{money(total)}</b> <small>تومان</small></div></div>
-        <button className="btn btn-paper btn-block" onClick={pay}>پرداخت امن</button>
+        <button className="btn btn-paper btn-block" onClick={pay}>پرداخت <span className="num">{money(total)}</span> تومان</button>
         <small className="muted" style={{ textAlign: "center", fontSize: 11 }}>درگاه پرداخت هنوز وصل نشده و این مرحله شبیه‌سازی است.</small>
       </div>
     </>
@@ -172,7 +172,7 @@ function DoneView() {
       <div className="s-h"><span /><button className="x" onClick={close} aria-label="بستن"><Icon id="x" /></button></div>
       <div className="steps"><i className="on" /><i className="on" /><i className="on" /></div>
       <div className="s-b">
-        <div className="done"><Dots size={12} /><h3>سفارشت ثبت شد.</h3><p>اشتراکت حدود ده دقیقه دیگر فعال می‌شود. هر مرحله را پیامک می‌کنیم.</p><span className="code">{orderCode}</span></div>
+        <div className="done"><Dots size={12} /><h3>پاست در راه است.</h3><p>حدود ده دقیقه دیگر فعال می‌شود.</p><span className="code">{orderCode}</span></div>
       </div>
       <div className="s-f"><a className="btn btn-ghost btn-block" href="#shield" onClick={close}>پیگیری سفارش</a></div>
     </>

@@ -337,3 +337,85 @@ html,body{overflow-x:clip}
   .toast{bottom:80px;width:calc(100% - 32px)}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.reveal,.drop-anim{opacity:1;transform:none}}
+
+/* ===== v3: Access Pass identity + simpler flow ===== */
+.grp h4{font-family:inherit;letter-spacing:0;direction:rtl;text-align:right;font-size:13px;color:var(--gray-d);font-weight:500}
+
+/* hero */
+.hero2{padding:150px 0 40px;position:relative;overflow:hidden}
+.hero2-g{display:grid;grid-template-columns:1.05fr .95fr;gap:64px;align-items:center;min-height:calc(100svh - 260px)}
+.hero2 h1{font-weight:300;font-size:clamp(38px,5.4vw,84px);line-height:1.15;letter-spacing:-.03em;margin:26px 0 18px}
+.hero2 h1 b{font-weight:600}
+.hero2 .lead{font-size:clamp(16px,1.4vw,20px);font-weight:300;color:var(--gray-d)}
+.pick{display:flex;flex-wrap:wrap;gap:8px;margin-top:40px}
+.pick button{height:40px;padding:0 18px;border:1px solid var(--hair-2);border-radius:999px;font-size:14px;color:var(--gray-d);transition:.25s}
+.pick button:hover{color:var(--paper);border-color:var(--paper)}
+.pick button.on{background:var(--paper);color:var(--ink);border-color:var(--paper)}
+.pick .more{height:40px;display:inline-flex;align-items:center;padding:0 10px;font-size:13px;color:var(--gray-d);text-decoration:underline;text-underline-offset:5px;text-decoration-color:var(--hair-2)}
+.hero2-cta{display:flex;align-items:center;gap:22px;margin-top:22px;flex-wrap:wrap}
+.assure-row{list-style:none;display:flex;flex-wrap:wrap;gap:10px 36px;border-top:1px solid var(--hair);margin-top:56px;padding-top:24px;font-size:13px;color:var(--gray-d)}
+.assure-row li{display:flex;align-items:center;gap:10px}
+
+/* deck of passes */
+.deck{position:relative;height:540px;display:grid;place-items:center}
+.deck-card{position:absolute;width:min(340px,80%);transition:transform .8s var(--ease),opacity .8s var(--ease),filter .8s;transform:translate(calc(var(--z)*-34px),calc(var(--z)*-22px)) rotate(calc(var(--z)*-5deg)) scale(calc(1 - var(--z)*.05));opacity:calc(1 - var(--z)*.35);z-index:calc(10 - var(--z));text-align:right}
+.deck-card:hover{transform:translate(calc(var(--z)*-34px),calc(var(--z)*-22px - 6px)) rotate(calc(var(--z)*-5deg)) scale(calc(1 - var(--z)*.05))}
+
+/* the pass */
+.pass{background:linear-gradient(180deg,#1A1F25,#13171B);border:1px solid var(--hair-2);border-radius:22px;padding:24px;color:var(--paper);box-shadow:0 50px 80px -40px rgba(0,0,0,.9);position:relative;overflow:hidden;animation:passin .7s var(--ease)}
+@keyframes passin{from{opacity:.4;transform:translateY(10px)}}
+.pass-top{display:flex;justify-content:space-between;align-items:center}
+.pass-top .wm{height:18px;color:var(--paper);--dot:var(--lime)}
+.pass-k{font-size:10px;letter-spacing:.3em;color:var(--gray-d)}
+.pass-mid{padding:44px 0 30px;display:flex;flex-direction:column;align-items:flex-start;direction:ltr;text-align:left}
+.pass-maker{font-size:11px;letter-spacing:.24em;color:var(--gray-d);text-transform:uppercase}
+.pass-tool{font-weight:300;font-size:clamp(40px,4.4vw,56px);line-height:1.05;letter-spacing:-.04em;margin-top:10px}
+.pass-tier{font-size:14px;font-weight:500;color:var(--ink);background:var(--lime);padding:1px 10px;border-radius:999px;margin-top:12px}
+.pass-use{direction:rtl;align-self:stretch;text-align:right;margin-top:22px;font-size:14px;color:var(--gray-d);font-weight:300;font-family:"Vazirmatn Variable",Vazirmatn,sans-serif}
+.pass-cut{position:relative;height:1px;margin:0 -24px;border-top:1px dashed var(--hair-2)}
+.pass-cut::before,.pass-cut::after{content:"";position:absolute;top:-11px;width:22px;height:22px;border-radius:50%;background:var(--ink);border:1px solid var(--hair-2)}
+.pass-cut::before{right:-12px}.pass-cut::after{left:-12px}
+.pass-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:20px 0 18px}
+.pass-meta dt{font-size:11px;color:var(--gray-d)}
+.pass-meta dd{font-size:13px;margin-top:2px}
+.pass-foot{display:flex;justify-content:space-between;align-items:center;font-size:10px;letter-spacing:.3em;color:var(--lime);border-top:1px solid var(--hair);padding-top:14px}
+
+/* three steps */
+.steps3{padding:110px 0}
+.steps3 ol{list-style:none;display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--hair)}
+.steps3 li{padding:36px 0 0;display:grid;gap:6px}
+.steps3 li+li{padding-inline-start:36px;border-inline-start:1px solid var(--hair)}
+.steps3 .n{font-size:12px;color:var(--lime);letter-spacing:.2em}
+.steps3 b{font-weight:300;font-size:clamp(26px,2.6vw,38px);letter-spacing:-.02em}
+.steps3 .muted{font-size:14px;font-weight:300}
+
+/* tiles */
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.tile{background:#fff;border:1px solid var(--hair-l);border-radius:18px;padding:22px;text-align:right;display:flex;flex-direction:column;min-height:230px;transition:transform .45s var(--ease),box-shadow .45s var(--ease),border-color .3s}
+.tile:hover{transform:translateY(-4px);box-shadow:0 30px 50px -30px rgba(17,20,24,.35);border-color:var(--hair-l2)}
+.tile-maker{font-size:10px;letter-spacing:.22em;color:var(--gray);text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;direction:ltr}
+.tile-drop{background:var(--ink);color:var(--lime);padding:2px 8px;border-radius:999px;letter-spacing:.2em}
+.tile-tool{font-weight:300;font-size:32px;letter-spacing:-.035em;line-height:1.1;margin-top:26px;direction:ltr;text-align:left}
+.tile-tool small{font-size:15px;font-weight:500}
+.tile-use{font-size:13px;color:var(--gray-l);margin-top:10px;font-weight:300}
+.tile-foot{margin-top:auto;padding-top:20px;border-top:1px solid var(--hair-l);display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--gray)}
+.tile-foot b{color:var(--ink);font-size:16px;font-weight:500;margin:0 4px}
+.tile-foot s{margin-inline-end:8px}
+
+@media (max-width:1060px){
+  .hero2-g{grid-template-columns:minmax(0,1fr);gap:24px;min-height:0}
+  .deck{height:470px;order:-1}
+  .tiles{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-width:640px){
+  .hero2{padding:96px 0 32px}
+  .deck{height:420px}
+  .deck-card{width:min(290px,82%)}
+  .pass-mid{padding:30px 0 22px}
+  .steps3 ol{grid-template-columns:1fr}
+  .steps3 li+li{padding-inline-start:0;border-inline-start:0;border-top:1px solid var(--hair);margin-top:28px}
+  .tiles{grid-template-columns:1fr 1fr;gap:10px}
+  .tile{padding:16px;min-height:190px}
+  .tile-tool{font-size:24px;margin-top:18px}
+  .assure-row{gap:10px 20px}
+}

@@ -36,29 +36,6 @@ function useSearch() {
   return { query, setQuery, onEnter };
 }
 
-export function HeroSearch() {
-  const { query, setQuery, onEnter } = useSearch();
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const off = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener("click", off);
-    return () => document.removeEventListener("click", off);
-  }, []);
-  return (
-    <div className="ask" ref={ref}>
-      <label>
-        <span className="sr">جست‌وجوی محصول</span>
-        <Icon id="search" style={{ color: "var(--gray-d)", width: 22, height: 22 }} />
-        <input type="search" placeholder="امروز به کدام ابزار نیاز داری؟" autoComplete="off" value={query}
-          onFocus={() => setOpen(true)} onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
-          onKeyDown={(e) => e.key === "Enter" && onEnter()} />
-      </label>
-      <div className={`res ${open ? "open" : ""}`}><Results query={query} /></div>
-    </div>
-  );
-}
-
 export function SearchDialog() {
   const { searchOpen } = useStore();
   const { query, setQuery, onEnter } = useSearch();
