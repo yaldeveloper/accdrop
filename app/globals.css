@@ -490,3 +490,114 @@ html,body{overflow-x:clip}
 }
 .pdp-list .k{text-align:right}
 .buybar b{white-space:nowrap}
+
+/* ===== v4: simpler store, real brand marks ===== */
+.blogo{display:block;flex:none}
+.mono{border-radius:12px}
+.mono .blogo{width:22px;height:22px}
+.pass-brand{display:flex;align-items:center;gap:12px}
+.pass-brand .blogo{color:var(--paper)}
+
+/* hero = the store */
+.hero3{padding:150px 0 64px}
+.hero3-h{max-width:760px}
+.hero3 h1{font-weight:300;font-size:clamp(36px,5vw,72px);line-height:1.15;letter-spacing:-.03em}
+.hero3 h1 b{font-weight:600}
+.hero3 .lead{font-size:clamp(16px,1.4vw,19px);font-weight:300;color:var(--gray-d);margin-top:18px}
+.hero3-bar{display:flex;align-items:center;justify-content:space-between;gap:24px;margin:56px 0 22px;flex-wrap:wrap}
+.find{display:flex;align-items:center;gap:12px;height:52px;padding:0 18px;border:1px solid var(--hair-2);border-radius:999px;width:min(420px,100%);transition:border-color .3s;color:var(--gray-d)}
+.find:focus-within{border-color:var(--paper)}
+.find input{flex:1;min-width:0;background:none;border:0;outline:0;font-size:15px;color:var(--paper)}
+.find input::placeholder{color:#6A7277}
+.find input::-webkit-search-cancel-button{filter:invert(1) opacity(.5)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips button{height:40px;padding:0 16px;border-radius:999px;font-size:13px;color:var(--gray-d);border:1px solid transparent;transition:.25s}
+.chips button:hover{color:var(--paper)}
+.chips button.on{color:var(--paper);border-color:var(--hair-2);background:var(--ink-2)}
+.hero3 .tiles .tile{background:var(--ink-1);border-color:var(--hair);color:var(--paper)}
+.hero3 .tiles .tile:hover{border-color:var(--hair-2);box-shadow:0 30px 60px -30px rgba(0,0,0,.9)}
+.hero3 .tile-use{color:var(--gray-d)}
+.hero3 .tile-foot{border-color:var(--hair);color:var(--gray-d)}
+.hero3 .tile-foot b{color:var(--paper)}
+.hero3 .tile-logo{background:var(--ink-2);border-color:var(--hair)}
+.hero3 .assure-row{margin-top:40px}
+.none-found{padding:56px 0;color:var(--gray-d);text-align:center;border:1px dashed var(--hair-2);border-radius:18px}
+
+/* product card */
+.tile{min-height:220px}
+.tile-top{display:flex;justify-content:space-between;align-items:flex-start}
+.tile-logo{width:52px;height:52px;border-radius:14px;display:grid;place-items:center;background:var(--paper-2);border:1px solid var(--hair-l)}
+.tile-drop{background:var(--lime);color:var(--ink);font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px}
+.tile-tool{margin-top:22px;font-size:28px}
+
+/* drop strip */
+.drop2{padding:110px 0}
+.drop2-card{display:grid;grid-template-columns:1fr auto;gap:40px;align-items:center;border:1px solid var(--hair-2);border-radius:24px;padding:40px;background:linear-gradient(120deg,var(--ink-1),var(--ink));transition:border-color .3s}
+.drop2-card:hover{border-color:var(--paper)}
+.drop2-a h2{display:flex;align-items:center;gap:16px;font-weight:300;font-size:clamp(30px,3.6vw,52px);letter-spacing:-.03em;margin:22px 0 8px;line-height:1.1}
+.drop2-a .muted{font-size:14px}
+.drop2-logo{display:grid;place-items:center;width:64px;height:64px;border-radius:18px;background:var(--ink-2);border:1px solid var(--hair-2)}
+.drop2-b{display:grid;gap:14px;justify-items:end}
+.drop2-price{display:flex;align-items:baseline;gap:10px}
+.drop2-price b{font-size:40px;font-weight:300;letter-spacing:-.03em;line-height:1}
+.drop2-price s{color:#5C6469;font-size:14px}
+.drop2-price small{font-size:12px;color:var(--gray-d)}
+.drop2-price span{background:var(--lime);color:var(--ink);font-size:12px;font-weight:600;padding:2px 10px;border-radius:999px;margin-inline-start:6px}
+.drop2-clock{font-family:"Inter Variable",Inter,sans-serif;direction:ltr;font-size:15px;letter-spacing:.12em;color:var(--gray-d)}
+
+/* product page */
+.pdp-g{grid-template-columns:minmax(0,1fr) minmax(0,440px);gap:80px}
+.pdp-main{display:grid;gap:36px}
+.pdp-brand{display:flex;align-items:center;gap:14px;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--gray-d)}
+.pdp-logo{width:60px;height:60px;border-radius:18px;display:grid;place-items:center;background:var(--ink-2);border:1px solid var(--hair-2);color:var(--paper)}
+.pdp-head h1{margin:26px 0 0;line-height:1}
+.pdp-head .pdp-tool{font-size:clamp(48px,6.4vw,96px);text-align:right;direction:ltr;display:inline-block}
+.pdp-head .pdp-use{margin-top:18px;color:var(--gray-d);font-size:clamp(17px,1.6vw,22px)}
+.pdp-aside{position:sticky;top:110px}
+.buy-box{padding:28px;gap:26px;max-width:640px}
+.grp h4 .step{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;border:1px solid var(--hair-2);font-size:11px;margin-inline-end:10px;vertical-align:1px;color:var(--gray-d)}
+.buy-pay{display:grid;gap:12px;border-top:1px solid var(--hair);padding-top:22px}
+.buy-pay .total{border:0;padding:0;margin:0}
+.buy-pay .btn{height:56px;font-size:15px}
+.add-link{font-size:13px;color:var(--gray-d);justify-self:center;padding:4px;text-decoration:underline;text-underline-offset:5px;text-decoration-color:var(--hair-2)}
+.add-link:hover{color:var(--paper)}
+.pdp-intro{margin-top:22px;color:var(--gray)}
+@media (max-width:1060px){
+  .pdp-g{grid-template-columns:minmax(0,1fr)}
+  .pdp-aside{display:none}
+  .drop2-card{grid-template-columns:minmax(0,1fr)}
+  .drop2-b{justify-items:start}
+}
+@media (max-width:640px){
+  .hero3{padding:100px 0 48px}
+  .hero3-bar{margin:32px 0 16px;gap:14px}
+  .find{width:100%}
+  .chips{flex-wrap:nowrap;overflow-x:auto;margin:0 -20px;padding:0 20px;scrollbar-width:none}
+  .chips button{white-space:nowrap;flex:none}
+  .tile-logo{width:44px;height:44px;border-radius:12px}
+  .tile-tool{font-size:22px;margin-top:16px}
+  .tile-use{font-size:12px}
+  .drop2{padding:64px 0}
+  .drop2-card{padding:26px;gap:24px}
+  .drop2-b .btn{width:100%}
+  .drop2-b{justify-items:stretch}
+  .buy-box{padding:20px}
+}
+.tile-tool{text-align:right}
+.steps3.light{padding:88px 0}
+.steps3.light ol{border-color:var(--hair-l2)}
+.steps3.light li+li{border-color:var(--hair-l2)}
+.steps3.light .n{color:var(--gray)}
+.pdp-head .pdp-tool small{margin-left:.3em}
+.cart-n{background:var(--lime);color:var(--ink);font-size:11px;min-width:18px;height:18px;border-radius:9px;display:inline-grid;place-items:center;padding:0 5px}
+@media (max-width:640px){
+  .buybar{transform:translateY(120%);transition:transform .35s var(--ease)}
+  .buybar.on{transform:none}
+}
+.drop2-card>*{min-width:0}
+@media (max-width:640px){
+  .drop2-price{flex-wrap:wrap}
+  .drop2-price b{font-size:32px}
+  .drop2-a h2{font-size:28px}
+  .drop2-logo{width:52px;height:52px;border-radius:14px}
+}

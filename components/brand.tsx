@@ -1,4 +1,5 @@
 import { BRAND_SPRITE } from "@/lib/sprite";
+import { LOGOS } from "@/lib/logos";
 import type { CSSProperties } from "react";
 
 /** Inline SVG symbols for the logo (#wm = Persian wordmark, #ig = «پ» glyph) and UI icons. Render once in the layout. */
@@ -44,5 +45,17 @@ export function Eyebrow({ children, dotColor, start = true }: { children: string
       <Dots color={dotColor} />
       <span className="en">{children}</span>
     </div>
+  );
+}
+
+/** Official mark of a tool we sell, single-colour (inherits currentColor). */
+export function BrandLogo({ id, size = 24, className = "", label }: { id: string; size?: number; className?: string; label?: string }) {
+  const d = LOGOS[id];
+  if (!d) return null;
+  return (
+    <svg className={`blogo ${className}`} width={size} height={size} viewBox="0 0 24 24" fill="currentColor" fillRule="evenodd"
+      role={label ? "img" : undefined} aria-label={label} aria-hidden={label ? undefined : true}>
+      <path d={d} />
+    </svg>
   );
 }

@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CATEGORIES, CURRENT_DROP, DELIVERY, PRODUCTS, deliveryTypes, minPrice, planKeys, type Product } from "@/lib/catalog";
-import { CONTENT, contentOf, productHref } from "@/lib/content";
-import { duration, fa, money } from "@/lib/format";
-import { Eyebrow, Icon } from "@/components/brand";
+import { CATEGORIES, PRODUCTS, deliveryTypes, minPrice, planKeys, type Product } from "@/lib/catalog";
+import { CONTENT, contentOf } from "@/lib/content";
+import { fa, money } from "@/lib/format";
+import { BrandLogo, Eyebrow, Icon } from "@/components/brand";
+import { ToolCard } from "@/components/sections";
 import { BuyPanel } from "@/components/buy-panel";
 import { splitName } from "@/components/pass";
 
@@ -35,6 +36,9 @@ function faqFor(p: Product): [string, string][] {
     [`اشتراک ${p.name} چقدر طول می‌کشد تا فعال شود؟`, `معمولاً حدود ${fa(p.etaMinutes)} دقیقه بعد از پرداخت. هر مرحله را در صفحه پیگیری سفارش می‌بینی و پیامکش را می‌گیری.`],
     ...(own ? [[`آیا ${p.name} روی اکانت خودم فعال می‌شود؟`, "بله. فقط ایمیل اکانتت را می‌خواهیم و اشتراک روی همان فعال می‌شود. تاریخچه‌ات حفظ می‌شود و هرگز رمز عبورت را نمی‌پرسیم."] as [string, string]] : []),
     ...(ready ? [["«اکانت آماده» چه فرقی دارد؟", "یک اکانت تازه که فقط مال توست. ایمیل و رمزش را تحویل می‌گیری. ارزان‌تر و سریع‌تر است."] as [string, string]] : []),
+    [`اشتراک ${p.name} چطور فعال می‌شود؟`, own
+      ? `مدت را انتخاب کن و با تومان بپرداز. بعد ایمیل اکانت ${p.maker} خودت را وارد می‌کنی و اشتراک روی همان فعال می‌شود.`
+      : "مدت را انتخاب کن و با تومان بپرداز. یک اکانت تازه برایت فعال می‌شود و ایمیل و رمزش را پیامک می‌کنیم."],
     [`اگر اشتراک ${p.name} وسط دوره قطع شد چه می‌شود؟`, "شیلد اک‌دراپ تا روز آخر پوشش می‌دهد: جایگزین می‌کنیم و اگر ممکن نبود، مبلغ روزهای باقی‌مانده برمی‌گردد."],
     ["پرداخت چطور است؟", "با کارت بانکی و درگاه امن، به تومان. نیازی به کارت ارزی نیست."],
   ];
@@ -46,9 +50,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const c = contentOf(p);
   const [tool, tier] = splitName(p.name);
   const months = planKeys(p);
-  const types = deliveryTypes(p);
   const faq = faqFor(p);
-  const fromPrice = CURRENT_DROP.productId === p.id ? Math.min(minPrice(p), CURRENT_DROP.price) : minPrice(p);
   const related = PRODUCTS.filter((x) => x.category === p.category && x.id !== p.id).concat(PRODUCTS.filter((x) => x.category !== p.category)).slice(0, 4);
   const prices = months.flatMap((m) => Object.values(p.plans[m] ?? {}) as number[]);
 
@@ -66,7 +68,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       "@context": "https://schema.org", "@type": "BreadcrumbList",
       itemListElement: [
         { "@type": "ListItem", position: 1, name: "اک‌دراپ", item: "https://accdrop.ir/" },
-        { "@type": "ListItem", position: 2, name: CATEGORIES[p.category], item: "https://accdrop.ir/#collection" },
+        { "@type": "ListItem", position: 2, name: CATEGORIES[p.category], item: "https://accdrop.ir/#tools" },
         { "@type": "ListItem", position: 3, name: p.name, item: `https://accdrop.ir/${c.slug}` },
       ],
     },
@@ -83,22 +85,15 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       <section className="pdp-top">
         <div className="wrap">
           <nav className="crumbs" aria-label="مسیر">
-            <Link href="/">اک‌دراپ</Link><span>/</span><Link href="/#collection">{CATEGORIES[p.category]}</Link><span>/</span><span className="en">{p.name}</span>
+            <Link href="/">اک‌دراپ</Link><span>/</span><Link href="/#tools">{CATEGORIES[p.category]}</Link><span>/</span><span className="en">{p.name}</span>
           </nav>
-          <div className="pdp-g">
-            <div className="pdp-info">
-              <Eyebrow>{`${p.maker} · Access Pass`}</Eyebrow>
+          <BuyPanel product={p}>
+            <div className="pdp-head">
+              <span className="pdp-brand"><span className="pdp-logo"><BrandLogo id={p.id} size={30} /></span><span className="en">{p.maker}</span></span>
               <h1><span className="sr">خرید اشتراک </span><span className="en pdp-tool">{tool}{tier && <small> {tier}</small>}</span></h1>
               <p className="pdp-use">{p.use}</p>
-              <p className="pdp-intro">{c.intro}</p>
-              <ul className="pdp-facts">
-                <li><small>شروع قیمت</small><b className="num">{money(fromPrice)} <i>تومان</i></b></li>
-                <li><small>فعال‌سازی</small><b>~{fa(p.etaMinutes)} دقیقه</b></li>
-                <li><small>گارانتی</small><b>تا روز آخر</b></li>
-              </ul>
             </div>
-            <BuyPanel product={p} />
-          </div>
+          </BuyPanel>
         </div>
       </section>
 
@@ -106,56 +101,13 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         <div className="wrap pdp-two">
           <div>
             <Eyebrow dotColor="var(--ink)">What you get</Eyebrow>
-            <h2 className="pdp-h">با این پاس<br /><b>چه می‌گیری؟</b></h2>
+            <h2 className="pdp-h">با این اشتراک<br /><b>چه می‌گیری؟</b></h2>
+            <p className="pdp-intro">{c.intro}</p>
           </div>
           <div>
             <ul className="pdp-list">{p.includes.map((x, i) => <li key={x}><span className="en k">0{i + 1}</span><span>{x}</span></li>)}</ul>
             <div className="pdp-for"><small>مناسب برای</small><div>{c.forWho.map((w) => <span key={w}>{w}</span>)}</div></div>
           </div>
-        </div>
-      </section>
-
-      <section className="light pdp-sec" style={{ paddingTop: 0 }}>
-        <div className="wrap pdp-two">
-          <div>
-            <Eyebrow dotColor="var(--ink)">How it works</Eyebrow>
-            <h2 className="pdp-h">چطور<br /><b>فعال می‌شود؟</b></h2>
-          </div>
-          <div className="pdp-how">
-            {types.map((t) => (
-              <div key={t}>
-                <h3>{DELIVERY[t].title}</h3>
-                <ol>
-                  <li>پلن را انتخاب کن و با تومان بپرداز.</li>
-                  {t === "own"
-                    ? <><li>ایمیل اکانت <span className="en">{p.maker}</span> خودت را وارد کن. رمز لازم نیست.</li><li>در حدود {fa(p.etaMinutes)} دقیقه، اشتراک روی همان اکانت فعال می‌شود.</li></>
-                    : <><li>یک اکانت تازه برایت ساخته و فعال می‌شود.</li><li>ایمیل و رمز را پیامک و ایمیل می‌کنیم؛ می‌توانی رمز را عوض کنی.</li></>}
-                </ol>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="light pdp-sec" style={{ paddingTop: 0 }}>
-        <div className="wrap">
-          <Eyebrow dotColor="var(--ink)">Plans</Eyebrow>
-          <h2 className="pdp-h" style={{ marginBottom: 36 }}>قیمت همه پلن‌ها</h2>
-          <div className="pdp-table" role="table" aria-label={`قیمت پلن‌های ${p.name}`} style={{ "--cols": types.length + 2 } as React.CSSProperties}>
-            <div className="tr th" role="row"><span role="columnheader">مدت</span>{types.map((t) => <span key={t} role="columnheader">{DELIVERY[t].title}</span>)}<span role="columnheader">هر ماه از</span></div>
-            {months.map((m) => {
-              const o = p.plans[m] ?? {};
-              const low = Math.min(...(Object.values(o) as number[]));
-              return (
-                <div className="tr" role="row" key={m}>
-                  <span role="cell">{duration(m)}</span>
-                  {types.map((t) => <span role="cell" key={t} className="num">{o[t] ? money(o[t]!) : "—"}</span>)}
-                  <span role="cell" className="num muted">{money(Math.round(low / Number(m)))}</span>
-                </div>
-              );
-            })}
-          </div>
-          <p className="foot-note"><span>قیمت‌ها به تومان و نهایی‌اند (داده نمونه).</span></p>
         </div>
       </section>
 
@@ -174,21 +126,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
       <section className="light pdp-sec">
         <div className="wrap">
-          <Eyebrow dotColor="var(--ink)">More passes</Eyebrow>
+          <Eyebrow dotColor="var(--ink)">More tools</Eyebrow>
           <h2 className="pdp-h" style={{ marginBottom: 36 }}>شاید این‌ها هم به کارت بیاید</h2>
-          <div className="tiles">
-            {related.map((r) => {
-              const [t2, tier2] = splitName(r.name);
-              return (
-                <Link className="tile" key={r.id} href={productHref(r)}>
-                  <span className="en tile-maker">{r.maker}</span>
-                  <b className="en tile-tool">{t2}{tier2 && <small> {tier2}</small>}</b>
-                  <span className="tile-use">{r.use}</span>
-                  <span className="tile-foot"><span>از <b className="num">{money(minPrice(r))}</b> تومان</span><Icon id="arrow" className="arrow" style={{ width: 16, height: 16 }} /></span>
-                </Link>
-              );
-            })}
-          </div>
+          <div className="tiles">{related.map((r) => <ToolCard key={r.id} p={r} />)}</div>
         </div>
       </section>
     </main>

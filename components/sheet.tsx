@@ -3,7 +3,7 @@
 import { useState, type CSSProperties } from "react";
 import { DELIVERY, deliveryTypes, planKeys, priceOf, productById, type Months } from "@/lib/catalog";
 import { clubPoints, duration, fa, money } from "@/lib/format";
-import { Dots, Icon } from "./brand";
+import { BrandLogo, Dots, Icon } from "./brand";
 import { useStore } from "./store";
 
 const Arrow = () => <Icon id="arrow" className="arrow" />;
@@ -20,7 +20,7 @@ function ProductView() {
   return (
     <>
       <div className="s-h">
-        <span className="mono">{p.monogram}</span>
+        <span className="mono"><BrandLogo id={p.id} size={22} /></span>
         <div><b className="t">{p.name}</b><small className="muted">{p.description}</small></div>
         <button className="x" onClick={close} aria-label="بستن"><Icon id="x" /></button>
       </div>
@@ -92,7 +92,7 @@ function CartView() {
                 const p = productById(l.id);
                 return (
                   <div className="ln" key={i}>
-                    <span className="mono">{p.monogram}</span>
+                    <span className="mono"><BrandLogo id={p.id} size={22} /></span>
                     <div className="t"><b>{p.name}</b><small>{duration(l.plan)} · {DELIVERY[l.type].title}</small></div>
                     <div style={{ textAlign: "left" }}><span className="num">{money(l.price)}</span><button className="rm" onClick={() => removeLine(i)}>حذف</button></div>
                   </div>
@@ -103,7 +103,7 @@ function CartView() {
           </>
         ) : (
           <div className="empty"><Dots size={8} /><br />سبد خرید خالی است.<br /><br />
-            <a className="link" href="#collection" onClick={close}>مشاهده مجموعه</a></div>
+            <a className="link" href="/#tools" onClick={close}>مشاهده مجموعه</a></div>
         )}
       </div>
       {cart.length > 0 && (
@@ -174,7 +174,7 @@ function DoneView() {
       <div className="s-b">
         <div className="done"><Dots size={12} /><h3>پاست در راه است.</h3><p>حدود ده دقیقه دیگر فعال می‌شود.</p><span className="code">{orderCode}</span></div>
       </div>
-      <div className="s-f"><a className="btn btn-ghost btn-block" href="#shield" onClick={close}>پیگیری سفارش</a></div>
+      <div className="s-f"><a className="btn btn-ghost btn-block" href="/#support" onClick={close}>پیگیری سفارش</a></div>
     </>
   );
 }
