@@ -601,3 +601,4 @@ html,body{overflow-x:clip}
   .drop2-a h2{font-size:28px}
   .drop2-logo{width:52px;height:52px;border-radius:14px}
 }
+.pick button{display:inline-flex;align-items:center;gap:8px}

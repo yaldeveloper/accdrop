@@ -21,8 +21,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const p = bySlug((await params).slug);
   if (!p) return {};
   const c = contentOf(p);
-  const title = `خرید اشتراک ${p.name} (${c.faName}) با تحویل فوری`;
-  const description = `خرید اشتراک ${p.name} با تومان، از ${money(minPrice(p))} تومان. فعال‌سازی روی ایمیل خودت در حدود ${fa(p.etaMinutes)} دقیقه، گارانتی تا روز آخر و پشتیبانی انسانی.`;
+  const title = `خرید اکانت ${p.name} (${c.faName}) | فعال‌سازی روی ایمیل شما`;
+  const description = `خرید اکانت ${p.name} با تحویل فوری و تومان، از ${money(minPrice(p))} تومان. فعال‌سازی روی ایمیل خودت در حدود ${fa(p.etaMinutes)} دقیقه، گارانتی تا روز آخر و پشتیبانی انسانی.`;
   return {
     title, description,
     alternates: { canonical: `/${c.slug}` },
@@ -57,7 +57,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const jsonLd = [
     {
       "@context": "https://schema.org", "@type": "Product",
-      name: `اشتراک ${p.name}`, description: c.intro, brand: { "@type": "Brand", name: p.maker }, sku: c.slug,
+      name: `اکانت ${p.name}`, description: c.intro, brand: { "@type": "Brand", name: p.maker }, sku: c.slug,
       offers: {
         "@type": "AggregateOffer", priceCurrency: "IRR", lowPrice: Math.min(...prices) * 10, highPrice: Math.max(...prices) * 10,
         offerCount: prices.length, availability: "https://schema.org/InStock", url: `https://accdrop.ir/${c.slug}`,
@@ -90,7 +90,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           <BuyPanel product={p}>
             <div className="pdp-head">
               <span className="pdp-brand"><span className="pdp-logo"><BrandLogo id={p.id} size={30} /></span><span className="en">{p.maker}</span></span>
-              <h1><span className="sr">خرید اشتراک </span><span className="en pdp-tool">{tool}{tier && <small> {tier}</small>}</span></h1>
+              <h1><span className="sr">خرید اکانت </span><span className="en pdp-tool">{tool}{tier && <small> {tier}</small>}</span></h1>
               <p className="pdp-use">{p.use}</p>
             </div>
           </BuyPanel>
