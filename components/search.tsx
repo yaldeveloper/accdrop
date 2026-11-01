@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { productHref } from "@/lib/content";
 import { minPrice, PRODUCTS } from "@/lib/catalog";
 import { money } from "@/lib/format";
 import { Icon } from "./brand";
 import { useStore } from "./store";
 
 function Results({ query }: { query: string }) {
-  const { openProduct } = useStore();
+  const { close } = useStore();
   const q = query.trim().toLowerCase();
   const found = PRODUCTS.filter((p) => !q || `${p.name} ${p.maker} ${p.id} ${p.description}`.toLowerCase().includes(q));
   if (!found.length)
@@ -15,11 +18,11 @@ function Results({ query }: { query: string }) {
   return (
     <>
       {found.slice(0, 6).map((p, i) => (
-        <button key={p.id} className={i ? "" : "act"} onClick={() => openProduct(p.id)}>
+        <Link key={p.id} className={i ? "" : "act"} href={productHref(p)} onClick={close}>
           <span className="mono">{p.monogram}</span>
           <span><b className="en" style={{ display: "block", fontWeight: 400 }}>{p.name}</b><small className="muted">{p.description}</small></span>
           <span className="p num">از {money(minPrice(p))}</span>
-        </button>
+        </Link>
       ))}
     </>
   );
@@ -27,11 +30,12 @@ function Results({ query }: { query: string }) {
 
 function useSearch() {
   const [query, setQuery] = useState("");
-  const { openProduct } = useStore();
+  const { close } = useStore();
+  const router = useRouter();
   const onEnter = () => {
     const q = query.trim().toLowerCase();
     const hit = PRODUCTS.find((p) => !q || `${p.name} ${p.maker} ${p.id} ${p.description}`.toLowerCase().includes(q));
-    if (hit) openProduct(hit.id);
+    if (hit) { close(); router.push(productHref(hit)); }
   };
   return { query, setQuery, onEnter };
 }

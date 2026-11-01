@@ -17,6 +17,8 @@ type Store = {
   openProduct: (id: string) => void;
   select: (patch: Partial<Selection>) => void;
   addSelection: () => void;
+  /** Add an explicit selection (used by product pages). */
+  addLine: (sel: Selection) => void;
   removeLine: (i: number) => void;
   setView: (v: SheetView) => void;
   completeOrder: () => void;
@@ -88,6 +90,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return next;
     }),
     addSelection: () => { if (selection) persist([...cart, { ...selection, price: priceOf(selection).price }]); },
+    addLine: (sel) => persist([...cart, { ...sel, price: priceOf(sel).price }]),
     removeLine: (i) => persist(cart.filter((_, j) => j !== i)),
     setView: (v) => setViewState(v),
     completeOrder: () => {

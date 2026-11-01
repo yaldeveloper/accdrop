@@ -6,6 +6,9 @@ import { useEffect, useState } from "react";
 import { CATEGORIES, CURRENT_DROP, DELIVERY, PRODUCTS, minPrice, planKeys, productById, type Category } from "@/lib/catalog";
 import { duration, fa, money, pad2 } from "@/lib/format";
 import { Dots, Eyebrow, Glyph, Icon, Wordmark } from "./brand";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { productHref } from "@/lib/content";
 import { AccessPass, splitName } from "./pass";
 import { useStore } from "./store";
 
@@ -33,14 +36,14 @@ export function Header() {
   return (
     <header className={`hd ${scrolled ? "s" : ""}`}>
       <div className="wrap">
-        <a href="#" aria-label="اک‌دراپ"><Wordmark /></a>
+        <a href="/" aria-label="اک‌دراپ، صفحه اصلی"><Wordmark /></a>
         <nav aria-label="منوی اصلی">
-          <a href="#collection">مجموعه</a><a href="#drop">دراپ</a><a href="#shield">شیلد</a><a href="#club">کلاب</a><a href="#concierge">پشتیبانی</a>
+          <a href="/#collection">مجموعه</a><a href="/#drop">دراپ</a><a href="/#shield">شیلد</a><a href="/#club">کلاب</a><a href="/#concierge">پشتیبانی</a>
         </nav>
         <div className="sp" />
         <div className="tools">
           <button onClick={openSearch} aria-label="جست‌وجو"><Icon id="search" /><span className="tx">جست‌وجو</span></button>
-          <a href="#shield" aria-label="پیگیری سفارش"><Icon id="user" /><span className="tx">سفارش‌ها</span></a>
+          <a href="/#shield" aria-label="پیگیری سفارش"><Icon id="user" /><span className="tx">سفارش‌ها</span></a>
           <button onClick={() => setView("cart")} aria-label="سبد خرید"><Icon id="bag" /><span className="num">({fa(cart.length)})</span></button>
         </div>
       </div>
@@ -48,10 +51,10 @@ export function Header() {
   );
 }
 
-const FEATURED = ["chatgpt", "claude", "gemini", "cursor", "kling"];
+const FEATURED = ["chatgpt", "claude", "cursor", "adobe", "canva", "notion"];
 
 export function Hero() {
-  const { openProduct } = useStore();
+  const router = useRouter();
   const [active, setActive] = useState(FEATURED[0]);
   const [paused, setPaused] = useState(false);
   useEffect(() => {
@@ -66,21 +69,21 @@ export function Hero() {
     <section className="hero2">
       <div className="wrap hero2-g">
         <div>
-          <Eyebrow>AI Access</Eyebrow>
-          <h1>اشتراک هوش مصنوعی،<br /><b>به ساده‌ترین شکل.</b></h1>
-          <p className="lead">با تومان بخر. چند دقیقه بعد، روی ایمیل خودت فعال است.</p>
+          <Eyebrow>AI &amp; Pro Tools</Eyebrow>
+          <h1>اشتراک ابزارهای حرفه‌ای،<br /><b>به ساده‌ترین شکل.</b></h1>
+          <p className="lead">هوش مصنوعی، طراحی، کدنویسی و کار روزمره. با تومان بخر؛ چند دقیقه بعد روی ایمیل خودت فعال است.</p>
           <div className="pick" role="group" aria-label="انتخاب ابزار" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
             {FEATURED.map((id) => (
               <button key={id} className={`en ${id === active ? "on" : ""}`} onClick={() => { setActive(id); setPaused(true); }}>
                 {splitName(productById(id).name)[0]}
               </button>
             ))}
-            <a href="#collection" className="more">همه ابزارها</a>
+            <a href="/#collection" className="more">همه ابزارها</a>
           </div>
           <div className="hero2-cta">
-            <button className="btn btn-paper" onClick={() => openProduct(active)}>
+            <Link className="btn btn-paper" href={productHref(p)}>
               دریافت <span className="en">{p.name}</span> <Icon id="arrow" className="arrow" />
-            </button>
+            </Link>
             <span className="muted">از <b className="num" style={{ color: "var(--paper)", fontWeight: 500 }}>{money(minPrice(p))}</b> تومان</span>
           </div>
         </div>
@@ -90,7 +93,7 @@ export function Hero() {
             const prod = productById(id);
             return (
               <button key={id} className="deck-card" style={{ "--z": depth } as React.CSSProperties}
-                onClick={() => (depth === 0 ? openProduct(id) : setActive(id))} aria-label={prod.name}>
+                onClick={() => (depth === 0 ? router.push(productHref(prod)) : setActive(id))} aria-label={prod.name}>
                 <AccessPass product={prod} months={planKeys(prod)[0]} price={depth === 0 ? minPrice(prod) : undefined} />
               </button>
             );
@@ -129,7 +132,6 @@ export function Steps() {
 }
 
 export function Collection() {
-  const { openProduct } = useStore();
   const [cat, setCat] = useState<"all" | Category>("all");
   const list = PRODUCTS.filter((p) => cat === "all" || p.category === cat);
   return (
@@ -152,7 +154,7 @@ export function Collection() {
             const isDrop = CURRENT_DROP.productId === p.id;
             const [tool, tier] = splitName(p.name);
             return (
-              <button className="tile" key={p.id} onClick={() => openProduct(p.id)} aria-label={p.name}>
+              <Link className="tile" key={p.id} href={productHref(p)}>
                 <span className="en tile-maker">{p.maker}{isDrop && <span className="tile-drop">DROP</span>}</span>
                 <b className="en tile-tool">{tool}{tier && <small> {tier}</small>}</b>
                 <span className="tile-use">{p.use}</span>
@@ -160,7 +162,7 @@ export function Collection() {
                   <span>{isDrop && <s className="num">{money(CURRENT_DROP.was)}</s>}از <b className="num">{money(isDrop ? CURRENT_DROP.price : minPrice(p))}</b> تومان</span>
                   <Icon id="arrow" className="arrow" style={{ width: 16, height: 16 }} />
                 </span>
-              </button>
+              </Link>
             );
           })}
         </div>
@@ -335,9 +337,9 @@ export function Footer() {
     <footer>
       <div className="wrap">
         <div className="fg">
-          <div><h5>COLLECTION</h5><ul><li><a href="#collection" className="en">ChatGPT Plus</a></li><li><a href="#collection" className="en">Claude Pro</a></li><li><a href="#collection" className="en">Cursor Pro</a></li><li><a href="#collection">همه محصولات</a></li></ul></div>
-          <div><h5>ACCDROP</h5><ul><li><a href="#drop">دراپ‌ها</a></li><li><a href="#club">کلاب</a></li><li><a href="#shield">شیلد</a></li></ul></div>
-          <div><h5>SUPPORT</h5><ul><li><a href="#shield">پیگیری سفارش</a></li><li><a href="#">شرایط گارانتی</a></li><li><a href="#concierge">سؤالات پرتکرار</a></li></ul></div>
+          <div><h5>PASSES</h5><ul className="f-products">{PRODUCTS.map((p) => <li key={p.id}><Link href={productHref(p)} className="en">{p.name}</Link></li>)}</ul></div>
+          <div><h5>ACCDROP</h5><ul><li><a href="/#drop">دراپ‌ها</a></li><li><a href="/#club">کلاب</a></li><li><a href="/#shield">شیلد</a></li></ul></div>
+          <div><h5>SUPPORT</h5><ul><li><a href="/#shield">پیگیری سفارش</a></li><li><a href="#">شرایط گارانتی</a></li><li><a href="/#concierge">سؤالات پرتکرار</a></li></ul></div>
           <div><h5>CONTACT</h5><ul><li><a href="#">تلگرام</a></li><li><a href="#">اینستاگرام</a></li><li><a href="#" className="en">hello@accdrop.ir</a></li></ul></div>
         </div>
         <Wordmark className="f-wm" />
@@ -351,9 +353,9 @@ export function MobileBar() {
   const { cart, openSearch, setView } = useStore();
   return (
     <nav className="mbar" aria-label="ناوبری موبایل">
-      <a href="#collection"><Icon id="grid" />مجموعه</a>
+      <a href="/#collection"><Icon id="grid" />مجموعه</a>
       <button onClick={openSearch}><Icon id="search" />جست‌وجو</button>
-      <a href="#shield"><Icon id="box" />سفارش‌ها</a>
+      <a href="/#shield"><Icon id="box" />سفارش‌ها</a>
       <button onClick={() => setView("cart")}><Icon id="bag" /><span>سبد <span className="num">({fa(cart.length)})</span></span></button>
     </nav>
   );
