@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CATEGORIES, DELIVERY, PRODUCTS, deliveryExplain, deliveryTypes, minPrice, planKeys, type Product } from "@/lib/catalog";
+import { CATEGORIES, DELIVERY, PRICES_UPDATED, PRODUCTS, deliveryExplain, deliveryTypes, minPrice, planKeys, priceOf, type Product } from "@/lib/catalog";
+import { seoOf } from "@/lib/seo";
+import { Toc } from "@/components/toc";
 import { CONTENT, contentOf } from "@/lib/content";
-import { fa, money } from "@/lib/format";
+import { duration, fa, money } from "@/lib/format";
 import { BrandLogo, Icon } from "@/components/brand";
 import { ToolCard } from "@/components/sections";
 import { BuyPanel } from "@/components/buy-panel";
@@ -49,7 +51,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const c = contentOf(p);
   const [tool, tier] = splitName(p.name);
   const months = planKeys(p);
-  const faq = faqFor(p);
+  const seo = seoOf(p.id);
+  const faq = [...(seo?.faq ?? []), ...faqFor(p)];
   const related = PRODUCTS.filter((x) => x.category === p.category && x.id !== p.id).concat(PRODUCTS.filter((x) => x.category !== p.category)).slice(0, 4);
   const prices = months.flatMap((m) => Object.values(p.plans[m] ?? {}) as number[]);
 
@@ -61,7 +64,14 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         "@type": "AggregateOffer", priceCurrency: "IRR", lowPrice: Math.min(...prices) * 10, highPrice: Math.max(...prices) * 10,
         offerCount: prices.length, availability: "https://schema.org/InStock", url: `https://accdrop.ir/${c.slug}`,
         seller: { "@type": "Organization", name: "AccDrop" },
+        offers: months.flatMap((m) => deliveryTypes(p).filter((t) => p.plans[m]?.[t]).map((t) => ({
+          "@type": "Offer", name: `${p.name}، ${duration(m)}، ${DELIVERY[t].title}`, priceCurrency: "IRR",
+          price: priceOf({ id: p.id, plan: m, type: t }).price * 10, availability: "https://schema.org/InStock",
+          url: `https://accdrop.ir/${c.slug}?plan=${m}&type=${t}`,
+        }))),
       },
+      category: CATEGORIES[p.category],
+      ...(seo ? { additionalProperty: [{ "@type": "PropertyValue", name: "پلتفرم‌ها", value: seo.platforms.join("، ") }] } : {}),
     },
     {
       "@context": "https://schema.org", "@type": "BreadcrumbList",
@@ -70,6 +80,10 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         { "@type": "ListItem", position: 2, name: CATEGORIES[p.category], item: "https://accdrop.ir/#tools" },
         { "@type": "ListItem", position: 3, name: p.name, item: `https://accdrop.ir/${c.slug}` },
       ],
+    },
+    {
+      "@context": "https://schema.org", "@type": "WebPage", name: `خرید اکانت ${p.name}`, inLanguage: "fa-IR",
+      dateModified: PRICES_UPDATED.iso, url: `https://accdrop.ir/${c.slug}`,
     },
     {
       "@context": "https://schema.org", "@type": "FAQPage",
@@ -109,16 +123,98 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         </div>
       </section>
 
-      <nav className="p2-nav" aria-label="بخش‌های صفحه">
-        <div className="wrap">
-          <a href="#delivery">نحوه تحویل</a><a href="#guarantee">ضمانت</a><a href="#compare">چرا اک‌دراپ</a><a href="#faq">سؤالات</a>
-        </div>
-      </nav>
+      <Toc items={[
+        ...(seo ? [["about", "معرفی"], ["features", "امکانات"]] as [string, string][] : []),
+        ["prices", "قیمت‌ها"], ["delivery", "نحوه تحویل"],
+        ...(seo ? [["free-vs-paid", "رایگان یا پولی"]] as [string, string][] : []),
+        ["guarantee", "ضمانت"], ["compare", "چرا اک‌دراپ"], ["faq", "سؤالات"],
+      ]} />
 
       <div className="light p2-body">
+        {seo && (
+          <section className="p2-sec" id="about">
+            <div className="wrap p2-two">
+              <div className="p2-prose">
+                <span className="p2-k">معرفی</span>
+                <h2>{p.name} چیست و به درد چه کسی می‌خورد؟</h2>
+                {seo.about.map((t) => <p key={t}>{t}</p>)}
+                <h3>مناسب برای</h3>
+                <ul className="p2-who">{c.forWho.map((w) => <li key={w}><Icon id="check" />{w}</li>)}</ul>
+              </div>
+              <aside className="p2-spec" aria-label="مشخصات">
+                <h3>مشخصات اشتراک</h3>
+                <dl>
+                  <div><dt>سرویس</dt><dd className="en">{p.name}</dd></div>
+                  <div><dt>سازنده</dt><dd className="en">{p.maker}</dd></div>
+                  <div><dt>دسته</dt><dd>{CATEGORIES[p.category]}</dd></div>
+                  <div><dt>نوع</dt><dd>اشتراک رسمی</dd></div>
+                  <div><dt>مدت</dt><dd>{months.map(duration).join("، ")}</dd></div>
+                  <div><dt>روش تحویل</dt><dd>{types.map((t) => DELIVERY[t].title).join("، ")}</dd></div>
+                  <div><dt>زمان تحویل</dt><dd>حدود {fa(p.etaMinutes)} دقیقه</dd></div>
+                  <div><dt>پلتفرم‌ها</dt><dd>{seo.platforms.join("، ")}</dd></div>
+                  <div><dt>شروع قیمت</dt><dd><b>{money(minPrice(p))}</b> تومان</dd></div>
+                  <div><dt>ضمانت</dt><dd>تا روز آخر اشتراک</dd></div>
+                </dl>
+              </aside>
+            </div>
+          </section>
+        )}
+
+        {seo && (
+          <section className="p2-sec" id="features">
+            <div className="wrap">
+              <div className="p2-h p2-hw"><span className="p2-k">امکانات</span><h2>با اشتراک {p.name} چه چیزهایی باز می‌شود؟</h2></div>
+              <div className="p2-feat">
+                {seo.features.map(([t, d], i) => (
+                  <div key={t}><span className="p2-n">{fa(String(i + 1).padStart(2, "0"))}</span><h3>{t}</h3><p>{d}</p></div>
+                ))}
+              </div>
+              <h3 className="p2-sub">کاربردهای رایج</h3>
+              <div className="p2-uses">
+                {seo.uses.map(([t, d]) => <div key={t}><b>{t}</b><span>{d}</span></div>)}
+              </div>
+            </div>
+          </section>
+        )}
+
+        <section className="p2-sec" id="prices">
+          <div className="wrap p2-two">
+            <div className="p2-h">
+              <span className="p2-k">قیمت</span>
+              <h2>قیمت خرید اکانت {p.name}</h2>
+              <p>قیمت‌ها به تومان و نهایی‌اند؛ بدون کارمزد و هزینه پنهان. پرداخت با همه کارت‌های بانکی عضو شتاب.</p>
+              <p className="p2-upd"><Icon id="clock" />به‌روزرسانی قیمت: <time dateTime={PRICES_UPDATED.iso}>{PRICES_UPDATED.fa}</time></p>
+            </div>
+            <div className="p2-tbl-w">
+              <table className="p2-tbl">
+                <caption className="sr">جدول قیمت {p.name}</caption>
+                <thead><tr><th scope="col">مدت</th>{types.map((t) => <th scope="col" key={t}>{DELIVERY[t].title}</th>)}</tr></thead>
+                <tbody>
+                  {months.map((m) => (
+                    <tr key={m}>
+                      <th scope="row">{duration(m)}</th>
+                      {types.map((t) => {
+                        if (!p.plans[m]?.[t]) return <td key={t} className="na">ندارد</td>;
+                        const pr = priceOf({ id: p.id, plan: m, type: t });
+                        return (
+                          <td key={t}>
+                            <b>{money(pr.price)}</b> <small>تومان</small>
+                            {pr.was && <><s>{money(pr.was)}</s><span className="p2-drop">دراپ هفته</span></>}
+                            {Number(m) > 1 && <em>ماهی {money(Math.round(pr.price / Number(m) / 1000) * 1000)}</em>}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
         <section className="p2-sec" id="delivery">
           <div className="wrap p2-two">
-            <div className="p2-h"><h2>تحویل چطور انجام می‌شود؟</h2><p>{types.length > 1 ? "دو روش داریم. هر کدام را که در کادر خرید انتخاب کنی، همان‌طور تحویل می‌گیری." : "ساده و بدون نیاز به رمز عبور."}</p></div>
+            <div className="p2-h"><span className="p2-k">تحویل</span><h2>تحویل {p.name} چطور انجام می‌شود؟</h2><p>{types.length > 1 ? "دو روش داریم. هر کدام را که در کادر خرید انتخاب کنی، همان‌طور تحویل می‌گیری." : "ساده و بدون نیاز به رمز عبور."}</p></div>
             <div className="p2-ways">
               {types.map((t) => (
                 <div className="p2-way" key={t}>
@@ -137,9 +233,29 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           </div>
         </section>
 
+        {seo && (
+          <section className="p2-sec" id="free-vs-paid">
+            <div className="wrap p2-two">
+              <div className="p2-h">
+                <span className="p2-k">مقایسه</span>
+                <h2>{p.name} یا نسخه رایگان؟</h2>
+                <p>نسخه رایگان برای امتحان خوب است؛ برای کار روزمره و جدی، تفاوت را همین جدول نشان می‌دهد.</p>
+                <div className="p2-plat"><small>در دسترس روی</small>{seo.platforms.map((x) => <span key={x}>{x}</span>)}</div>
+              </div>
+              <div className="p2-tbl-w">
+                <table className="p2-tbl p2-fvp">
+                  <caption className="sr">مقایسه نسخه رایگان و {p.name}</caption>
+                  <thead><tr><th scope="col" /><th scope="col">رایگان</th><th scope="col" className="hi">{p.name}</th></tr></thead>
+                  <tbody>{seo.freeVsPaid.map(([k, a, b]) => <tr key={k}><th scope="row">{k}</th><td>{a}</td><td className="hi"><Icon id="check" />{b}</td></tr>)}</tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        )}
+
         <section className="p2-sec" id="guarantee">
           <div className="wrap p2-two">
-            <div className="p2-h"><h2>ضمانت اک‌دراپ</h2><p>اشتراکی که می‌خری تا روز آخر بیمه است. این‌ها تعهد ماست، نه شعار.</p><Link className="link" href="/guarantee">شرایط کامل ضمانت</Link></div>
+            <div className="p2-h"><span className="p2-k">ضمانت</span><h2>ضمانت اک‌دراپ</h2><p>اشتراکی که می‌خری تا روز آخر بیمه است. این‌ها تعهد ماست، نه شعار.</p><Link className="link" href="/guarantee">شرایط کامل ضمانت</Link></div>
             <ul className="p2-promise">
               <li><b>فعال نشد؟</b><span>کل مبلغ را برمی‌گردانیم.</span></li>
               <li><b>وسط دوره قطع شد؟</b><span>ظرف ۲۴ ساعت جایگزین می‌کنیم؛ اگر نشد، مبلغ روزهای باقی‌مانده برمی‌گردد.</span></li>
@@ -151,7 +267,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
         <section className="p2-sec" id="compare">
           <div className="wrap p2-two">
-            <div className="p2-h"><h2>خرید مستقیم یا اک‌دراپ؟</h2><p>همان اشتراک رسمی <span className="en">{p.maker}</span>، بدون دردسر کارت ارزی.</p></div>
+            <div className="p2-h"><span className="p2-k">مقایسه</span><h2>خرید مستقیم یا اک‌دراپ؟</h2><p>همان اشتراک رسمی <span className="en">{p.maker}</span>، بدون دردسر کارت ارزی.</p></div>
             <div className="cmp" role="table" aria-label="مقایسه">
               <div className="cmp-r cmp-h" role="row"><span role="columnheader" /><span role="columnheader">خرید مستقیم</span><span role="columnheader">اک‌دراپ</span></div>
               {([
@@ -170,7 +286,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         <section className="p2-sec" id="faq">
           <div className="wrap p2-two">
             <div className="p2-h">
-              <h2>سؤال‌های پرتکرار</h2>
+              <span className="p2-k">پرسش و پاسخ</span>
+              <h2>سؤالات پرتکرار خرید {p.name}</h2>
               <p>جوابت را پیدا نکردی؟ یک آدم واقعی جواب می‌دهد.</p>
               <a className="btn btn-ink" href="#">پیام در تلگرام <Icon id="arrow" className="arrow" /></a>
             </div>
@@ -182,7 +299,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
         <section className="p2-sec">
           <div className="wrap">
-            <div className="p2-h" style={{ marginBottom: 28 }}><h2>ابزارهای مشابه</h2></div>
+            <div className="p2-h p2-hw"><span className="p2-k">پیشنهاد</span><h2>ابزارهای مشابه {p.name}</h2></div>
             <div className="tiles">{related.map((r) => <ToolCard key={r.id} p={r} />)}</div>
           </div>
         </section>

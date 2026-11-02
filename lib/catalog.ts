@@ -120,3 +120,6 @@ export function deliveryExplain(p: Product, t: DeliveryType) {
     : "یک اکانت تازه با ایمیل و رمز تحویل می‌گیری که فقط مال توست. ارزان‌تر و سریع‌تر است.";
 }
 
+
+/** When the sample prices were last reviewed (shown on product pages). */
+export const PRICES_UPDATED = { fa: "آبان ۱۴۰۵", iso: "2026-11-01" };
