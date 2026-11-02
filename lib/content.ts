@@ -4,7 +4,7 @@ import type { Product } from "./catalog";
 export type ProductContent = {
   /** URL slug, e.g. /chatgpt-plus */
   slug: string;
-  /** Persian search name, used in titles: «خرید اشتراک ChatGPT Plus» */
+  /** Persian search name, used in titles: «خرید اکانت ChatGPT Plus» */
   faName: string;
   intro: string;
   forWho: string[];

@@ -112,3 +112,14 @@ export function priceOf(sel: Selection): { price: number; was?: number } {
   if (d.productId === sel.id && d.plan === sel.plan && d.type === sel.type) return { price: d.price, was: base };
   return { price: base };
 }
+
+/** What each delivery method means, in plain words, for this product. */
+export function deliveryExplain(p: Product, t: DeliveryType) {
+  return t === "own"
+    ? `ایمیل اکانت ${p.maker} خودت را می‌دهی و اشتراک روی همان فعال می‌شود. رمز نمی‌خواهیم و تاریخچه‌ات می‌ماند.`
+    : "یک اکانت تازه با ایمیل و رمز تحویل می‌گیری که فقط مال توست. ارزان‌تر و سریع‌تر است.";
+}
+
+
+/** When the sample prices were last reviewed (shown on product pages). */
+export const PRICES_UPDATED = { fa: "آبان ۱۴۰۵", iso: "2026-11-01" };

@@ -1,0 +1,39 @@
+"use client";
+
+import { useEffect, type ReactNode } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useAccount } from "@/components/account";
+import { Icon } from "@/components/brand";
+import { fa } from "@/lib/format";
+
+const NAV = [
+  ["/account", "پاس‌های من"],
+  ["/account/orders", "سفارش‌ها"],
+  ["/account/club", "کلاب"],
+  ["/account/reseller", "نمایندگی"],
+  ["/account/profile", "حساب کاربری"],
+] as const;
+
+export default function AccountLayout({ children }: { children: ReactNode }) {
+  const { ready, user, logout } = useAccount();
+  const router = useRouter();
+  const path = usePathname();
+  useEffect(() => { if (ready && !user) router.replace(`/login?next=${encodeURIComponent(path)}`); }, [ready, user, path, router]);
+  if (!ready || !user) return <div className="wrap dash-wait" />;
+  return (
+    <div className="wrap dash">
+      <aside className="dash-side">
+        <div className="dash-me">
+          <span className="dash-av">{(user.name || "؟").trim().charAt(0)}</span>
+          <div><b>{user.name || "کاربر اک‌دراپ"}</b><small className="num muted">{fa(user.mobile)}</small></div>
+        </div>
+        <nav aria-label="داشبورد">
+          {NAV.map(([href, label]) => <Link key={href} href={href} className={path === href ? "on" : ""}>{label}</Link>)}
+          <button onClick={() => { logout(); router.push("/"); }}>خروج <Icon id="arrow" className="arrow" /></button>
+        </nav>
+      </aside>
+      <div className="dash-main">{children}</div>
+    </div>
+  );
+}

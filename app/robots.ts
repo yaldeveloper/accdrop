@@ -3,5 +3,5 @@ import type { MetadataRoute } from "next";
 export const dynamic = "force-static";
 
 export default function robots(): MetadataRoute.Robots {
-  return { rules: { userAgent: "*", allow: "/" }, sitemap: "https://accdrop.ir/sitemap.xml" };
+  return { rules: { userAgent: "*", allow: "/", disallow: ["/account", "/checkout", "/orders", "/login"] }, sitemap: "https://accdrop.ir/sitemap.xml" };
 }

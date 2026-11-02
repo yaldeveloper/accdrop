@@ -11,3 +11,7 @@ export const duration = (m: string | number) =>
 export const clubPoints = (toman: number) => Math.floor(toman / 100000);
 
 export const pad2 = (n: number) => fa(String(n).padStart(2, "0"));
+
+/** Solar Hijri date/time, e.g. «۱۰ آبان ۱۴۰۵، ۱۴:۳۰». */
+export const faDate = (t: number, withTime = true) =>
+  new Intl.DateTimeFormat("fa-IR", withTime ? { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" } : { day: "numeric", month: "long", year: "numeric" }).format(t);

@@ -1,15 +1,17 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import { type CSSProperties } from "react";
+import { useRouter } from "next/navigation";
 import { DELIVERY, deliveryTypes, planKeys, priceOf, productById, type Months } from "@/lib/catalog";
 import { clubPoints, duration, fa, money } from "@/lib/format";
-import { Dots, Icon } from "./brand";
+import { BrandLogo, Dots, Icon } from "./brand";
 import { useStore } from "./store";
 
 const Arrow = () => <Icon id="arrow" className="arrow" />;
 
 function ProductView() {
-  const { selection, select, addSelection, setView, close, notify } = useStore();
+  const { selection, select, addSelection, close, notify } = useStore();
+  const router = useRouter();
   if (!selection) return null;
   const p = productById(selection.id);
   const offers = p.plans[selection.plan] ?? {};
@@ -20,7 +22,7 @@ function ProductView() {
   return (
     <>
       <div className="s-h">
-        <span className="mono">{p.monogram}</span>
+        <span className="mono"><BrandLogo id={p.id} size={22} /></span>
         <div><b className="t">{p.name}</b><small className="muted">{p.description}</small></div>
         <button className="x" onClick={close} aria-label="بستن"><Icon id="x" /></button>
       </div>
@@ -72,7 +74,7 @@ function ProductView() {
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: 10 }}>
           <button className="btn btn-ghost" onClick={() => { addSelection(); close(); notify(`${p.name} به سبد اضافه شد`); }}>افزودن به سبد</button>
-          <button className="btn btn-paper" onClick={() => { addSelection(); setView("checkout"); }}>همین الان بخر <Arrow /></button>
+          <button className="btn btn-paper" onClick={() => { addSelection(); close(); router.push("/checkout"); }}>همین الان بخر <Arrow /></button>
         </div>
       </div>
     </>
@@ -80,7 +82,8 @@ function ProductView() {
 }
 
 function CartView() {
-  const { cart, total, removeLine, setView, close } = useStore();
+  const { cart, total, removeLine, close } = useStore();
+  const router = useRouter();
   return (
     <>
       <div className="s-h"><b className="t" style={{ fontFamily: "inherit" }}>سبد خرید</b><button className="x" onClick={close} aria-label="بستن"><Icon id="x" /></button></div>
@@ -92,7 +95,7 @@ function CartView() {
                 const p = productById(l.id);
                 return (
                   <div className="ln" key={i}>
-                    <span className="mono">{p.monogram}</span>
+                    <span className="mono"><BrandLogo id={p.id} size={22} /></span>
                     <div className="t"><b>{p.name}</b><small>{duration(l.plan)} · {DELIVERY[l.type].title}</small></div>
                     <div style={{ textAlign: "left" }}><span className="num">{money(l.price)}</span><button className="rm" onClick={() => removeLine(i)}>حذف</button></div>
                   </div>
@@ -103,78 +106,15 @@ function CartView() {
           </>
         ) : (
           <div className="empty"><Dots size={8} /><br />سبد خرید خالی است.<br /><br />
-            <a className="link" href="#collection" onClick={close}>مشاهده مجموعه</a></div>
+            <a className="link" href="/#tools" onClick={close}>مشاهده مجموعه</a></div>
         )}
       </div>
       {cart.length > 0 && (
         <div className="s-f">
           <div className="total"><small>جمع کل</small><div><b className="num">{money(total)}</b> <small>تومان</small></div></div>
-          <button className="btn btn-paper btn-block" onClick={() => setView("checkout")}>ادامه <Arrow /></button>
+          <button className="btn btn-paper btn-block" onClick={() => { close(); router.push("/checkout"); }}>تسویه حساب <Arrow /></button>
         </div>
       )}
-    </>
-  );
-}
-
-function CheckoutView() {
-  const { cart, total, setView, close, completeOrder, notify } = useStore();
-  const needsEmail = cart.some((l) => l.type === "own");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [bad, setBad] = useState<"email" | "phone" | null>(null);
-
-  const pay = () => {
-    if (needsEmail && !/^\S+@\S+\.\S+$/.test(email)) { setBad("email"); notify("ایمیل را درست وارد کن"); return; }
-    if (!/^0?9\d{9}$/.test(phone.replace(/\D/g, ""))) { setBad("phone"); notify("شماره موبایل را درست وارد کن"); return; }
-    completeOrder();
-  };
-
-  return (
-    <>
-      <div className="s-h">
-        <button className="x" style={{ margin: 0 }} onClick={() => setView("cart")} aria-label="بازگشت"><Icon id="back" /></button>
-        <b className="t" style={{ fontFamily: "inherit" }}>پرداخت</b>
-        <button className="x" onClick={close} aria-label="بستن"><Icon id="x" /></button>
-      </div>
-      <div className="steps"><i className="on" /><i className="on" /><i /></div>
-      <form className="s-b" noValidate onSubmit={(e) => { e.preventDefault(); pay(); }}>
-        {needsEmail && (
-          <div className="fld">
-            <label htmlFor="em">ایمیل اکانتت</label>
-            <input id="em" type="email" className={`ltr ${bad === "email" ? "bad" : ""}`} placeholder="you@gmail.com" value={email} onChange={(e) => { setEmail(e.target.value); setBad(null); }} />
-            <small>فقط ایمیل، نه رمز.</small>
-          </div>
-        )}
-        <div className="fld">
-          <label htmlFor="ph">شماره موبایل</label>
-          <input id="ph" type="tel" inputMode="numeric" className={`ltr ${bad === "phone" ? "bad" : ""}`} placeholder="09xx xxx xxxx" value={phone} onChange={(e) => { setPhone(e.target.value); setBad(null); }} />
-          <small>کد پیگیری را پیامک می‌کنیم.</small>
-        </div>
-        <div className="lines">
-          {cart.map((l, i) => (
-            <div className="ln" key={i}><div className="t"><b>{productById(l.id).name}</b><small>{duration(l.plan)}</small></div><span className="num">{money(l.price)}</span></div>
-          ))}
-        </div>
-      </form>
-      <div className="s-f">
-        <div className="total"><small>قابل پرداخت</small><div><b className="num">{money(total)}</b> <small>تومان</small></div></div>
-        <button className="btn btn-paper btn-block" onClick={pay}>پرداخت <span className="num">{money(total)}</span> تومان</button>
-        <small className="muted" style={{ textAlign: "center", fontSize: 11 }}>درگاه پرداخت هنوز وصل نشده و این مرحله شبیه‌سازی است.</small>
-      </div>
-    </>
-  );
-}
-
-function DoneView() {
-  const { orderCode, close } = useStore();
-  return (
-    <>
-      <div className="s-h"><span /><button className="x" onClick={close} aria-label="بستن"><Icon id="x" /></button></div>
-      <div className="steps"><i className="on" /><i className="on" /><i className="on" /></div>
-      <div className="s-b">
-        <div className="done"><Dots size={12} /><h3>پاست در راه است.</h3><p>حدود ده دقیقه دیگر فعال می‌شود.</p><span className="code">{orderCode}</span></div>
-      </div>
-      <div className="s-f"><a className="btn btn-ghost btn-block" href="#shield" onClick={close}>پیگیری سفارش</a></div>
     </>
   );
 }
@@ -187,8 +127,6 @@ export function Sheet() {
       <aside className={`sheet ${view ? "on" : ""}`} role="dialog" aria-modal="true" aria-hidden={!view}>
         {view === "product" && <ProductView />}
         {view === "cart" && <CartView />}
-        {view === "checkout" && <CheckoutView />}
-        {view === "done" && <DoneView />}
       </aside>
     </>
   );

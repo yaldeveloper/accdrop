@@ -3,14 +3,15 @@
 import type React from "react";
 
 import { useEffect, useState } from "react";
-import { CATEGORIES, CURRENT_DROP, DELIVERY, PRODUCTS, minPrice, planKeys, productById, type Category } from "@/lib/catalog";
+import { CATEGORIES, CURRENT_DROP, DELIVERY, PRODUCTS, minPrice, productById, type Category, type Product } from "@/lib/catalog";
 import { duration, fa, money, pad2 } from "@/lib/format";
-import { Dots, Eyebrow, Glyph, Icon, Wordmark } from "./brand";
+import { BrandLogo, Dots, Eyebrow, Glyph, Icon, Wordmark } from "./brand";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { productHref } from "@/lib/content";
-import { AccessPass, splitName } from "./pass";
+import { splitName } from "./pass";
 import { useStore } from "./store";
+import { useAccount } from "./account";
 
 /** Fades sections in on scroll. */
 export function useReveal() {
@@ -26,6 +27,7 @@ export function useReveal() {
 
 export function Header() {
   const { cart, openSearch, setView } = useStore();
+  const { user } = useAccount();
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
     const on = () => setScrolled(scrollY > 20);
@@ -38,12 +40,12 @@ export function Header() {
       <div className="wrap">
         <a href="/" aria-label="اک‌دراپ، صفحه اصلی"><Wordmark /></a>
         <nav aria-label="منوی اصلی">
-          <a href="/#collection">مجموعه</a><a href="/#drop">دراپ</a><a href="/#shield">شیلد</a><a href="/#club">کلاب</a><a href="/#concierge">پشتیبانی</a>
+          <Link href="/#collection">همه ابزارها</Link><Link href="/#drop">دراپ هفته</Link><Link href="/guarantee">ضمانت</Link><Link href="/reseller">نمایندگی فروش</Link><Link href="/contact">پشتیبانی</Link>
         </nav>
         <div className="sp" />
         <div className="tools">
           <button onClick={openSearch} aria-label="جست‌وجو"><Icon id="search" /><span className="tx">جست‌وجو</span></button>
-          <a href="/#shield" aria-label="پیگیری سفارش"><Icon id="user" /><span className="tx">سفارش‌ها</span></a>
+          <Link href={user ? "/account" : "/login"} aria-label={user ? "داشبورد" : "ورود"}><Icon id="user" /><span className="tx">{user ? (user.name.split(" ")[0] || "حساب من") : "ورود / ثبت‌نام"}</span></Link>
           <button onClick={() => setView("cart")} aria-label="سبد خرید"><Icon id="bag" /><span className="num">({fa(cart.length)})</span></button>
         </div>
       </div>
@@ -51,31 +53,84 @@ export function Header() {
   );
 }
 
+/** One product card: brand mark, name, what it is for, starting price. */
+export function ToolCard({ p }: { p: Product }) {
+  const isDrop = CURRENT_DROP.productId === p.id;
+  const [tool, tier] = splitName(p.name);
+  return (
+    <Link className="tile" href={productHref(p)}>
+      <span className="tile-top">
+        <span className="tile-logo"><BrandLogo id={p.id} size={26} /></span>
+        {isDrop && <span className="tile-drop">{fa(Math.round((1 - CURRENT_DROP.price / CURRENT_DROP.was) * 100))}٪ تخفیف</span>}
+      </span>
+      <b className="en tile-tool">{tool}{tier && <small> {tier}</small>}</b>
+      <span className="tile-use">{p.use}</span>
+      <span className="tile-foot">
+        <span>از <b className="num">{money(isDrop ? CURRENT_DROP.price : minPrice(p))}</b> تومان</span>
+        <Icon id="arrow" className="arrow" style={{ width: 16, height: 16 }} />
+      </span>
+    </Link>
+  );
+}
+
 const FEATURED = ["chatgpt", "claude", "cursor", "adobe", "canva", "notion"];
+/** Inner ring first, then outer ring; also the auto-cycle order. */
+const INNER = ["chatgpt", "claude", "gemini", "perplexity", "grok"];
+const OUTER = ["cursor", "copilot", "adobe", "canva", "capcut", "kling", "notion"];
+const ORBIT = [...INNER, ...OUTER];
+
+const fromPrice = (p: Product) => (CURRENT_DROP.productId === p.id ? Math.min(CURRENT_DROP.price, minPrice(p)) : minPrice(p));
+
+/** Every tool on two slow, counter-rotating rings; the selected one sits in the centre. */
+function Orbit({ active, onPick, onHover }: { active: string; onPick: (id: string) => void; onHover: (v: boolean) => void }) {
+  const p = productById(active);
+  const [tool, tier] = splitName(p.name);
+  const ring = (ids: string[], cls: string) => (
+    <div className={`orb-ring ${cls}`}>
+      {ids.map((id, i) => (
+        <button key={id} className={`orb-i ${id === active ? "on" : ""}`} style={{ "--a": `${(360 / ids.length) * i}deg` } as React.CSSProperties}
+          onClick={() => onPick(id)} aria-label={productById(id).name} aria-pressed={id === active}>
+          <span><BrandLogo id={id} size={cls === "in" ? 24 : 22} /></span>
+        </button>
+      ))}
+    </div>
+  );
+  return (
+    <div className="orbit" onMouseEnter={() => onHover(true)} onMouseLeave={() => onHover(false)}>
+      <div className="orb-glow" aria-hidden />
+      {ring(OUTER, "out")}
+      {ring(INNER, "in")}
+      <Link className="orb-core" href={productHref(p)} key={active}>
+        <span className="orb-logo"><BrandLogo id={p.id} size={34} /></span>
+        <b className="en">{tool}{tier && <i> {tier}</i>}</b>
+        <small>از <span className="num">{money(fromPrice(p))}</span> تومان</small>
+      </Link>
+      <span className="orb-count"><b>{fa(PRODUCTS.length)}</b> ابزار، یک فروشگاه</span>
+    </div>
+  );
+}
 
 export function Hero() {
-  const router = useRouter();
   const [active, setActive] = useState(FEATURED[0]);
   const [paused, setPaused] = useState(false);
   useEffect(() => {
     if (paused) return;
-    const t = setInterval(() => setActive((a) => FEATURED[(FEATURED.indexOf(a) + 1) % FEATURED.length]), 3200);
+    const t = setInterval(() => setActive((a) => ORBIT[(ORBIT.indexOf(a) + 1) % ORBIT.length]), 3000);
     return () => clearInterval(t);
   }, [paused]);
-  const order = [...FEATURED.slice(FEATURED.indexOf(active)), ...FEATURED.slice(0, FEATURED.indexOf(active))];
   const p = productById(active);
 
   return (
     <section className="hero2">
       <div className="wrap hero2-g">
         <div>
-          <Eyebrow>AI &amp; Pro Tools</Eyebrow>
-          <h1>اشتراک ابزارهای حرفه‌ای،<br /><b>به ساده‌ترین شکل.</b></h1>
-          <p className="lead">هوش مصنوعی، طراحی، کدنویسی و کار روزمره. با تومان بخر؛ چند دقیقه بعد روی ایمیل خودت فعال است.</p>
+          <Eyebrow>هوش مصنوعی و ابزارهای حرفه‌ای</Eyebrow>
+          <h1><span>اشتراک ابزارهای حرفه‌ای،</span> <b>به ساده‌ترین شکل.</b></h1>
+          <p className="lead">ChatGPT، Claude، Canva، Adobe و ابزارهای دیگر را با کارت بانکی بخر. حدود ۱۰ دقیقه بعد روی ایمیل خودت فعال است؛ اگر فعال نشد، پولت برمی‌گردد.</p>
           <div className="pick" role="group" aria-label="انتخاب ابزار" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
             {FEATURED.map((id) => (
               <button key={id} className={`en ${id === active ? "on" : ""}`} onClick={() => { setActive(id); setPaused(true); }}>
-                {splitName(productById(id).name)[0]}
+                <BrandLogo id={id} size={16} />{id === "adobe" ? "Adobe" : splitName(productById(id).name)[0]}
               </button>
             ))}
             <a href="/#collection" className="more">همه ابزارها</a>
@@ -84,28 +139,17 @@ export function Hero() {
             <Link className="btn btn-paper" href={productHref(p)}>
               دریافت <span className="en">{p.name}</span> <Icon id="arrow" className="arrow" />
             </Link>
-            <span className="muted">از <b className="num" style={{ color: "var(--paper)", fontWeight: 500 }}>{money(minPrice(p))}</b> تومان</span>
+            <span className="muted">از <b className="num" style={{ color: "var(--paper)", fontWeight: 500 }}>{money(fromPrice(p))}</b> تومان</span>
           </div>
         </div>
-        <div className="deck" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
-          {order.slice(0, 3).reverse().map((id, i, arr) => {
-            const depth = arr.length - 1 - i;
-            const prod = productById(id);
-            return (
-              <button key={id} className="deck-card" style={{ "--z": depth } as React.CSSProperties}
-                onClick={() => (depth === 0 ? router.push(productHref(prod)) : setActive(id))} aria-label={prod.name}>
-                <AccessPass product={prod} months={planKeys(prod)[0]} price={depth === 0 ? minPrice(prod) : undefined} />
-              </button>
-            );
-          })}
-        </div>
+        <Orbit active={active} onPick={(id) => { setActive(id); setPaused(true); }} onHover={setPaused} />
       </div>
       <div className="wrap">
         <ul className="assure-row">
-          <li><Dots size={3} />فعال‌سازی در حدود ۱۱ دقیقه</li>
-          <li><Dots size={3} />فقط ایمیل؛ هرگز رمز عبور</li>
-          <li><Dots size={3} />گارانتی تا روز آخر</li>
-          <li><Dots size={3} />پشتیبانی انسانی</li>
+          <li><Dots size={3} />تحویل حدود ۱۰ دقیقه</li>
+          <li><Dots size={3} />فقط ایمیل، هرگز رمز عبور</li>
+          <li><Dots size={3} /><Link href="/guarantee">ضمانت بازگشت وجه</Link></li>
+          <li><Dots size={3} />پشتیبانی فارسی، هر روز ۹ تا ۲۴</li>
         </ul>
       </div>
     </section>
@@ -139,7 +183,7 @@ export function Collection() {
       <div className="wrap">
         <div className="head reveal">
           <div>
-            <Eyebrow dotColor="var(--ink)">All Passes</Eyebrow>
+            <Eyebrow dotColor="var(--ink)">همه ابزارها</Eyebrow>
             <h2>به چه چیزی<br /><b>نیاز داری؟</b></h2>
           </div>
           <p className="muted">کاتالوگ کوچک، فقط ابزارهایی که حرفه‌ای‌ها هر روز استفاده می‌کنند.</p>
@@ -150,21 +194,7 @@ export function Collection() {
           ))}
         </div>
         <div className="tiles">
-          {list.map((p) => {
-            const isDrop = CURRENT_DROP.productId === p.id;
-            const [tool, tier] = splitName(p.name);
-            return (
-              <Link className="tile" key={p.id} href={productHref(p)}>
-                <span className="en tile-maker">{p.maker}{isDrop && <span className="tile-drop">DROP</span>}</span>
-                <b className="en tile-tool">{tool}{tier && <small> {tier}</small>}</b>
-                <span className="tile-use">{p.use}</span>
-                <span className="tile-foot">
-                  <span>{isDrop && <s className="num">{money(CURRENT_DROP.was)}</s>}از <b className="num">{money(isDrop ? CURRENT_DROP.price : minPrice(p))}</b> تومان</span>
-                  <Icon id="arrow" className="arrow" style={{ width: 16, height: 16 }} />
-                </span>
-              </Link>
-            );
-          })}
+          {list.map((p) => <ToolCard key={p.id} p={p} />)}
         </div>
         <div className="foot-note"><span>قیمت‌ها نهایی‌اند.</span><span>داده نمونه</span></div>
       </div>
@@ -189,7 +219,7 @@ function useCountdownToMidnight() {
 }
 
 export function DropSection() {
-  const { openProduct, notify } = useStore();
+  const { notify } = useStore();
   const d = CURRENT_DROP, p = productById(d.productId);
   const left = useCountdownToMidnight();
   return (
@@ -197,24 +227,24 @@ export function DropSection() {
       <div className="wrap">
         <div className="drop-g">
           <div className="reveal">
-            <Eyebrow>AccDrop Deals</Eyebrow>
+            <Eyebrow>دراپ هفته</Eyebrow>
             <div className="drop-no" style={{ marginTop: 28 }}>№{String(d.number).padStart(2, "0")}<sup>DROP</sup></div>
             <p className="muted" style={{ marginTop: 28, maxWidth: 420, fontWeight: 300, fontSize: 18 }}>پاس‌های محدود، با قیمت ویژه.<br />وقتی تمام شود، تمام شده.</p>
           </div>
           <div className="drop-card reveal">
-            <span className="tag">LIMITED</span>
+            <span className="tag">ظرفیت محدود</span>
             <h3>{p.name}</h3>
             <div className="sub">{duration(d.plan)} · {DELIVERY[d.type].title}</div>
             <div className="price">
-              <b className="num">{money(d.price)}</b><s className="num">{money(d.was)}</s>
-              <span className="num">−{fa(Math.round((1 - d.price / d.was) * 100))}٪</span>
+              <b className="num">{money(d.price)}</b><small>تومان</small><s className="num">{money(d.was)}</s>
+              <span className="num">{fa(Math.round((1 - d.price / d.was) * 100))}٪ تخفیف</span>
             </div>
             <div className="clock">
               {(["ساعت", "دقیقه", "ثانیه"] as const).map((u, i) => <div key={u}><b className="num">{left ? pad2(left[i]) : "--"}</b><span>{u}</span></div>)}
             </div>
-            <div className="stock"><span>{fa(d.left)} از {fa(d.of)} باقی‌مانده</span><span>{fa(Math.round((d.left / d.of) * 100))}٪</span></div>
+            <div className="stock"><span>فقط <b>{fa(d.left)}</b> پاس از {fa(d.of)} باقی مانده</span><span>تا پایان امشب</span></div>
             <div className="meter"><i style={{ width: `${(d.left / d.of) * 100}%` }} /></div>
-            <button className="btn btn-paper btn-block" onClick={() => openProduct(p.id)}>بگیرش <Icon id="arrow" className="arrow" /></button>
+            <Link className="btn btn-paper btn-block" href={productHref(p)}>بگیرش <Icon id="arrow" className="arrow" /></Link>
           </div>
         </div>
         <div className="next reveal">
@@ -234,6 +264,8 @@ export function DropSection() {
 
 export function Shield() {
   const [tracked, setTracked] = useState<string | null>(null);
+  const router = useRouter();
+  const { orderByCode } = useAccount();
   const promises: [string, string][] = [
     ["قطع شد؟ جایگزین می‌کنیم.", "تا روز آخر اشتراک. اگر نشد، پول روزهای باقی‌مانده برمی‌گردد."],
     ["فقط ایمیل، نه رمز.", "اشتراک روی اکانت خودت فعال می‌شود."],
@@ -243,14 +275,14 @@ export function Shield() {
     <section className="light" id="shield">
       <div className="wrap shield-g">
         <div className="reveal">
-          <Eyebrow dotColor="var(--ink)">AccDrop Shield</Eyebrow>
+          <Eyebrow dotColor="var(--ink)">ضمانت اک‌دراپ</Eyebrow>
           <p className="big-quote" style={{ marginTop: 28 }}>پاس تو،<br /><b>تا روز آخر بیمه است.</b></p>
-          <form className="track" onSubmit={(e) => { e.preventDefault(); const v = new FormData(e.currentTarget).get("code"); setTracked(String(v || "AD-48213").toUpperCase()); }}>
+          <p className="muted" style={{ marginTop: 18, fontSize: 14 }}>فعال نشد؟ کل مبلغ برمی‌گردد. قطع شد؟ جایگزین می‌کنیم. <Link className="link" href="/guarantee">شرایط کامل ضمانت</Link></p>
+          <form className="track" onSubmit={(e) => { e.preventDefault(); const v = String(new FormData(e.currentTarget).get("code") || "").trim().toUpperCase(); if (v && orderByCode(v)) { router.push(`/orders/${v}`); return; } setTracked(v || "AD-48213"); }}>
             <input name="code" placeholder="AD-48213" aria-label="کد سفارش" />
             <button>پیگیری <Icon id="arrow" className="arrow" style={{ width: 14, height: 14, verticalAlign: -2 }} /></button>
           </form>
-          {/* Sample status; wire to the orders API. */}
-          <div className={`status ${tracked ? "on" : ""}`}><span className="pulse" /><span>سفارش <b className="en">{tracked}</b> در حال فعال‌سازی است · حدود ۸ دقیقه</span></div>
+          <div className={`status ${tracked ? "on" : ""}`}><span className="pulse" /><span>سفارش <b className="en">{tracked}</b> در این مرورگر پیدا نشد. <Link className="link" href="/login?next=/account/orders">وارد حسابت شو</Link></span></div>
         </div>
         <ol className="promises reveal">
           {promises.map(([h, p], i) => (
@@ -281,7 +313,7 @@ export function Club() {
           </div>
         </div>
         <div className="reveal">
-          <Eyebrow>AccDrop Club</Eyebrow>
+          <Eyebrow>باشگاه مشتریان</Eyebrow>
           <div className="head" style={{ gridTemplateColumns: "1fr", margin: "22px 0 48px", gap: 16 }}>
             <h2 style={{ margin: 0 }}>بیشتر بخر،<br /><b>کمتر بپرداز.</b></h2>
             <p className="muted" style={{ justifySelf: "start" }}>هر خرید امتیاز دارد. عضویت رایگان و خودکار است.</p>
@@ -313,7 +345,7 @@ export function Concierge() {
     <section id="concierge">
       <div className="wrap faq-g">
         <div className="reveal">
-          <Eyebrow>Concierge</Eyebrow>
+          <Eyebrow>پشتیبانی</Eyebrow>
           <h2 style={{ fontWeight: 300, fontSize: "clamp(32px,4vw,56px)", lineHeight: 1.2, letterSpacing: "-.025em", marginTop: 22 }}>
             سؤال داری؟<br /><b style={{ fontWeight: 600 }}>یک آدم جواب می‌دهد.</b>
           </h2>
@@ -337,10 +369,10 @@ export function Footer() {
     <footer>
       <div className="wrap">
         <div className="fg">
-          <div><h5>PASSES</h5><ul className="f-products">{PRODUCTS.map((p) => <li key={p.id}><Link href={productHref(p)} className="en">{p.name}</Link></li>)}</ul></div>
-          <div><h5>ACCDROP</h5><ul><li><a href="/#drop">دراپ‌ها</a></li><li><a href="/#club">کلاب</a></li><li><a href="/#shield">شیلد</a></li></ul></div>
-          <div><h5>SUPPORT</h5><ul><li><a href="/#shield">پیگیری سفارش</a></li><li><a href="#">شرایط گارانتی</a></li><li><a href="/#concierge">سؤالات پرتکرار</a></li></ul></div>
-          <div><h5>CONTACT</h5><ul><li><a href="#">تلگرام</a></li><li><a href="#">اینستاگرام</a></li><li><a href="#" className="en">hello@accdrop.ir</a></li></ul></div>
+          <div><h5 className="fa">ابزارها</h5><ul className="f-products">{PRODUCTS.map((p) => <li key={p.id}><Link href={productHref(p)} className="en">{p.name}</Link></li>)}</ul></div>
+          <div><h5 className="fa">اک‌دراپ</h5><ul><li><Link href="/#drop">دراپ هفته</Link></li><li><Link href="/#club">باشگاه مشتریان</Link></li><li><Link href="/reseller">نمایندگی فروش</Link></li></ul></div>
+          <div><h5 className="fa">راهنما</h5><ul><li><Link href="/account/orders">پیگیری سفارش</Link></li><li><Link href="/guarantee">شرایط ضمانت و بازگشت وجه</Link></li><li><Link href="/terms">قوانین و مقررات</Link></li><li><Link href="/#concierge">سؤالات پرتکرار</Link></li></ul></div>
+          <div><h5 className="fa">تماس</h5><ul><li><Link href="/contact">پشتیبانی، هر روز ۹ تا ۲۴</Link></li><li><a href="#">تلگرام</a></li><li><a href="#">اینستاگرام</a></li><li><a href="mailto:hello@accdrop.ir" className="en">hello@accdrop.ir</a></li></ul></div>
         </div>
         <Wordmark className="f-wm" />
         <div className="legal"><span>© ۱۴۰۵ اک‌دراپ · دسترسی ممتاز به ابزارهای هوشمند</span><span className="en">accdrop.ir</span></div>
@@ -351,11 +383,12 @@ export function Footer() {
 
 export function MobileBar() {
   const { cart, openSearch, setView } = useStore();
+  const { user } = useAccount();
   return (
     <nav className="mbar" aria-label="ناوبری موبایل">
       <a href="/#collection"><Icon id="grid" />مجموعه</a>
       <button onClick={openSearch}><Icon id="search" />جست‌وجو</button>
-      <a href="/#shield"><Icon id="box" />سفارش‌ها</a>
+      <Link href={user ? "/account" : "/login"}><Icon id="user" />{user ? "حساب من" : "ورود"}</Link>
       <button onClick={() => setView("cart")}><Icon id="bag" /><span>سبد <span className="num">({fa(cart.length)})</span></span></button>
     </nav>
   );

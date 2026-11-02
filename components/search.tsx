@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { productHref } from "@/lib/content";
 import { minPrice, PRODUCTS } from "@/lib/catalog";
 import { money } from "@/lib/format";
-import { Icon } from "./brand";
+import { BrandLogo, Icon } from "./brand";
 import { useStore } from "./store";
 
 function Results({ query }: { query: string }) {
@@ -14,12 +14,12 @@ function Results({ query }: { query: string }) {
   const q = query.trim().toLowerCase();
   const found = PRODUCTS.filter((p) => !q || `${p.name} ${p.maker} ${p.id} ${p.description}`.toLowerCase().includes(q));
   if (!found.length)
-    return <div className="none">در مجموعه ما نیست. <a className="link" href="#concierge">درخواستش را بده</a></div>;
+    return <div className="none">در مجموعه ما نیست. <a className="link" href="/#support">درخواستش را بده</a></div>;
   return (
     <>
       {found.slice(0, 6).map((p, i) => (
         <Link key={p.id} className={i ? "" : "act"} href={productHref(p)} onClick={close}>
-          <span className="mono">{p.monogram}</span>
+          <span className="mono"><BrandLogo id={p.id} size={22} /></span>
           <span><b className="en" style={{ display: "block", fontWeight: 400 }}>{p.name}</b><small className="muted">{p.description}</small></span>
           <span className="p num">از {money(minPrice(p))}</span>
         </Link>

@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import type { Product } from "@/lib/catalog";
 import { duration, fa, money } from "@/lib/format";
-import { Dots, Wordmark } from "./brand";
+import { BrandLogo, Dots, Wordmark } from "./brand";
 
 /** "ChatGPT Plus" -> ["ChatGPT", "Plus"] so the tool name can be set large and the tier small. */
 export function splitName(name: string): [string, string] {
@@ -26,7 +26,7 @@ export function AccessPass({ product, months, price, style, className = "" }: {
         <span className="en pass-k">ACCESS PASS</span>
       </div>
       <div className="pass-mid">
-        <span className="en pass-maker">{product.maker}</span>
+        <span className="pass-brand"><BrandLogo id={product.id} size={30} /><span className="en pass-maker">{product.maker}</span></span>
         <b className="en pass-tool">{tool}</b>
         {tier && <span className="en pass-tier">{tier}</span>}
         <p className="pass-use">{product.use}</p>

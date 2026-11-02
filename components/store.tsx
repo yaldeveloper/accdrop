@@ -20,6 +20,7 @@ type Store = {
   /** Add an explicit selection (used by product pages). */
   addLine: (sel: Selection) => void;
   removeLine: (i: number) => void;
+  clearCart: () => void;
   setView: (v: SheetView) => void;
   completeOrder: () => void;
   openSearch: () => void;
@@ -92,6 +93,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     addSelection: () => { if (selection) persist([...cart, { ...selection, price: priceOf(selection).price }]); },
     addLine: (sel) => persist([...cart, { ...sel, price: priceOf(sel).price }]),
     removeLine: (i) => persist(cart.filter((_, j) => j !== i)),
+    clearCart: () => persist([]),
     setView: (v) => setViewState(v),
     completeOrder: () => {
       // Placeholder for the payment gateway (e.g. Zarinpal) redirect + server-side order creation.

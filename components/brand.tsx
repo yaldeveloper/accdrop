@@ -1,4 +1,5 @@
 import { BRAND_SPRITE } from "@/lib/sprite";
+import { LOGOS } from "@/lib/logos";
 import type { CSSProperties } from "react";
 
 /** Inline SVG symbols for the logo (#wm = Persian wordmark, #ig = «پ» glyph) and UI icons. Render once in the layout. */
@@ -14,6 +15,11 @@ export function Sprites() {
         <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M19 12H5m6-6-6 6 6 6" /></symbol>
         <symbol id="i-back" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6" /></symbol>
         <symbol id="i-grid" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" /></symbol>
+        <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></symbol>
+        <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.5 3 8.5 7 10 4-1.5 7-5.5 7-10V6l-7-3Z" /><path d="m9 12 2 2 4-4" /></symbol>
+        <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4.5 4.5L19 7" /></symbol>
+        <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></symbol>
+        <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4V5Z" /></symbol>
         <symbol id="i-box" viewBox="0 0 24 24"><path d="M21 8 12 3 3 8v8l9 5 9-5V8Z" /><path d="m3 8 9 5 9-5M12 13v8" /></symbol>
       </svg>
     </>
@@ -42,7 +48,19 @@ export function Eyebrow({ children, dotColor, start = true }: { children: string
   return (
     <div className="eyebrow" style={start ? { justifyContent: "flex-start", direction: "rtl" } : undefined}>
       <Dots color={dotColor} />
-      <span className="en">{children}</span>
+      <span className={/[\u0600-\u06FF]/.test(children) ? "fa" : "en"}>{children}</span>
     </div>
+  );
+}
+
+/** Official mark of a tool we sell, single-colour (inherits currentColor). */
+export function BrandLogo({ id, size = 24, className = "", label }: { id: string; size?: number; className?: string; label?: string }) {
+  const d = LOGOS[id];
+  if (!d) return null;
+  return (
+    <svg className={`blogo ${className}`} width={size} height={size} viewBox="0 0 24 24" fill="currentColor" fillRule="evenodd"
+      role={label ? "img" : undefined} aria-label={label} aria-hidden={label ? undefined : true}>
+      <path d={d} />
+    </svg>
   );
 }
