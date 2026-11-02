@@ -11,6 +11,7 @@ const NAV = [
   ["/account", "پاس‌های من"],
   ["/account/orders", "سفارش‌ها"],
   ["/account/club", "کلاب"],
+  ["/account/reseller", "نمایندگی"],
   ["/account/profile", "حساب کاربری"],
 ] as const;
 

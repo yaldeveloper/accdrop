@@ -60,3 +60,18 @@ export const normalizeMobile = (m: string) => {
   return d.startsWith("98") ? `0${d.slice(2)}` : d.startsWith("9") ? `0${d}` : d;
 };
 export const validEmail = (e: string) => /^\S+@\S+\.\S+$/.test(e.trim());
+
+// ----- Reseller program (sample terms; confirm the real percentages before launch) -----
+export type ResellerApp = {
+  mobile: string; business: string; kind: string; link: string; volume: string; note: string;
+  createdAt: number; status: "pending" | "approved";
+};
+
+export const RESELLER_TIERS = [
+  { key: "bronze", title: "برنزی", rate: 0.08, need: "از اولین فروش" },
+  { key: "silver", title: "نقره‌ای", rate: 0.12, need: "فروش ماهانه بالای ۲۰ میلیون تومان" },
+  { key: "gold", title: "طلایی", rate: 0.16, need: "فروش ماهانه بالای ۸۰ میلیون تومان" },
+] as const;
+
+export const RESELLER_KINDS = ["کانال تلگرام یا پیج اینستاگرام", "فروشگاه اینترنتی", "فروشگاه حضوری یا کافی‌نت", "فریلنسر یا آژانس", "سایر"];
+export const RESELLER_VOLUMES = ["کمتر از ۱۰ سفارش در ماه", "۱۰ تا ۵۰ سفارش در ماه", "بیشتر از ۵۰ سفارش در ماه"];

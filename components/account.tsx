@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { DISCOUNTS, newOrderCode, normalizeMobile, type Order, type OrderLine, type User } from "@/lib/account";
+import { DISCOUNTS, newOrderCode, normalizeMobile, type Order, type OrderLine, type ResellerApp, type User } from "@/lib/account";
 
 type Account = {
   ready: boolean;
@@ -16,10 +16,14 @@ type Account = {
   logout: () => void;
   placeOrder: (lines: OrderLine[], discountCode: string) => Order;
   orderByCode: (code: string) => Order | undefined;
+  reseller: ResellerApp | null;
+  applyReseller: (a: Omit<ResellerApp, "mobile" | "createdAt" | "status">) => void;
+  /** Demo only: lets the owner preview the reseller panel without a review step. */
+  approveResellerDemo: () => void;
 };
 
 const Ctx = createContext<Account | null>(null);
-const K_USERS = "accdrop-users", K_SESSION = "accdrop-session", K_ORDERS = "accdrop-orders";
+const K_USERS = "accdrop-users", K_SESSION = "accdrop-session", K_ORDERS = "accdrop-orders", K_RESELLERS = "accdrop-resellers";
 
 const read = <T,>(k: string, d: T): T => { try { return JSON.parse(localStorage.getItem(k) || "") as T; } catch { return d; } };
 const write = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* ignore */ } };
@@ -29,12 +33,14 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [now, setNow] = useState(() => Date.now());
+  const [resellers, setResellers] = useState<Record<string, ResellerApp>>({});
 
   useEffect(() => {
     const users = read<Record<string, User>>(K_USERS, {});
     const session = read<string | null>(K_SESSION, null);
     setUser(session ? users[session] ?? null : null);
     setAllOrders(read<Order[]>(K_ORDERS, []));
+    setResellers(read<Record<string, ResellerApp>>(K_RESELLERS, {}));
     setReady(true);
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
@@ -79,9 +85,20 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         return o;
       },
       orderByCode: (code) => allOrders.find((o) => o.code === code),
+      reseller: user ? resellers[user.mobile] ?? null : null,
+      applyReseller: (a) => {
+        if (!user) return;
+        const next = { ...resellers, [user.mobile]: { ...a, mobile: user.mobile, createdAt: Date.now(), status: "pending" as const } };
+        write(K_RESELLERS, next); setResellers(next);
+      },
+      approveResellerDemo: () => {
+        if (!user || !resellers[user.mobile]) return;
+        const next = { ...resellers, [user.mobile]: { ...resellers[user.mobile], status: "approved" as const } };
+        write(K_RESELLERS, next); setResellers(next);
+      },
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, user, allOrders, now, requestOtp, verifyOtp]);
+  }, [ready, user, allOrders, resellers, now, requestOtp, verifyOtp]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

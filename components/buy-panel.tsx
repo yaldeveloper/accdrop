@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { CURRENT_DROP, DELIVERY, deliveryTypes, planKeys, priceOf, type DeliveryType, type Months, type Product, type Selection } from "@/lib/catalog";
-import { duration, fa, money } from "@/lib/format";
-import { Dots, Icon } from "./brand";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
-import { AccessPass } from "./pass";
+import { CURRENT_DROP, DELIVERY, deliveryTypes, planKeys, priceOf, type DeliveryType, type Months, type Product, type Selection } from "@/lib/catalog";
+import { clubPoints, duration, fa, money } from "@/lib/format";
+import { Icon } from "./brand";
 import { useStore } from "./store";
 
 function initial(p: Product): Selection {
@@ -16,11 +15,8 @@ function initial(p: Product): Selection {
 
 const lowest = (p: Product, m: Months) => Math.min(...(Object.values(p.plans[m] ?? {}) as number[]));
 
-/**
- * Product page top: heading (passed in from the server page), two choices, one button.
- * The Access Pass on the side mirrors the choice live.
- */
-export function BuyPanel({ product: p, children }: { product: Product; children: ReactNode }) {
+/** The purchase card on a product page: duration, delivery method, price, one main button. */
+export function BuyPanel({ product: p }: { product: Product }) {
   const { addLine, notify } = useStore();
   const router = useRouter();
   const [sel, setSel] = useState<Selection>(() => initial(p));
@@ -30,18 +26,13 @@ export function BuyPanel({ product: p, children }: { product: Product; children:
   const perMonth = months.map((m) => lowest(p, m) / Number(m));
   const { price, was } = priceOf(sel);
 
-  const choose = (patch: Partial<Selection>) => setSel((s) => {
-    const next = { ...s, ...patch };
-    const o = p.plans[next.plan] ?? {};
-    if (!o[next.type]) next.type = Object.keys(o)[0] as DeliveryType;
-    return next;
-  });
   // Renewal links from the dashboard carry ?plan=&type=.
   useEffect(() => {
     const q = new URLSearchParams(location.search);
     const plan = q.get("plan") as Months | null, type = q.get("type") as DeliveryType | null;
-    if (plan && p.plans[plan] && type && p.plans[plan]?.[type]) setSel({ id: p.id, plan, type });
+    if (plan && type && p.plans[plan]?.[type]) setSel({ id: p.id, plan, type });
   }, [p]);
+
   const cta = useRef<HTMLButtonElement>(null);
   const [ctaVisible, setCtaVisible] = useState(true);
   useEffect(() => {
@@ -51,67 +42,73 @@ export function BuyPanel({ product: p, children }: { product: Product; children:
     io.observe(el);
     return () => io.disconnect();
   }, []);
+
+  const choose = (patch: Partial<Selection>) => setSel((s) => {
+    const next = { ...s, ...patch };
+    const o = p.plans[next.plan] ?? {};
+    if (!o[next.type]) next.type = Object.keys(o)[0] as DeliveryType;
+    return next;
+  });
   const buy = () => { addLine(sel); router.push("/checkout"); };
   const add = () => { addLine(sel); notify(`${p.name} به سبد اضافه شد`); };
 
   return (
-    <div className="pdp-g">
-      <div className="pdp-main">
-        {children}
-        <div className="buy-box">
-          <div className="grp">
-            <h4>{types.length > 1 && <span className="en step">1</span>}مدت اشتراک</h4>
-            <div className="opts h" style={{ "--n": months.length } as CSSProperties}>
-              {months.map((m, i) => {
-                const save = i > 0 ? Math.round((1 - perMonth[i] / perMonth[0]) * 100) : 0;
-                return (
-                  <button key={m} className={`opt ${m === sel.plan ? "on" : ""}`} onClick={() => choose({ plan: m })} aria-pressed={m === sel.plan}>
-                    {save > 0 && <span className="sv">{fa(save)}٪ تخفیف</span>}
-                    <b>{duration(m)}</b>
-                    <small className="num">{money(lowest(p, m))}</small>
-                    {Number(m) > 1 && <small className="pm num">ماهی {money(Math.round(perMonth[i] / 1000) * 1000)}</small>}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          {types.length > 1 && (
-            <div className="grp">
-              <h4><span className="en step">2</span>نوع فعال‌سازی</h4>
-              <div className="opts v">
-                {types.map((t) => {
-                  const amount = offers[t];
-                  return (
-                    <button key={t} className={`opt ${t === sel.type ? "on" : ""}`} disabled={!amount} onClick={() => choose({ type: t })} aria-pressed={t === sel.type}>
-                      <b>{DELIVERY[t].title}</b>
-                      <small>{amount ? DELIVERY[t].detail : "برای این مدت موجود نیست"}</small>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-          <div className="buy-pay">
-            <div className="total">
-              <small>قیمت نهایی</small>
-              <div>{was ? <s className="num">{money(was)}</s> : null}<b className="num">{money(price)}</b> <small>تومان</small></div>
-            </div>
-            <button ref={cta} className="btn btn-paper btn-block" onClick={buy}>خرید <Icon id="arrow" className="arrow" /></button>
-            <button className="add-link" onClick={add}>افزودن به سبد و ادامه خرید</button>
-          </div>
-          <ul className="buy-notes">
-            <li><Dots size={3} />فعال در حدود {fa(p.etaMinutes)} دقیقه</li>
-            <li><Dots size={3} />{sel.type === "own" ? "فقط ایمیل، نه رمز" : "ایمیل و رمز پیامک می‌شود"}</li>
-            <li><Dots size={3} />گارانتی تا روز آخر</li>
-          </ul>
+    <div className="bx" id="buy">
+      <h2 className="bx-t">انتخاب اشتراک</h2>
+
+      <fieldset className="bx-g">
+        <legend>مدت اشتراک</legend>
+        <div className="bx-seg" style={{ "--n": months.length } as CSSProperties}>
+          {months.map((m, i) => {
+            const save = i > 0 ? Math.round((1 - perMonth[i] / perMonth[0]) * 100) : 0;
+            const on = m === sel.plan;
+            const t = p.plans[m]?.[sel.type] ? sel.type : (Object.keys(p.plans[m] ?? {})[0] as DeliveryType);
+            const pr = priceOf({ id: p.id, plan: m, type: t }).price;
+            return (
+              <label key={m} className={`bx-s ${on ? "on" : ""}`}>
+                <input type="radio" name="plan" checked={on} onChange={() => choose({ plan: m })} />
+                {save > 0 && <span className="bx-tag">{fa(save)}٪ ارزان‌تر</span>}
+                <b>{duration(m)}</b>
+                <small className="num">{money(pr)}</small>
+              </label>
+            );
+          })}
         </div>
+      </fieldset>
+
+      <fieldset className="bx-g">
+        <legend>روش تحویل {types.length > 1 && <a href="#delivery" className="bx-help">فرقشان چیست؟</a>}</legend>
+        {types.map((t) => {
+          const amount = offers[t];
+          const on = t === sel.type;
+          return (
+            <label key={t} className={`bx-o bx-o2 ${on ? "on" : ""} ${amount ? "" : "dis"}`}>
+              <input type="radio" name="type" checked={on} disabled={!amount} onChange={() => choose({ type: t })} />
+              <span className="bx-r" aria-hidden="true" />
+              <span className="bx-l"><b>{DELIVERY[t].title}</b><small>{amount ? DELIVERY[t].detail : "برای این مدت موجود نیست"}</small></span>
+              {types.length > 1 && amount ? <span className="bx-p num">{money(priceOf({ id: p.id, plan: sel.plan, type: t }).price)}</span> : null}
+            </label>
+          );
+        })}
+      </fieldset>
+
+      <div className="bx-sum">
+        <div className="bx-row"><span>مبلغ قابل پرداخت</span><span>{was ? <s className="num">{money(was)}</s> : null}<b className="num">{money(price)}</b> <small>تومان</small></span></div>
+        <div className="bx-row sub"><span>تحویل</span><span>حدود {fa(p.etaMinutes)} دقیقه بعد از پرداخت</span></div>
+        <div className="bx-row sub"><span>امتیاز کلاب</span><span className="num">{fa(clubPoints(price))} امتیاز</span></div>
       </div>
-      <aside className="pdp-aside" aria-hidden="true">
-        <AccessPass product={p} months={sel.plan} price={price} className="buy-pass" />
-      </aside>
+
+      <button ref={cta} className="btn btn-paper btn-block bx-cta" onClick={buy}>ادامه خرید <Icon id="arrow" className="arrow" /></button>
+      <button className="add-link" onClick={add}>افزودن به سبد خرید</button>
+
+      <ul className="bx-trust">
+        <li><Icon id="lock" />پرداخت از درگاه بانکی رسمی؛ بدون کارت ارزی</li>
+        <li><Icon id="shield" />اگر فعال نشد، کل مبلغ برمی‌گردد</li>
+      </ul>
+
       <div className={`buybar ${ctaVisible ? "" : "on"}`} role="region" aria-label="خرید سریع">
         <div><small>{duration(sel.plan)} • {DELIVERY[sel.type].title}</small><b className="num">{money(price)} <small>تومان</small></b></div>
-        <button className="btn btn-paper" onClick={buy}>خرید</button>
+        <button className="btn btn-paper" onClick={buy}>ادامه خرید</button>
       </div>
     </div>
   );

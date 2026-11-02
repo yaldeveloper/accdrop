@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CATEGORIES, PRODUCTS, deliveryTypes, minPrice, planKeys, type Product } from "@/lib/catalog";
+import { CATEGORIES, DELIVERY, PRODUCTS, deliveryExplain, deliveryTypes, minPrice, planKeys, type Product } from "@/lib/catalog";
 import { CONTENT, contentOf } from "@/lib/content";
 import { fa, money } from "@/lib/format";
-import { BrandLogo, Dots, Eyebrow, Icon } from "@/components/brand";
+import { BrandLogo, Icon } from "@/components/brand";
 import { ToolCard } from "@/components/sections";
 import { BuyPanel } from "@/components/buy-panel";
 import { splitName } from "@/components/pass";
@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!p) return {};
   const c = contentOf(p);
   const title = `خرید اکانت ${p.name} (${c.faName}) | فعال‌سازی روی ایمیل شما`;
-  const description = `خرید اکانت ${p.name} با تحویل فوری و تومان، از ${money(minPrice(p))} تومان. فعال‌سازی روی ایمیل خودت در حدود ${fa(p.etaMinutes)} دقیقه، گارانتی تا روز آخر و پشتیبانی انسانی.`;
+  const description = `خرید اکانت ${p.name} با تحویل فوری و تومان، از ${money(minPrice(p))} تومان. فعال‌سازی روی ایمیل خودت در حدود ${fa(p.etaMinutes)} دقیقه، ضمانت بازگشت وجه و پشتیبانی فارسی.`;
   return {
     title, description,
     alternates: { canonical: `/${c.slug}` },
@@ -33,14 +33,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 function faqFor(p: Product): [string, string][] {
   const own = deliveryTypes(p).includes("own"), ready = deliveryTypes(p).includes("ready");
   return [
-    [`اشتراک ${p.name} چقدر طول می‌کشد تا فعال شود؟`, `معمولاً حدود ${fa(p.etaMinutes)} دقیقه بعد از پرداخت. هر مرحله را در صفحه پیگیری سفارش می‌بینی و پیامکش را می‌گیری.`],
-    ...(own ? [[`آیا ${p.name} روی اکانت خودم فعال می‌شود؟`, "بله. فقط ایمیل اکانتت را می‌خواهیم و اشتراک روی همان فعال می‌شود. تاریخچه‌ات حفظ می‌شود و هرگز رمز عبورت را نمی‌پرسیم."] as [string, string]] : []),
-    ...(ready ? [["«اکانت آماده» چه فرقی دارد؟", "یک اکانت تازه که فقط مال توست. ایمیل و رمزش را تحویل می‌گیری. ارزان‌تر و سریع‌تر است."] as [string, string]] : []),
-    [`اشتراک ${p.name} چطور فعال می‌شود؟`, own
-      ? `مدت را انتخاب کن و با تومان بپرداز. بعد ایمیل اکانت ${p.maker} خودت را وارد می‌کنی و اشتراک روی همان فعال می‌شود.`
-      : "مدت را انتخاب کن و با تومان بپرداز. یک اکانت تازه برایت فعال می‌شود و ایمیل و رمزش را پیامک می‌کنیم."],
-    [`اگر اشتراک ${p.name} وسط دوره قطع شد چه می‌شود؟`, "شیلد اک‌دراپ تا روز آخر پوشش می‌دهد: جایگزین می‌کنیم و اگر ممکن نبود، مبلغ روزهای باقی‌مانده برمی‌گردد."],
-    ["پرداخت چطور است؟", "با کارت بانکی و درگاه امن، به تومان. نیازی به کارت ارزی نیست."],
+    [`بعد از پرداخت، ${p.name} چقدر طول می‌کشد تا فعال شود؟`, `معمولاً حدود ${fa(p.etaMinutes)} دقیقه. وضعیت سفارش را لحظه‌به‌لحظه در حساب کاربری‌ات می‌بینی و وقتی فعال شد پیامک می‌گیری. ساعت کاری فعال‌سازی ۹ صبح تا ۱۲ شب است؛ سفارش‌های بعد از آن صبح روز بعد انجام می‌شوند.`],
+    ...(own ? [[`برای فعال‌سازی روی ایمیل خودم چه چیزی لازم است؟`, `فقط ایمیلی که با آن در ${p.maker} ثبت‌نام کرده‌ای. هیچ‌وقت رمز عبورت را نمی‌خواهیم. اگر هنوز اکانت نداری، اول با همان ایمیل در سایت ${p.maker} ثبت‌نام کن.`] as [string, string]] : []),
+    ...(ready ? [["«اکانت آماده» یعنی چه؟", "یک اکانت تازه که فقط مال توست و با کسی به اشتراک گذاشته نمی‌شود. ایمیل و رمزش را در حساب کاربری و پیامک تحویل می‌گیری و می‌توانی رمز را عوض کنی."] as [string, string]] : []),
+    ["آیا از داخل ایران قابل استفاده است؟", `${p.maker} کاربران ایران را محدود کرده است، پس برای استفاده به اینترنت بدون محدودیت نیاز داری. بعد از خرید، راهنمای قدم‌به‌قدم استفاده را برایت می‌فرستیم.`],
+    ["اگر اشتراک فعال نشد یا وسط دوره قطع شد چه می‌شود؟", "اگر به هر دلیلی فعال نشد، کل مبلغ برمی‌گردد. اگر وسط دوره قطع شد، ظرف ۲۴ ساعت جایگزین می‌کنیم و اگر ممکن نبود، مبلغ روزهای باقی‌مانده را برمی‌گردانیم."],
+    ["پرداخت چطور انجام می‌شود؟", "با هر کارت بانکی عضو شتاب، از درگاه پرداخت رسمی و به تومان. نیازی به کارت ارزی یا حساب خارجی نیست."],
+    ["تمدید چطور است؟", "چند روز قبل از تمام شدن، پیامک یادآوری می‌گیری و از حساب کاربری‌ات با یک کلیک تمدید می‌کنی."],
   ];
 }
 
@@ -78,101 +77,116 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     },
   ];
 
+  const types = deliveryTypes(p);
   return (
-    <main className="pdp">
+    <main className="pdp2">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
-      <section className="pdp-top">
+      <section className="p2-top">
         <div className="wrap">
           <nav className="crumbs" aria-label="مسیر">
-            <Link href="/">اک‌دراپ</Link><span>/</span><Link href="/#tools">{CATEGORIES[p.category]}</Link><span>/</span><span className="en">{p.name}</span>
+            <Link href="/">اک‌دراپ</Link><span>/</span><Link href="/#collection">{CATEGORIES[p.category]}</Link><span>/</span><span className="en">{p.name}</span>
           </nav>
-          <BuyPanel product={p}>
-            <div className="pdp-head">
-              <span className="pdp-brand"><span className="pdp-logo"><BrandLogo id={p.id} size={30} /></span><span className="en">{p.maker}</span></span>
-              <h1><span className="sr">خرید اکانت </span><span className="en pdp-tool">{tool}{tier && <small> {tier}</small>}</span></h1>
-              <p className="pdp-use">{p.use}</p>
-              <ul className="pdp-badges">
-                <li><Dots size={3} />فعال در حدود {fa(p.etaMinutes)} دقیقه</li>
-                <li><Dots size={3} />پرداخت تومانی</li>
-                <li><Dots size={3} />گارانتی تا روز آخر</li>
-                <li><span className="live" />آماده تحویل</li>
+          <div className="p2-g">
+            <div className="p2-info p2-head">
+              <div className="p2-brand"><span className="p2-logo"><BrandLogo id={p.id} size={30} /></span><div><small>اشتراک رسمی</small><b className="en">{p.maker}</b></div></div>
+              <h1><small>خرید اکانت</small><span className="en">{tool}{tier && <i> {tier}</i>}</span></h1>
+              <p className="p2-lead">{c.intro}</p>
+            </div>
+            <BuyPanel product={p} />
+            <div className="p2-info p2-more">
+              <div className="p2-incl">
+                <h2>با این اشتراک</h2>
+                <ul>{p.includes.map((x) => <li key={x}><Icon id="check" />{x}</li>)}</ul>
+              </div>
+              <ul className="p2-facts">
+                <li><Icon id="clock" /><div><b>حدود {fa(p.etaMinutes)} دقیقه</b><small>تحویل بعد از پرداخت</small></div></li>
+                <li><Icon id="shield" /><div><b>ضمانت تا روز آخر</b><small>جایگزینی یا بازگشت وجه</small></div></li>
+                <li><Icon id="chat" /><div><b>پشتیبانی فارسی</b><small>هر روز ۹ تا ۲۴</small></div></li>
               </ul>
             </div>
-          </BuyPanel>
-        </div>
-      </section>
-
-      <section className="light pdp-sec">
-        <div className="wrap pdp-two">
-          <div>
-            <Eyebrow dotColor="var(--ink)">What you get</Eyebrow>
-            <h2 className="pdp-h">با این اشتراک<br /><b>چه می‌گیری؟</b></h2>
-            <p className="pdp-intro">{c.intro}</p>
-          </div>
-          <div>
-            <ul className="pdp-list">{p.includes.map((x, i) => <li key={x}><span className="en k">0{i + 1}</span><span>{x}</span></li>)}</ul>
-            <div className="pdp-for"><small>مناسب برای</small><div>{c.forWho.map((w) => <span key={w}>{w}</span>)}</div></div>
           </div>
         </div>
       </section>
 
-
-      <section className="pdp-sec">
+      <nav className="p2-nav" aria-label="بخش‌های صفحه">
         <div className="wrap">
-          <Eyebrow>Delivery</Eyebrow>
-          <h2 className="pdp-h" style={{ marginBottom: 44 }}>از پرداخت تا استفاده،<br /><b>حدود {fa(p.etaMinutes)} دقیقه.</b></h2>
-          <ol className="flow">
-            <li><span className="en">00:00</span><b>پرداخت تومانی</b><small>با هر کارت شتابی، از درگاه امن.</small></li>
-            <li><span className="en">00:01</span><b>{deliveryTypes(p).includes("own") ? "ثبت ایمیل اکانت" : "ساخت اکانت"}</b><small>{deliveryTypes(p).includes("own") ? `ایمیل اکانت ${p.maker} خودت؛ بدون رمز.` : "یک اکانت تازه فقط برای تو."}</small></li>
-            <li><span className="en">~{String(p.etaMinutes).padStart(2, "0")}:00</span><b>فعال‌سازی</b><small>هر مرحله را در داشبورد زنده می‌بینی.</small></li>
-            <li><span className="en">✓</span><b>شروع استفاده</b><small>پیامک تأیید و یادآوری قبل از تمام شدن.</small></li>
-          </ol>
+          <a href="#delivery">نحوه تحویل</a><a href="#guarantee">ضمانت</a><a href="#compare">چرا اک‌دراپ</a><a href="#faq">سؤالات</a>
         </div>
-      </section>
+      </nav>
 
-      <section className="light pdp-sec">
-        <div className="wrap pdp-two">
-          <div>
-            <Eyebrow dotColor="var(--ink)">Why AccDrop</Eyebrow>
-            <h2 className="pdp-h">خرید مستقیم<br /><b>یا اک‌دراپ؟</b></h2>
-            <p className="pdp-intro">همان اشتراک رسمی {p.maker}؛ بدون دردسر کارت ارزی.</p>
+      <div className="light p2-body">
+        <section className="p2-sec" id="delivery">
+          <div className="wrap p2-two">
+            <div className="p2-h"><h2>تحویل چطور انجام می‌شود؟</h2><p>{types.length > 1 ? "دو روش داریم. هر کدام را که در کادر خرید انتخاب کنی، همان‌طور تحویل می‌گیری." : "ساده و بدون نیاز به رمز عبور."}</p></div>
+            <div className="p2-ways">
+              {types.map((t) => (
+                <div className="p2-way" key={t}>
+                  <h3>{DELIVERY[t].title}{t === "own" && types.length > 1 && <span className="p2-rec">پیشنهاد ما</span>}</h3>
+                  <p>{deliveryExplain(p, t)}</p>
+                  <ol>
+                    <li><b>پرداخت</b><span>مدت را انتخاب کن و با کارت بانکی بپرداز.</span></li>
+                    {t === "own"
+                      ? <li><b>ایمیل اکانت</b><span>ایمیل اکانت <span className="en">{p.maker}</span> خودت را وارد کن. رمز لازم نیست.</span></li>
+                      : <li><b>ساخت اکانت</b><span>یک اکانت تازه فقط برای تو ساخته می‌شود.</span></li>}
+                    <li><b>فعال‌سازی، حدود {fa(p.etaMinutes)} دقیقه</b><span>{t === "own" ? "اشتراک روی همان اکانت فعال می‌شود و پیامک می‌گیری." : "ایمیل و رمز را در حساب کاربری و پیامک می‌بینی."}</span></li>
+                  </ol>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="cmp" role="table" aria-label="مقایسه">
-            <div className="cmp-r cmp-h" role="row"><span role="columnheader" /><span role="columnheader" className="en">{p.maker}</span><span role="columnheader">اک‌دراپ</span></div>
-            {([
-              ["پرداخت", "کارت ارزی بین‌المللی", "کارت بانکی، به تومان"],
-              ["قیمت", "دلاری، با کارمزد و نوسان", "تومانی و نهایی"],
-              ["تحویل", "نیاز به حساب و آدرس خارجی", `حدود ${fa(p.etaMinutes)} دقیقه`],
-              ["گارانتی", "ندارد", "تا روز آخر اشتراک"],
-              ["پشتیبانی", "ایمیلی، انگلیسی", "فارسی و انسانی، ۹ تا ۲۴"],
-            ] as const).map(([k, a, b]) => (
-              <div className="cmp-r" role="row" key={k}><span role="cell" className="muted">{k}</span><span role="cell" className="muted">{a}</span><span role="cell"><Dots size={3} color="var(--ink)" />{b}</span></div>
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="pdp-sec">
-        <div className="wrap faq-g">
-          <div>
-            <Eyebrow>Questions</Eyebrow>
-            <h2 className="pdp-h">سؤال‌های<br /><b><span className="en">{p.name}</span></b></h2>
-            <div className="concierge"><p>جوابت را پیدا نکردی؟ هر روز ۹ تا ۲۴ در تلگرام.</p><a className="btn btn-ghost" href="#">گفت‌وگو با پشتیبانی <Icon id="arrow" className="arrow" /></a></div>
+        <section className="p2-sec" id="guarantee">
+          <div className="wrap p2-two">
+            <div className="p2-h"><h2>ضمانت اک‌دراپ</h2><p>اشتراکی که می‌خری تا روز آخر بیمه است. این‌ها تعهد ماست، نه شعار.</p><Link className="link" href="/guarantee">شرایط کامل ضمانت</Link></div>
+            <ul className="p2-promise">
+              <li><b>فعال نشد؟</b><span>کل مبلغ را برمی‌گردانیم.</span></li>
+              <li><b>وسط دوره قطع شد؟</b><span>ظرف ۲۴ ساعت جایگزین می‌کنیم؛ اگر نشد، مبلغ روزهای باقی‌مانده برمی‌گردد.</span></li>
+              <li><b>رمز عبورت امن است.</b><span>برای فعال‌سازی روی ایمیل خودت، هیچ‌وقت رمز نمی‌خواهیم.</span></li>
+              <li><b>قیمت همان است که می‌بینی.</b><span>بدون کارمزد پنهان، به تومان و نهایی.</span></li>
+            </ul>
           </div>
-          <div className="faq">
-            {faq.map(([q, a], i) => <details key={q} open={i === 0}><summary>{q}<span className="pm" /></summary><p>{a}</p></details>)}
-          </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="light pdp-sec">
-        <div className="wrap">
-          <Eyebrow dotColor="var(--ink)">More tools</Eyebrow>
-          <h2 className="pdp-h" style={{ marginBottom: 36 }}>شاید این‌ها هم به کارت بیاید</h2>
-          <div className="tiles">{related.map((r) => <ToolCard key={r.id} p={r} />)}</div>
-        </div>
-      </section>
+        <section className="p2-sec" id="compare">
+          <div className="wrap p2-two">
+            <div className="p2-h"><h2>خرید مستقیم یا اک‌دراپ؟</h2><p>همان اشتراک رسمی <span className="en">{p.maker}</span>، بدون دردسر کارت ارزی.</p></div>
+            <div className="cmp" role="table" aria-label="مقایسه">
+              <div className="cmp-r cmp-h" role="row"><span role="columnheader" /><span role="columnheader">خرید مستقیم</span><span role="columnheader">اک‌دراپ</span></div>
+              {([
+                ["پرداخت", "کارت ارزی بین‌المللی", "کارت بانکی، به تومان"],
+                ["قیمت", "دلاری، با کارمزد و نوسان", "تومانی و نهایی"],
+                ["شروع", "حساب و آدرس خارجی لازم است", `حدود ${fa(p.etaMinutes)} دقیقه`],
+                ["ضمانت", "ندارد", "تا روز آخر اشتراک"],
+                ["پشتیبانی", "ایمیلی، انگلیسی", "فارسی و انسانی"],
+              ] as const).map(([k, a, b]) => (
+                <div className="cmp-r" role="row" key={k}><span role="cell" className="muted">{k}</span><span role="cell" className="muted">{a}</span><span role="cell"><Icon id="check" />{b}</span></div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="p2-sec" id="faq">
+          <div className="wrap p2-two">
+            <div className="p2-h">
+              <h2>سؤال‌های پرتکرار</h2>
+              <p>جوابت را پیدا نکردی؟ یک آدم واقعی جواب می‌دهد.</p>
+              <a className="btn btn-ink" href="#">پیام در تلگرام <Icon id="arrow" className="arrow" /></a>
+            </div>
+            <div className="faq faq-l">
+              {faq.map(([q, a], i) => <details key={q} open={i === 0}><summary>{q}<span className="pm" /></summary><p>{a}</p></details>)}
+            </div>
+          </div>
+        </section>
+
+        <section className="p2-sec">
+          <div className="wrap">
+            <div className="p2-h" style={{ marginBottom: 28 }}><h2>ابزارهای مشابه</h2></div>
+            <div className="tiles">{related.map((r) => <ToolCard key={r.id} p={r} />)}</div>
+          </div>
+        </section>
+      </div>
     </main>
   );
 }

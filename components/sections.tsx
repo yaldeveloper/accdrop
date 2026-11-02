@@ -40,7 +40,7 @@ export function Header() {
       <div className="wrap">
         <a href="/" aria-label="اک‌دراپ، صفحه اصلی"><Wordmark /></a>
         <nav aria-label="منوی اصلی">
-          <a href="/#collection">مجموعه</a><a href="/#drop">دراپ</a><a href="/#shield">شیلد</a><a href="/#club">کلاب</a><a href="/#concierge">پشتیبانی</a>
+          <Link href="/#collection">همه ابزارها</Link><Link href="/#drop">دراپ هفته</Link><Link href="/guarantee">ضمانت</Link><Link href="/reseller">نمایندگی فروش</Link><Link href="/contact">پشتیبانی</Link>
         </nav>
         <div className="sp" />
         <div className="tools">
@@ -91,9 +91,9 @@ export function Hero() {
     <section className="hero2">
       <div className="wrap hero2-g">
         <div>
-          <Eyebrow>AI &amp; Pro Tools</Eyebrow>
+          <Eyebrow>هوش مصنوعی و ابزارهای حرفه‌ای</Eyebrow>
           <h1>اشتراک ابزارهای حرفه‌ای،<br /><b>به ساده‌ترین شکل.</b></h1>
-          <p className="lead">هوش مصنوعی، طراحی، کدنویسی و کار روزمره. با تومان بخر؛ چند دقیقه بعد روی ایمیل خودت فعال است.</p>
+          <p className="lead">ChatGPT، Claude، Canva، Adobe و ابزارهای دیگر را با کارت بانکی بخر. حدود ۱۰ دقیقه بعد روی ایمیل خودت فعال است؛ اگر فعال نشد، پولت برمی‌گردد.</p>
           <div className="pick" role="group" aria-label="انتخاب ابزار" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
             {FEATURED.map((id) => (
               <button key={id} className={`en ${id === active ? "on" : ""}`} onClick={() => { setActive(id); setPaused(true); }}>
@@ -116,7 +116,7 @@ export function Hero() {
             return (
               <button key={id} className="deck-card" style={{ "--z": depth } as React.CSSProperties}
                 onClick={() => (depth === 0 ? router.push(productHref(prod)) : setActive(id))} aria-label={prod.name}>
-                <AccessPass product={prod} months={planKeys(prod)[0]} price={depth === 0 ? minPrice(prod) : undefined} />
+                <AccessPass product={prod} months={planKeys(prod)[0]} price={depth === 0 ? (CURRENT_DROP.productId === prod.id ? Math.min(CURRENT_DROP.price, minPrice(prod)) : minPrice(prod)) : undefined} />
               </button>
             );
           })}
@@ -124,10 +124,10 @@ export function Hero() {
       </div>
       <div className="wrap">
         <ul className="assure-row">
-          <li><Dots size={3} />فعال‌سازی در حدود ۱۱ دقیقه</li>
-          <li><Dots size={3} />فقط ایمیل؛ هرگز رمز عبور</li>
-          <li><Dots size={3} />گارانتی تا روز آخر</li>
-          <li><Dots size={3} />پشتیبانی انسانی</li>
+          <li><Dots size={3} />تحویل حدود ۱۰ دقیقه</li>
+          <li><Dots size={3} />فقط ایمیل، هرگز رمز عبور</li>
+          <li><Dots size={3} /><Link href="/guarantee">ضمانت بازگشت وجه</Link></li>
+          <li><Dots size={3} />پشتیبانی فارسی، هر روز ۹ تا ۲۴</li>
         </ul>
       </div>
     </section>
@@ -161,7 +161,7 @@ export function Collection() {
       <div className="wrap">
         <div className="head reveal">
           <div>
-            <Eyebrow dotColor="var(--ink)">All Passes</Eyebrow>
+            <Eyebrow dotColor="var(--ink)">همه ابزارها</Eyebrow>
             <h2>به چه چیزی<br /><b>نیاز داری؟</b></h2>
           </div>
           <p className="muted">کاتالوگ کوچک، فقط ابزارهایی که حرفه‌ای‌ها هر روز استفاده می‌کنند.</p>
@@ -197,7 +197,7 @@ function useCountdownToMidnight() {
 }
 
 export function DropSection() {
-  const { openProduct, notify } = useStore();
+  const { notify } = useStore();
   const d = CURRENT_DROP, p = productById(d.productId);
   const left = useCountdownToMidnight();
   return (
@@ -205,7 +205,7 @@ export function DropSection() {
       <div className="wrap">
         <div className="drop-g">
           <div className="reveal">
-            <Eyebrow>AccDrop Deals</Eyebrow>
+            <Eyebrow>دراپ هفته</Eyebrow>
             <div className="drop-no" style={{ marginTop: 28 }}>№{String(d.number).padStart(2, "0")}<sup>DROP</sup></div>
             <p className="muted" style={{ marginTop: 28, maxWidth: 420, fontWeight: 300, fontSize: 18 }}>پاس‌های محدود، با قیمت ویژه.<br />وقتی تمام شود، تمام شده.</p>
           </div>
@@ -222,7 +222,7 @@ export function DropSection() {
             </div>
             <div className="stock"><span>{fa(d.left)} از {fa(d.of)} باقی‌مانده</span><span>{fa(Math.round((d.left / d.of) * 100))}٪</span></div>
             <div className="meter"><i style={{ width: `${(d.left / d.of) * 100}%` }} /></div>
-            <button className="btn btn-paper btn-block" onClick={() => openProduct(p.id)}>بگیرش <Icon id="arrow" className="arrow" /></button>
+            <Link className="btn btn-paper btn-block" href={productHref(p)}>بگیرش <Icon id="arrow" className="arrow" /></Link>
           </div>
         </div>
         <div className="next reveal">
@@ -253,8 +253,9 @@ export function Shield() {
     <section className="light" id="shield">
       <div className="wrap shield-g">
         <div className="reveal">
-          <Eyebrow dotColor="var(--ink)">AccDrop Shield</Eyebrow>
+          <Eyebrow dotColor="var(--ink)">ضمانت اک‌دراپ</Eyebrow>
           <p className="big-quote" style={{ marginTop: 28 }}>پاس تو،<br /><b>تا روز آخر بیمه است.</b></p>
+          <p className="muted" style={{ marginTop: 18, fontSize: 14 }}>فعال نشد؟ کل مبلغ برمی‌گردد. قطع شد؟ جایگزین می‌کنیم. <Link className="link" href="/guarantee">شرایط کامل ضمانت</Link></p>
           <form className="track" onSubmit={(e) => { e.preventDefault(); const v = String(new FormData(e.currentTarget).get("code") || "").trim().toUpperCase(); if (v && orderByCode(v)) { router.push(`/orders/${v}`); return; } setTracked(v || "AD-48213"); }}>
             <input name="code" placeholder="AD-48213" aria-label="کد سفارش" />
             <button>پیگیری <Icon id="arrow" className="arrow" style={{ width: 14, height: 14, verticalAlign: -2 }} /></button>
@@ -290,7 +291,7 @@ export function Club() {
           </div>
         </div>
         <div className="reveal">
-          <Eyebrow>AccDrop Club</Eyebrow>
+          <Eyebrow>باشگاه مشتریان</Eyebrow>
           <div className="head" style={{ gridTemplateColumns: "1fr", margin: "22px 0 48px", gap: 16 }}>
             <h2 style={{ margin: 0 }}>بیشتر بخر،<br /><b>کمتر بپرداز.</b></h2>
             <p className="muted" style={{ justifySelf: "start" }}>هر خرید امتیاز دارد. عضویت رایگان و خودکار است.</p>
@@ -322,7 +323,7 @@ export function Concierge() {
     <section id="concierge">
       <div className="wrap faq-g">
         <div className="reveal">
-          <Eyebrow>Concierge</Eyebrow>
+          <Eyebrow>پشتیبانی</Eyebrow>
           <h2 style={{ fontWeight: 300, fontSize: "clamp(32px,4vw,56px)", lineHeight: 1.2, letterSpacing: "-.025em", marginTop: 22 }}>
             سؤال داری؟<br /><b style={{ fontWeight: 600 }}>یک آدم جواب می‌دهد.</b>
           </h2>
@@ -346,10 +347,10 @@ export function Footer() {
     <footer>
       <div className="wrap">
         <div className="fg">
-          <div><h5>PASSES</h5><ul className="f-products">{PRODUCTS.map((p) => <li key={p.id}><Link href={productHref(p)} className="en">{p.name}</Link></li>)}</ul></div>
-          <div><h5>ACCDROP</h5><ul><li><a href="/#drop">دراپ‌ها</a></li><li><a href="/#club">کلاب</a></li><li><a href="/#shield">شیلد</a></li></ul></div>
-          <div><h5>SUPPORT</h5><ul><li><Link href="/account/orders">پیگیری سفارش</Link></li><li><a href="#">شرایط گارانتی</a></li><li><a href="/#concierge">سؤالات پرتکرار</a></li></ul></div>
-          <div><h5>CONTACT</h5><ul><li><a href="#">تلگرام</a></li><li><a href="#">اینستاگرام</a></li><li><a href="#" className="en">hello@accdrop.ir</a></li></ul></div>
+          <div><h5 className="fa">ابزارها</h5><ul className="f-products">{PRODUCTS.map((p) => <li key={p.id}><Link href={productHref(p)} className="en">{p.name}</Link></li>)}</ul></div>
+          <div><h5 className="fa">اک‌دراپ</h5><ul><li><Link href="/#drop">دراپ هفته</Link></li><li><Link href="/#club">باشگاه مشتریان</Link></li><li><Link href="/reseller">نمایندگی فروش</Link></li></ul></div>
+          <div><h5 className="fa">راهنما</h5><ul><li><Link href="/account/orders">پیگیری سفارش</Link></li><li><Link href="/guarantee">شرایط ضمانت و بازگشت وجه</Link></li><li><Link href="/terms">قوانین و مقررات</Link></li><li><Link href="/#concierge">سؤالات پرتکرار</Link></li></ul></div>
+          <div><h5 className="fa">تماس</h5><ul><li><Link href="/contact">پشتیبانی، هر روز ۹ تا ۲۴</Link></li><li><a href="#">تلگرام</a></li><li><a href="#">اینستاگرام</a></li><li><a href="mailto:hello@accdrop.ir" className="en">hello@accdrop.ir</a></li></ul></div>
         </div>
         <Wordmark className="f-wm" />
         <div className="legal"><span>© ۱۴۰۵ اک‌دراپ · دسترسی ممتاز به ابزارهای هوشمند</span><span className="en">accdrop.ir</span></div>
