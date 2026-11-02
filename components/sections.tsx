@@ -3,13 +3,13 @@
 import type React from "react";
 
 import { useEffect, useState } from "react";
-import { CATEGORIES, CURRENT_DROP, DELIVERY, PRODUCTS, minPrice, planKeys, productById, type Category, type Product } from "@/lib/catalog";
+import { CATEGORIES, CURRENT_DROP, DELIVERY, PRODUCTS, minPrice, productById, type Category, type Product } from "@/lib/catalog";
 import { duration, fa, money, pad2 } from "@/lib/format";
 import { BrandLogo, Dots, Eyebrow, Glyph, Icon, Wordmark } from "./brand";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { productHref } from "@/lib/content";
-import { AccessPass, splitName } from "./pass";
+import { splitName } from "./pass";
 import { useStore } from "./store";
 import { useAccount } from "./account";
 
@@ -74,17 +74,50 @@ export function ToolCard({ p }: { p: Product }) {
 }
 
 const FEATURED = ["chatgpt", "claude", "cursor", "adobe", "canva", "notion"];
+/** Inner ring first, then outer ring; also the auto-cycle order. */
+const INNER = ["chatgpt", "claude", "gemini", "perplexity", "grok"];
+const OUTER = ["cursor", "copilot", "adobe", "canva", "capcut", "kling", "notion"];
+const ORBIT = [...INNER, ...OUTER];
+
+const fromPrice = (p: Product) => (CURRENT_DROP.productId === p.id ? Math.min(CURRENT_DROP.price, minPrice(p)) : minPrice(p));
+
+/** Every tool on two slow, counter-rotating rings; the selected one sits in the centre. */
+function Orbit({ active, onPick, onHover }: { active: string; onPick: (id: string) => void; onHover: (v: boolean) => void }) {
+  const p = productById(active);
+  const [tool, tier] = splitName(p.name);
+  const ring = (ids: string[], cls: string) => (
+    <div className={`orb-ring ${cls}`}>
+      {ids.map((id, i) => (
+        <button key={id} className={`orb-i ${id === active ? "on" : ""}`} style={{ "--a": `${(360 / ids.length) * i}deg` } as React.CSSProperties}
+          onClick={() => onPick(id)} aria-label={productById(id).name} aria-pressed={id === active}>
+          <span><BrandLogo id={id} size={cls === "in" ? 24 : 22} /></span>
+        </button>
+      ))}
+    </div>
+  );
+  return (
+    <div className="orbit" onMouseEnter={() => onHover(true)} onMouseLeave={() => onHover(false)}>
+      <div className="orb-glow" aria-hidden />
+      {ring(OUTER, "out")}
+      {ring(INNER, "in")}
+      <Link className="orb-core" href={productHref(p)} key={active}>
+        <span className="orb-logo"><BrandLogo id={p.id} size={34} /></span>
+        <b className="en">{tool}{tier && <i> {tier}</i>}</b>
+        <small>از <span className="num">{money(fromPrice(p))}</span> تومان</small>
+      </Link>
+      <span className="orb-count"><b>{fa(PRODUCTS.length)}</b> ابزار، یک فروشگاه</span>
+    </div>
+  );
+}
 
 export function Hero() {
-  const router = useRouter();
   const [active, setActive] = useState(FEATURED[0]);
   const [paused, setPaused] = useState(false);
   useEffect(() => {
     if (paused) return;
-    const t = setInterval(() => setActive((a) => FEATURED[(FEATURED.indexOf(a) + 1) % FEATURED.length]), 3200);
+    const t = setInterval(() => setActive((a) => ORBIT[(ORBIT.indexOf(a) + 1) % ORBIT.length]), 3000);
     return () => clearInterval(t);
   }, [paused]);
-  const order = [...FEATURED.slice(FEATURED.indexOf(active)), ...FEATURED.slice(0, FEATURED.indexOf(active))];
   const p = productById(active);
 
   return (
@@ -106,21 +139,10 @@ export function Hero() {
             <Link className="btn btn-paper" href={productHref(p)}>
               دریافت <span className="en">{p.name}</span> <Icon id="arrow" className="arrow" />
             </Link>
-            <span className="muted">از <b className="num" style={{ color: "var(--paper)", fontWeight: 500 }}>{money(CURRENT_DROP.productId === p.id ? Math.min(CURRENT_DROP.price, minPrice(p)) : minPrice(p))}</b> تومان</span>
+            <span className="muted">از <b className="num" style={{ color: "var(--paper)", fontWeight: 500 }}>{money(fromPrice(p))}</b> تومان</span>
           </div>
         </div>
-        <div className="deck" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
-          {order.slice(0, 3).reverse().map((id, i, arr) => {
-            const depth = arr.length - 1 - i;
-            const prod = productById(id);
-            return (
-              <button key={id} className="deck-card" style={{ "--z": depth } as React.CSSProperties}
-                onClick={() => (depth === 0 ? router.push(productHref(prod)) : setActive(id))} aria-label={prod.name}>
-                <AccessPass product={prod} months={planKeys(prod)[0]} price={depth === 0 ? (CURRENT_DROP.productId === prod.id ? Math.min(CURRENT_DROP.price, minPrice(prod)) : minPrice(prod)) : undefined} />
-              </button>
-            );
-          })}
-        </div>
+        <Orbit active={active} onPick={(id) => { setActive(id); setPaused(true); }} onHover={setPaused} />
       </div>
       <div className="wrap">
         <ul className="assure-row">

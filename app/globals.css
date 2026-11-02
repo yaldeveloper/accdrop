@@ -1162,3 +1162,42 @@ footer h5.fa{font-family:inherit;letter-spacing:0;font-size:13px;direction:rtl}
 .btn{border-radius:12px}
 .pick button{height:38px;padding:0 15px;font-size:13.5px;display:inline-flex;align-items:center;gap:8px}
 .drop-card .price b,.tile-foot b,.hero2-cta .num{font-variant-numeric:normal}
+
+/* ---------- v9: hero orbit (all tools) ---------- */
+.orbit{position:relative;width:min(520px,100%);container-type:inline-size;aspect-ratio:1;justify-self:center;display:grid;place-items:center}
+.orb-glow{position:absolute;inset:18%;border-radius:50%;background:radial-gradient(closest-side,rgba(185,255,99,.13),rgba(185,255,99,.03) 60%,transparent);filter:blur(6px)}
+.orb-ring{position:absolute;border-radius:50%;border:1px solid var(--hair);animation:orb var(--t) linear infinite}
+.orb-ring.out{inset:0;--t:120s;--r:50cqi}
+.orb-ring.in{inset:20%;--t:90s;--r:30cqi;animation-direction:reverse;border-style:dashed;border-color:var(--hair-2)}
+.orbit:hover .orb-ring,.orbit:hover .orb-i>span{animation-play-state:paused}
+@keyframes orb{to{transform:rotate(360deg)}}
+.orb-i{position:absolute;top:50%;left:50%;width:0;height:0;transform:rotate(var(--a)) translateY(calc(var(--r) * -1))}
+.orb-i>span{position:absolute;left:-26px;top:-26px;width:52px;height:52px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(180deg,#1C2128,#14181D);border:1px solid var(--hair-2);color:var(--paper);box-shadow:0 18px 30px -16px rgba(0,0,0,.9);
+  transform:rotate(calc(var(--a) * -1));animation:orb-c var(--t) linear infinite;transition:border-color .3s,box-shadow .3s,background .3s}
+.orb-ring.in .orb-i>span{animation-direction:reverse}
+@keyframes orb-c{from{transform:rotate(calc(var(--a) * -1))}to{transform:rotate(calc(var(--a) * -1 - 360deg))}}
+.orb-i:hover>span{border-color:var(--paper)}
+.orb-i.on>span{background:var(--paper);color:var(--ink);border-color:var(--paper);box-shadow:0 0 0 6px rgba(185,255,99,.14),0 18px 30px -16px rgba(0,0,0,.9)}
+.orb-i:focus-visible{outline:none}.orb-i:focus-visible>span{outline:2px solid var(--lime);outline-offset:3px}
+.orb-core{position:relative;z-index:2;width:38%;aspect-ratio:1;border-radius:50%;display:grid;place-content:center;justify-items:center;gap:6px;text-align:center;
+  background:radial-gradient(circle at 50% 30%,#20262D,#121519 70%);border:1px solid var(--hair-2);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 40px 70px -30px rgba(0,0,0,.95);animation:core-in .6s var(--ease);transition:border-color .3s}
+.orb-core:hover{border-color:var(--lime)}
+@keyframes core-in{from{opacity:0;transform:scale(.94)}}
+.orb-logo{color:var(--paper);margin-bottom:4px}
+.orb-core b{font-weight:300;font-size:clamp(20px,2vw,26px);letter-spacing:-.03em;line-height:1.1;direction:ltr}
+.orb-core b i{font-style:normal;font-weight:500;font-size:.62em;color:var(--lime)}
+.orb-core small{font-size:12px;color:var(--gray-d)}
+.orb-core small .num{color:var(--paper);font-variant-numeric:normal;font-weight:500}
+.orb-count{position:absolute;bottom:-58px;left:50%;transform:translateX(-50%);font-size:12px;color:var(--gray-d);white-space:nowrap;background:var(--ink);padding:4px 14px;border:1px solid var(--hair);border-radius:999px}
+.orb-count b{color:var(--lime);font-weight:600}
+@media (max-width:1060px){.orbit{width:min(440px,100%);margin-top:40px}}
+@media (max-width:640px){
+  .orbit{width:min(310px,calc(100vw - 80px));margin-top:44px}
+  .orb-i>span{width:42px;height:42px;left:-21px;top:-21px;border-radius:13px}
+  .orb-i>span svg{width:19px;height:19px}
+  .orb-core{width:42%}
+  .orb-core b{font-size:18px}
+  .orb-logo svg{width:26px;height:26px}
+}
+@media (prefers-reduced-motion:reduce){.orb-ring,.orb-i>span{animation:none!important}}
+.orbit{margin-bottom:58px}
