@@ -92,7 +92,7 @@ export function Hero() {
       <div className="wrap hero2-g">
         <div>
           <Eyebrow>هوش مصنوعی و ابزارهای حرفه‌ای</Eyebrow>
-          <h1>اشتراک ابزارهای حرفه‌ای،<br /><b>به ساده‌ترین شکل.</b></h1>
+          <h1><span>اشتراک ابزارهای حرفه‌ای،</span> <b>به ساده‌ترین شکل.</b></h1>
           <p className="lead">ChatGPT، Claude، Canva، Adobe و ابزارهای دیگر را با کارت بانکی بخر. حدود ۱۰ دقیقه بعد روی ایمیل خودت فعال است؛ اگر فعال نشد، پولت برمی‌گردد.</p>
           <div className="pick" role="group" aria-label="انتخاب ابزار" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
             {FEATURED.map((id) => (
@@ -210,17 +210,17 @@ export function DropSection() {
             <p className="muted" style={{ marginTop: 28, maxWidth: 420, fontWeight: 300, fontSize: 18 }}>پاس‌های محدود، با قیمت ویژه.<br />وقتی تمام شود، تمام شده.</p>
           </div>
           <div className="drop-card reveal">
-            <span className="tag">LIMITED</span>
+            <span className="tag">ظرفیت محدود</span>
             <h3>{p.name}</h3>
             <div className="sub">{duration(d.plan)} · {DELIVERY[d.type].title}</div>
             <div className="price">
-              <b className="num">{money(d.price)}</b><s className="num">{money(d.was)}</s>
-              <span className="num">−{fa(Math.round((1 - d.price / d.was) * 100))}٪</span>
+              <b className="num">{money(d.price)}</b><small>تومان</small><s className="num">{money(d.was)}</s>
+              <span className="num">{fa(Math.round((1 - d.price / d.was) * 100))}٪ تخفیف</span>
             </div>
             <div className="clock">
               {(["ساعت", "دقیقه", "ثانیه"] as const).map((u, i) => <div key={u}><b className="num">{left ? pad2(left[i]) : "--"}</b><span>{u}</span></div>)}
             </div>
-            <div className="stock"><span>{fa(d.left)} از {fa(d.of)} باقی‌مانده</span><span>{fa(Math.round((d.left / d.of) * 100))}٪</span></div>
+            <div className="stock"><span>فقط <b>{fa(d.left)}</b> پاس از {fa(d.of)} باقی مانده</span><span>تا پایان امشب</span></div>
             <div className="meter"><i style={{ width: `${(d.left / d.of) * 100}%` }} /></div>
             <Link className="btn btn-paper btn-block" href={productHref(p)}>بگیرش <Icon id="arrow" className="arrow" /></Link>
           </div>

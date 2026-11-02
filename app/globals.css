@@ -1118,3 +1118,47 @@ footer h5.fa{font-family:inherit;letter-spacing:0;font-size:13px;direction:rtl}
   .p2-tbl td b{font-size:16px}
   .p2-spec dl>div{grid-template-columns:96px minmax(0,1fr)}
 }
+
+/* ---------- v8: home hero polish ---------- */
+.hero2{padding:136px 0 40px}
+.hero2::before{content:"";position:absolute;inset:auto auto 10% -10%;width:min(70vw,900px);aspect-ratio:1;background:radial-gradient(closest-side,rgba(185,255,99,.07),transparent 70%);pointer-events:none}
+.hero2-g{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:56px;min-height:min(680px,calc(100svh - 230px))}
+.hero2 h1{font-size:clamp(36px,4.4vw,68px);line-height:1.22;letter-spacing:-.025em;margin:22px 0 20px}
+.hero2 h1>span,.hero2 h1>b{display:block;white-space:nowrap}
+.hero2 .lead{max-width:34em;line-height:2;text-wrap:pretty}
+.pick{margin-top:34px}
+.hero2-cta{margin-top:26px}
+.deck{height:520px}
+.deck::before{content:"";position:absolute;width:72%;aspect-ratio:1;border-radius:50%;background:radial-gradient(closest-side,rgba(185,255,99,.10),transparent 72%);filter:blur(10px)}
+.deck-card{opacity:1;filter:brightness(calc(1 - var(--z)*.28))}
+.deck-card .pass{background:#161A1F}
+.deck-card .pass>*{transition:opacity .5s var(--ease);opacity:calc(1 - var(--z))}
+.deck-card .pass{animation:none}
+.deck-card[style*="--z:0"] .pass,.deck-card:first-child:last-child .pass{animation:passin .7s var(--ease)}
+@media (max-width:1180px){.hero2 h1>span,.hero2 h1>b{white-space:normal}}
+@media (max-width:1060px){
+  .hero2-g{grid-template-columns:minmax(0,1fr);gap:8px;min-height:0}
+  .deck{height:440px;order:0;margin-top:24px}
+}
+@media (max-width:640px){
+  .hero2{padding:104px 0 28px}
+  .hero2 h1{font-size:clamp(30px,8.6vw,38px)}
+  .deck{height:390px}
+  .deck-card{width:min(280px,76%)}
+}
+/* drop card + club card polish */
+.mcard .ig{display:none}
+.drop-card{border-radius:24px;padding:40px;background:linear-gradient(180deg,var(--ink-1),#13171B);box-shadow:0 50px 90px -50px rgba(0,0,0,.9)}
+.drop-card .tag{position:static;display:inline-flex;font-family:inherit;letter-spacing:0;font-size:12px;border-radius:999px;padding:4px 12px;margin-bottom:22px;direction:rtl}
+.drop-card .price{align-items:center;flex-wrap:wrap;gap:6px 10px;margin:28px 0 24px;padding:24px 0}
+.drop-card .price b{font-weight:400;font-size:42px;letter-spacing:-.01em}
+.drop-card .price small{font-size:13px;color:var(--gray-d)}
+.drop-card .price s{font-size:14px;margin-inline-start:6px}
+.drop-card .price span{background:rgba(185,255,99,.12);color:var(--lime);font-weight:600;padding:4px 10px;border-radius:999px}
+.clock b{font-weight:300;font-size:40px;letter-spacing:0}
+.clock span{display:block;margin-top:4px}
+.stock b{color:var(--paper);font-weight:600}
+.meter{height:4px;border-radius:4px;background:var(--ink-2)}.meter i{height:4px;border-radius:4px}
+.btn{border-radius:12px}
+.pick button{height:38px;padding:0 15px;font-size:13.5px;display:inline-flex;align-items:center;gap:8px}
+.drop-card .price b,.tile-foot b,.hero2-cta .num{font-variant-numeric:normal}
