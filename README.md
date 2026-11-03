@@ -23,8 +23,16 @@ npm run build && npm start
 - `lib/catalog.ts` — products, plans, current drop (**sample data**)
 - `public/brand/` — logo SVGs
 
+## Backend
+- `lib/server/` — Postgres (`db.ts`, tables are created on first request), login codes and sessions (`auth.ts`),
+  Kavenegar SMS (`sms.ts`), Zarinpal (`pay.ts`), orders, gift-code stock and fulfilment (`orders.ts`).
+- `app/api/` — auth, orders, payment callback, discount check, reseller; `app/api/admin/` for the panel.
+- `/admin` — orders, gift-code stock, resellers, users, discount codes. Open to the mobiles in `ADMIN_MOBILES`.
+- Prices are always computed on the server from `lib/catalog.ts`; what the browser sends is ignored.
+- Settings are in `.env.example`. Without SMS or gateway keys the site runs in demo mode
+  (login code 12345, built-in test gateway), so it can be tried end to end with just `DATABASE_URL`.
+
 ## Not wired yet
-- Real catalogue and prices (admin panel / API)
-- Payment gateway (e.g. Zarinpal) and server-side orders
-- Order tracking API, SMS, Club accounts
+- Editing prices from the admin panel (prices still live in `lib/catalog.ts`)
+- Virtual-number supplier API (numbers are entered by an admin for now)
 - Telegram / Instagram links and eNamad badge

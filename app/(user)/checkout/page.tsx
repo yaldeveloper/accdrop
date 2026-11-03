@@ -4,20 +4,21 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DELIVERY, optionLabel, productById } from "@/lib/catalog";
-import { DISCOUNTS, normalizeUsername, validEmail, validUsername } from "@/lib/account";
+import { normalizeUsername, validEmail, validUsername } from "@/lib/account";
 import { clubPoints, fa, money } from "@/lib/format";
 import { BrandLogo, Dots, Icon } from "@/components/brand";
 import { LoginFlow } from "@/components/login";
-import { useAccount } from "@/components/account";
+import { api, useAccount } from "@/components/account";
 import { useStore } from "@/components/store";
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { cart, removeLine, clearCart, notify } = useStore();
-  const { ready, user, placeOrder } = useAccount();
+  const { ready, user, placeOrder, demo } = useAccount();
   const [emails, setEmails] = useState<Record<number, string>>({});
   const [code, setCode] = useState("");
   const [applied, setApplied] = useState("");
+  const [rate, setRate] = useState(0);
   const [agree, setAgree] = useState(true);
   const [paying, setPaying] = useState(false);
   const [bad, setBad] = useState<number[]>([]);
@@ -32,16 +33,17 @@ export default function CheckoutPage() {
   }, [user?.email, cart]);
 
   const subtotal = cart.reduce((s, l) => s + l.price, 0);
-  const rate = DISCOUNTS[applied] ?? 0;
   const discount = Math.round((subtotal * rate) / 1000) * 1000;
   const total = subtotal - discount;
 
-  const apply = () => {
+  const apply = async () => {
     const c = code.trim().toUpperCase();
-    if (DISCOUNTS[c]) { setApplied(c); notify(`کد ${c} اعمال شد`); } else { setApplied(""); notify("این کد معتبر نیست"); }
+    if (!c) return;
+    const r = await api<{ rate: number }>(`/api/discount?code=${encodeURIComponent(c)}`);
+    if (r.rate) { setApplied(c); setRate(r.rate); notify(`کد ${c} اعمال شد`); } else { setApplied(""); setRate(0); notify("این کد معتبر نیست"); }
   };
 
-  const pay = () => {
+  const pay = async () => {
     if (!user || inFlow) { notify("اول وارد حسابت شو"); document.getElementById("co-account")?.scrollIntoView({ behavior: "smooth", block: "center" }); return; }
     const ok = (t: string, v: string) => (t === "own" ? validEmail(v) : t === "username" ? validUsername(v) : true);
     const missing = cart.map((l, i) => (!ok(l.type, emails[i] ?? "") ? i : -1)).filter((i) => i >= 0);
@@ -53,14 +55,17 @@ export default function CheckoutPage() {
     }
     if (!agree) { notify("قوانین را بپذیر"); return; }
     setPaying(true);
-    // DEMO: stands in for the redirect to the payment gateway and its callback.
-    setTimeout(() => {
-      const o = placeOrder(cart.map((l, i) => ({ ...l,
-        email: l.type === "own" ? emails[i]?.trim() : undefined,
-        username: l.type === "username" ? normalizeUsername(emails[i] ?? "") : undefined })), applied);
-      clearCart();
-      router.push(`/orders/${o.code}`);
-    }, 1400);
+    const r = await placeOrder(cart.map((l, i) => ({ id: l.id, plan: l.plan, type: l.type,
+      email: l.type === "own" ? emails[i]?.trim() : undefined,
+      username: l.type === "username" ? normalizeUsername(emails[i] ?? "") : undefined })), applied);
+    if ("error" in r) {
+      setPaying(false);
+      if (r.index !== undefined && (r.error === "bad_email" || r.error === "bad_username")) { setBad([r.index]); document.getElementById(`co-em-${r.index}`)?.focus(); }
+      notify(r.error === "bad_item" ? "یکی از اقلام سبد دیگر موجود نیست. حذفش کن و دوباره امتحان کن." : r.error === "unauthorized" ? "اول وارد حسابت شو" : "ثبت سفارش انجام نشد. دوباره امتحان کن.");
+      return;
+    }
+    clearCart();
+    if (r.payUrl.startsWith("/")) router.push(r.payUrl); else window.location.href = r.payUrl;
   };
 
   if (!cart.length && !paying) {
@@ -167,7 +172,7 @@ export default function CheckoutPage() {
             <li><Dots size={3} />ضمانت بازگشت وجه</li>
             <li><Dots size={3} />پشتیبانی ۹ تا ۲۴</li>
           </ul>
-          <small className="muted fine">نسخه آزمایشی: درگاه هنوز وصل نیست و پرداخت شبیه‌سازی می‌شود. کد <span className="en">WELCOME</span> ده درصد تخفیف می‌دهد.</small>
+          {demo.gateway && <small className="muted fine">نسخه آزمایشی: درگاه هنوز وصل نیست و پرداخت در درگاه آزمایشی انجام می‌شود. کد <span className="en">WELCOME</span> ده درصد تخفیف می‌دهد.</small>}
         </aside>
       </div>
     </div>

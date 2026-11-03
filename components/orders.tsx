@@ -2,35 +2,25 @@
 
 import Link from "next/link";
 import { DELIVERY, isSub, optionLabel, productById } from "@/lib/catalog";
-import { DEMO_ACTIVATION_MS, STAGES, passWindow, stageOf, type Order } from "@/lib/account";
+import { STAGES, STATUS_TITLE, isPaid, passWindow, stageOf, type Order } from "@/lib/account";
 import { fa, faDate, money } from "@/lib/format";
 import { BrandLogo, Icon } from "./brand";
 
-/** DEMO: a stable fake gift-card code or phone number per order line, until real fulfilment exists. */
-function demoSecret(code: string, i: number, kind: "code" | "number") {
-  let h = i + 7;
-  for (const ch of code) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  const digits = String(h).padStart(10, "0");
-  if (kind === "number") return `+1 (555) ${digits.slice(0, 3)}-${digits.slice(3, 7)}`;
-  const abc = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let x = h, s = "";
-  for (let k = 0; k < 16; k++) { x = (x * 1103515245 + 12345) >>> 0; s += abc[x % abc.length]; }
-  return `${s.slice(0, 4)}-${s.slice(4, 8)}-${s.slice(8, 12)}-${s.slice(12)}`;
-}
-
-export function StatusChip({ order, now }: { order: Order; now: number }) {
-  const s = stageOf(order, now);
-  return <span className={`chip s${s}`}><i />{STAGES[s]}</span>;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function StatusChip({ order, now }: { order: Order; now?: number }) {
+  const cls = isPaid(order) ? `s${stageOf(order)}` : "sx";
+  return <span className={`chip ${cls}`}><i />{STATUS_TITLE[order.status]}</span>;
 }
 
 /** Paid → activating → active, with times and a live countdown. */
-export function OrderTimeline({ order, now }: { order: Order; now: number }) {
-  const s = stageOf(order, now);
-  const left = Math.max(0, Math.ceil((order.createdAt + DEMO_ACTIVATION_MS - now) / 1000));
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function OrderTimeline({ order, now }: { order: Order; now?: number }) {
+  const s = stageOf(order);
+  const eta = Math.max(...order.lines.map((l) => productById(l.id).etaMinutes));
   const items = [
-    { t: STAGES[0], d: faDate(order.createdAt) },
-    { t: STAGES[1], d: s === 1 ? <>حدود <span className="num">{fa(left)}</span> ثانیه دیگر</> : s > 1 ? "انجام شد" : "در صف" },
-    { t: STAGES[2], d: s === 2 ? faDate(order.createdAt + DEMO_ACTIVATION_MS) : "پیامک می‌کنیم" },
+    { t: STAGES[0], d: faDate(order.paidAt ?? order.createdAt) },
+    { t: STAGES[1], d: s === 1 ? (eta ? <>معمولاً کمتر از <span className="num">{fa(eta)}</span> دقیقه</> : "در حال تحویل") : s > 1 ? "انجام شد" : "در صف" },
+    { t: STAGES[2], d: s === 2 && order.activatedAt ? faDate(order.activatedAt) : "پیامک می‌کنیم" },
   ];
   return (
     <ol className="tl">
@@ -57,8 +47,9 @@ export function OrderRow({ order, now }: { order: Order; now: number }) {
   );
 }
 
-export function OrderDetail({ order, now }: { order: Order; now: number }) {
-  const s = stageOf(order, now);
+export function OrderDetail({ order, now, onPay, paying }: { order: Order; now: number; onPay?: () => void; paying?: boolean }) {
+  const s = stageOf(order);
+  const paid = isPaid(order);
   return (
     <div className="od">
       <div className="od-h">
@@ -72,12 +63,17 @@ export function OrderDetail({ order, now }: { order: Order; now: number }) {
       <div className="od-g">
         <div className="od-card">
           <h2>وضعیت</h2>
-          <OrderTimeline order={order} now={now} />
-          {s < 2 ? <p className="muted od-tip">لازم نیست این صفحه باز بماند؛ وقتی فعال شد پیامک می‌گیری.</p>
-            : <p className="od-tip ok">همه‌چیز فعال است. از اشتراک‌هایت لذت ببر.</p>}
+          {paid ? <>
+            <OrderTimeline order={order} now={now} />
+            {s < 2 ? <p className="muted od-tip">لازم نیست این صفحه باز بماند؛ وقتی فعال شد پیامک می‌گیری.</p>
+              : <p className="od-tip ok">همه‌چیز فعال است. از خریدت لذت ببر.</p>}
+          </> : order.status === "refunded" ? <p className="muted od-tip">مبلغ این سفارش به کارتت برگشت داده شد.</p> : <>
+            <p className="od-tip">{order.status === "pending" ? "این سفارش هنوز پرداخت نشده." : "پرداخت انجام نشد. اگر از حسابت کم شده، بانک تا ۷۲ ساعت برمی‌گرداند."}</p>
+            {onPay && <button className="btn btn-paper" onClick={onPay} disabled={paying}>{paying ? "در حال اتصال به درگاه…" : <>پرداخت <span className="num">{money(order.total)}</span> تومان</>}</button>}
+          </>}
         </div>
         <div className="od-card">
-          <h2>اشتراک‌ها</h2>
+          <h2>اقلام سفارش</h2>
           <ul className="od-lines">
             {order.lines.map((l, i) => {
               const p = productById(l.id);
@@ -91,9 +87,8 @@ export function OrderDetail({ order, now }: { order: Order; now: number }) {
                     {l.type === "own" && l.email && <small className="ltr-i">فعال‌سازی روی <span className="en">{l.email}</span></small>}
                     {l.type === "username" && l.username && <small className="ltr-i">ارسال به <span className="en">{l.username}</span></small>}
                     {s === 2 && isSub(p) && <small className="ok">فعال تا {faDate(w.end, false)}</small>}
-                    {s === 2 && l.type === "code" && <small className="od-secret"><span>کد گیفت‌کارت</span><b className="en">{demoSecret(order.code, i, "code")}</b></small>}
-                    {s === 2 && l.type === "number" && <small className="od-secret"><span>شماره</span><b className="en">{demoSecret(order.code, i, "number")}</b></small>}
-                    {s === 2 && l.type === "ready" && <small className="muted">اطلاعات ورود اکانت اینجا و در پیامک نمایش داده می‌شود (نسخه آزمایشی).</small>}
+                    {l.secret && <small className="od-secret"><span>{{ code: "کد گیفت‌کارت", number: "شماره", ready: "اطلاعات ورود" }[l.type as "code"] ?? "اطلاعات تحویل"}</span><b className="en">{l.secret}</b></small>}
+                    {paid && !l.secret && (l.type === "code" || l.type === "number" || l.type === "ready") && <small className="muted">به‌محض آماده شدن همین‌جا نمایش داده می‌شود و پیامک می‌گیری.</small>}
                   </div>
                   <span className="num">{money(l.price)}</span>
                 </li>
@@ -103,7 +98,7 @@ export function OrderDetail({ order, now }: { order: Order; now: number }) {
           <dl className="co-totals">
             <div><dt>جمع</dt><dd className="num">{money(order.subtotal)}</dd></div>
             {order.discount > 0 && <div className="disc"><dt>تخفیف</dt><dd className="num">−{money(order.discount)}</dd></div>}
-            <div className="tot"><dt>پرداخت شده</dt><dd><b className="num">{money(order.total)}</b> <small>تومان</small></dd></div>
+            <div className="tot"><dt>{paid ? "پرداخت شده" : "مبلغ سفارش"}</dt><dd><b className="num">{money(order.total)}</b> <small>تومان</small></dd></div>
           </dl>
         </div>
       </div>

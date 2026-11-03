@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { isSub, optionLabel, productById, type Selection } from "@/lib/catalog";
 import { contentOf } from "@/lib/content";
-import { clubOf, daysLeft, passWindow, stageOf, TIERS, type Order, type OrderLine } from "@/lib/account";
+import { clubOf, daysLeft, isPaid, passWindow, stageOf, TIERS, type Order, type OrderLine } from "@/lib/account";
 import { fa, faDate } from "@/lib/format";
 import { BrandLogo, Dots, Glyph, Icon, Wordmark } from "./brand";
 import { splitName } from "./pass";
@@ -11,7 +11,7 @@ import { splitName } from "./pass";
 type Held = { order: Order; line: OrderLine; stage: number; start: number; end: number; left: number; total: number };
 
 export function heldPasses(orders: Order[], now: number): Held[] {
-  return orders.flatMap((o) => o.lines.filter((l) => isSub(productById(l.id))).map((l) => {
+  return orders.filter(isPaid).flatMap((o) => o.lines.filter((l) => isSub(productById(l.id))).map((l) => {
     const w = passWindow(o, l);
     return { order: o, line: l, stage: stageOf(o, now), start: w.start, end: w.end, left: daysLeft(w.end, now), total: w.totalDays };
   }));
@@ -47,7 +47,7 @@ export function ClubCard({ orders }: { orders: Order[] }) {
     <div className="club-mini">
       <div className="mcard">
         <Glyph />
-        <div className="top"><Wordmark /><span className="tier">{orders.length ? c.tier.key : "GUEST"}</span></div>
+        <div className="top"><Wordmark /><span className="tier">{c.orders ? c.tier.key : "GUEST"}</span></div>
         <div className="bot"><div><small>POINTS</small><b className="num">{fa(c.points)}</b></div><Dots size={6} /></div>
       </div>
       <div className="club-next">
@@ -63,7 +63,7 @@ export function TierList({ orders }: { orders: Order[] }) {
   return (
     <div className="tiers">
       {TIERS.map((t) => (
-        <div key={t.key} className={orders.length && t.key === c.tier.key ? "on" : ""}>
+        <div key={t.key} className={c.orders && t.key === c.tier.key ? "on" : ""}>
           <div className="lv">{t.key}</div><h4>{t.title}</h4>
           <ul>{t.perks.map((x) => <li key={x}>{x}</li>)}</ul>
           <div className="req">از خرید {t.from === 1 ? "اول" : t.from === 3 ? "سوم" : "دهم"}</div>

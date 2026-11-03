@@ -1,104 +1,103 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { DISCOUNTS, newOrderCode, normalizeMobile, type Order, type OrderLine, type ResellerApp, type User } from "@/lib/account";
+import { normalizeMobile, type Order, type ResellerApp, type User } from "@/lib/account";
+import type { DeliveryType } from "@/lib/catalog";
+
+export type Me = User & { isAdmin: boolean };
+export type PlaceLine = { id: string; plan: string; type: DeliveryType; email?: string; username?: string };
+export type ApiError = { error: string; index?: number; wait?: number };
 
 type Account = {
   ready: boolean;
-  user: User | null;
+  user: Me | null;
   orders: Order[];
   now: number;
-  /** Step 1 of login: send an OTP. Demo: always succeeds. */
-  requestOtp: (mobile: string) => Promise<void>;
-  /** Step 2: verify. Returns whether the user is new (so the UI can ask for a name). */
-  verifyOtp: (mobile: string, code: string) => Promise<{ ok: boolean; isNew: boolean }>;
-  updateProfile: (patch: Partial<Pick<User, "name" | "email">>) => void;
-  logout: () => void;
-  placeOrder: (lines: OrderLine[], discountCode: string) => Order;
-  orderByCode: (code: string) => Order | undefined;
+  /** While no SMS panel or gateway is connected the site says so (fixed login code, test gateway). */
+  demo: { login: boolean; gateway: boolean };
+  requestOtp: (mobile: string) => Promise<{ ok: boolean; error?: string; wait?: number }>;
+  verifyOtp: (mobile: string, code: string) => Promise<{ ok: boolean; isNew: boolean; error?: string }>;
+  updateProfile: (patch: Partial<Pick<User, "name" | "email">>) => Promise<boolean>;
+  logout: () => Promise<void>;
+  /** Creates the order on the server and returns where to send the customer to pay. */
+  placeOrder: (lines: PlaceLine[], discountCode: string) => Promise<{ code: string; payUrl: string } | ApiError>;
+  refreshOrders: () => Promise<void>;
   reseller: ResellerApp | null;
-  applyReseller: (a: Omit<ResellerApp, "mobile" | "createdAt" | "status">) => void;
-  /** Demo only: lets the owner preview the reseller panel without a review step. */
-  approveResellerDemo: () => void;
+  applyReseller: (a: Omit<ResellerApp, "mobile" | "createdAt" | "status">) => Promise<boolean>;
 };
 
 const Ctx = createContext<Account | null>(null);
-const K_USERS = "accdrop-users", K_SESSION = "accdrop-session", K_ORDERS = "accdrop-orders", K_RESELLERS = "accdrop-resellers";
 
-const read = <T,>(k: string, d: T): T => { try { return JSON.parse(localStorage.getItem(k) || "") as T; } catch { return d; } };
-const write = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* ignore */ } };
+export async function api<T>(path: string, init?: { method?: string; body?: unknown }): Promise<T & Partial<ApiError>> {
+  try {
+    const r = await fetch(path, {
+      method: init?.method ?? (init?.body ? "POST" : "GET"),
+      headers: init?.body ? { "content-type": "application/json" } : undefined,
+      body: init?.body ? JSON.stringify(init.body) : undefined,
+      cache: "no-store",
+    });
+    return (await r.json().catch(() => ({ error: "server_error" }))) as T & Partial<ApiError>;
+  } catch {
+    return { error: "network" } as T & Partial<ApiError>;
+  }
+}
 
 export function AccountProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-  const [allOrders, setAllOrders] = useState<Order[]>([]);
+  const [user, setUser] = useState<Me | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [reseller, setReseller] = useState<ResellerApp | null>(null);
+  const [demo, setDemo] = useState({ login: false, gateway: false });
   const [now, setNow] = useState(() => Date.now());
-  const [resellers, setResellers] = useState<Record<string, ResellerApp>>({});
+
+  const loadMine = useCallback(async () => {
+    const [o, r] = await Promise.all([api<{ orders: Order[] }>("/api/orders"), api<{ reseller: ResellerApp | null }>("/api/reseller")]);
+    setOrders(o.orders ?? []);
+    setReseller(r.reseller ?? null);
+  }, []);
+
+  const loadMe = useCallback(async () => {
+    const r = await api<{ user: Me | null; demo: { login: boolean; gateway: boolean } }>("/api/auth/me");
+    setUser(r.user ?? null);
+    if (r.demo) setDemo(r.demo);
+    if (r.user) await loadMine(); else { setOrders([]); setReseller(null); }
+    return r.user ?? null;
+  }, [loadMine]);
 
   useEffect(() => {
-    const users = read<Record<string, User>>(K_USERS, {});
-    const session = read<string | null>(K_SESSION, null);
-    setUser(session ? users[session] ?? null : null);
-    setAllOrders(read<Order[]>(K_ORDERS, []));
-    setResellers(read<Record<string, ResellerApp>>(K_RESELLERS, {}));
-    setReady(true);
+    loadMe().finally(() => setReady(true));
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
-  }, []);
+  }, [loadMe]);
 
-  const saveUser = (u: User) => {
-    const users = read<Record<string, User>>(K_USERS, {});
-    users[u.mobile] = u;
-    write(K_USERS, users);
-    setUser(u);
-  };
-
-  const requestOtp = useCallback(async () => { await new Promise((r) => setTimeout(r, 500)); }, []);
-
-  const verifyOtp = useCallback(async (mobile: string, code: string) => {
-    await new Promise((r) => setTimeout(r, 400));
-    if (code !== "12345") return { ok: false, isNew: false };
-    const m = normalizeMobile(mobile);
-    const users = read<Record<string, User>>(K_USERS, {});
-    const existing = users[m];
-    const u = existing ?? { mobile: m, name: "", email: "", createdAt: Date.now() };
-    saveUser(u);
-    write(K_SESSION, m);
-    return { ok: true, isNew: !existing || !existing.name };
-  }, []);
-
-  const value = useMemo<Account>(() => {
-    const orders = user ? allOrders.filter((o) => o.mobile === user.mobile).sort((a, b) => b.createdAt - a.createdAt) : [];
-    return {
-      ready, user, orders, now, requestOtp, verifyOtp,
-      updateProfile: (patch) => { if (user) saveUser({ ...user, ...patch }); },
-      logout: () => { write(K_SESSION, null); setUser(null); },
-      placeOrder: (lines, discountCode) => {
-        const subtotal = lines.reduce((s, l) => s + l.price, 0);
-        const rate = DISCOUNTS[discountCode.trim().toUpperCase()] ?? 0;
-        const discount = Math.round((subtotal * rate) / 1000) * 1000;
-        const o: Order = { code: newOrderCode(), createdAt: Date.now(), lines, subtotal, discount, total: subtotal - discount, mobile: user?.mobile ?? "" };
-        const next = [o, ...allOrders];
-        write(K_ORDERS, next);
-        setAllOrders(next);
-        if (user && !user.email) { const e = lines.find((l) => l.email)?.email; if (e) saveUser({ ...user, email: e }); }
-        return o;
-      },
-      orderByCode: (code) => allOrders.find((o) => o.code === code),
-      reseller: user ? resellers[user.mobile] ?? null : null,
-      applyReseller: (a) => {
-        if (!user) return;
-        const next = { ...resellers, [user.mobile]: { ...a, mobile: user.mobile, createdAt: Date.now(), status: "pending" as const } };
-        write(K_RESELLERS, next); setResellers(next);
-      },
-      approveResellerDemo: () => {
-        if (!user || !resellers[user.mobile]) return;
-        const next = { ...resellers, [user.mobile]: { ...resellers[user.mobile], status: "approved" as const } };
-        write(K_RESELLERS, next); setResellers(next);
-      },
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, user, allOrders, resellers, now, requestOtp, verifyOtp]);
+  const value = useMemo<Account>(() => ({
+    ready, user, orders, now, demo, reseller,
+    requestOtp: async (mobile) => {
+      const r = await api<{ ok: boolean }>("/api/auth/otp", { body: { mobile: normalizeMobile(mobile) } });
+      return { ok: !!r.ok, error: r.error, wait: r.wait };
+    },
+    verifyOtp: async (mobile, code) => {
+      const r = await api<{ ok: boolean; isNew: boolean }>("/api/auth/verify", { body: { mobile: normalizeMobile(mobile), code } });
+      if (r.ok) await loadMe();
+      return { ok: !!r.ok, isNew: !!r.isNew, error: r.error };
+    },
+    updateProfile: async (patch) => {
+      const r = await api<{ user: Me }>("/api/auth/me", { method: "PATCH", body: patch });
+      if (r.user) setUser(r.user);
+      return !!r.user;
+    },
+    logout: async () => { await api("/api/auth/logout", { method: "POST", body: {} }); setUser(null); setOrders([]); setReseller(null); },
+    placeOrder: async (lines, discount) => {
+      const r = await api<{ code: string; payUrl: string }>("/api/orders", { body: { lines, discount } });
+      return r.error || !r.code ? { error: r.error ?? "server_error", index: r.index } : { code: r.code, payUrl: r.payUrl };
+    },
+    refreshOrders: loadMine,
+    applyReseller: async (a) => {
+      const r = await api<{ reseller: ResellerApp }>("/api/reseller", { body: a });
+      if (r.reseller) setReseller(r.reseller);
+      return !!r.reseller;
+    },
+  }), [ready, user, orders, now, demo, reseller, loadMe, loadMine]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
@@ -107,4 +106,29 @@ export function useAccount() {
   const a = useContext(Ctx);
   if (!a) throw new Error("useAccount must be used inside <AccountProvider>");
   return a;
+}
+
+/** One order, fetched from the server and refreshed every few seconds until it is complete. */
+export function useOrder(code: string) {
+  const { user, ready } = useAccount();
+  const [order, setOrder] = useState<Order | null>(null);
+  const [state, setState] = useState<"loading" | "ok" | "missing">("loading");
+  const load = useCallback(async () => {
+    const r = await api<{ order: Order }>(`/api/orders/${encodeURIComponent(code)}`);
+    if (r.order) { setOrder(r.order); setState("ok"); } else setState("missing");
+    return r.order;
+  }, [code]);
+  useEffect(() => {
+    if (!ready) return;
+    if (!user) { setState("missing"); return; }
+    let stop = false;
+    let t: ReturnType<typeof setTimeout>;
+    const tick = async () => {
+      const o = await load();
+      if (!stop && o && (o.status === "paid" || o.status === "activating")) t = setTimeout(tick, 5000);
+    };
+    tick();
+    return () => { stop = true; clearTimeout(t); };
+  }, [ready, user, load]);
+  return { order, state, reload: load };
 }

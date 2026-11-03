@@ -30,7 +30,8 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
         </div>
         <nav aria-label="داشبورد">
           {NAV.map(([href, label]) => <Link key={href} href={href} className={path === href ? "on" : ""}>{label}</Link>)}
-          <button onClick={() => { logout(); router.push("/"); }}>خروج <Icon id="arrow" className="arrow" /></button>
+          {user.isAdmin && <Link href="/admin">پنل مدیریت</Link>}
+          <button onClick={async () => { await logout(); router.push("/"); }}>خروج <Icon id="arrow" className="arrow" /></button>
         </nav>
       </aside>
       <div className="dash-main">{children}</div>

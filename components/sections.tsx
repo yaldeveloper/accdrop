@@ -266,7 +266,6 @@ export function DropSection() {
 export function Shield() {
   const [tracked, setTracked] = useState<string | null>(null);
   const router = useRouter();
-  const { orderByCode } = useAccount();
   const promises: [string, string][] = [
     ["قطع شد؟ جایگزین می‌کنیم.", "تا روز آخر اشتراک. اگر نشد، پول روزهای باقی‌مانده برمی‌گردد."],
     ["فقط ایمیل، نه رمز.", "اشتراک روی اکانت خودت فعال می‌شود."],
@@ -279,11 +278,11 @@ export function Shield() {
           <Eyebrow dotColor="var(--ink)">ضمانت اک‌دراپ</Eyebrow>
           <p className="big-quote" style={{ marginTop: 28 }}>پاس تو،<br /><b>تا روز آخر بیمه است.</b></p>
           <p className="muted" style={{ marginTop: 18, fontSize: 14 }}>فعال نشد؟ کل مبلغ برمی‌گردد. قطع شد؟ جایگزین می‌کنیم. <Link className="link" href="/guarantee">شرایط کامل ضمانت</Link></p>
-          <form className="track" onSubmit={(e) => { e.preventDefault(); const v = String(new FormData(e.currentTarget).get("code") || "").trim().toUpperCase(); if (v && orderByCode(v)) { router.push(`/orders/${v}`); return; } setTracked(v || "AD-48213"); }}>
+          <form className="track" onSubmit={(e) => { e.preventDefault(); const v = String(new FormData(e.currentTarget).get("code") || "").trim().toUpperCase(); if (/^AD-\d{5,6}$/.test(v)) { router.push(`/orders/${v}`); return; } setTracked(v || "AD-482137"); }}>
             <input name="code" placeholder="AD-48213" aria-label="کد سفارش" />
             <button>پیگیری <Icon id="arrow" className="arrow" style={{ width: 14, height: 14, verticalAlign: -2 }} /></button>
           </form>
-          <div className={`status ${tracked ? "on" : ""}`}><span className="pulse" /><span>سفارش <b className="en">{tracked}</b> در این مرورگر پیدا نشد. <Link className="link" href="/login?next=/account/orders">وارد حسابت شو</Link></span></div>
+          <div className={`status ${tracked ? "on" : ""}`}><span className="pulse" /><span>کد <b className="en">{tracked}</b> درست نیست. کد سفارش مثل AD-482137 است. <Link className="link" href="/login?next=/account/orders">وارد حسابت شو</Link></span></div>
         </div>
         <ol className="promises reveal">
           {promises.map(([h, p], i) => (
