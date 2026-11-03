@@ -36,7 +36,7 @@ export function ResellerForm() {
   if (reseller) {
     return (
       <div className="rs-form rs-done">
-        <span className="chip s1"><i />{reseller.status === "approved" ? "تأیید شده" : "در حال بررسی"}</span>
+        <span className="chip s1"><i />{{ approved: "تأیید شده", pending: "در حال بررسی", rejected: "تأیید نشد" }[reseller.status]}</span>
         <h3>درخواستت ثبت شد</h3>
         <p className="muted">ثبت در {faDate(reseller.createdAt)}. معمولاً ظرف یک روز کاری بررسی می‌کنیم و نتیجه را پیامک می‌کنیم.</p>
         <Link className="btn btn-paper" href="/account/reseller">رفتن به پنل نمایندگی <Icon id="arrow" className="arrow" /></Link>
@@ -66,7 +66,7 @@ export function ResellerForm() {
 
 /** Dashboard tab: application status, then (once approved) partner prices and a referral link. */
 export function ResellerPanel() {
-  const { user, reseller, approveResellerDemo } = useAccount();
+  const { user, reseller } = useAccount();
   const { notify } = useStore();
   if (!user) return null;
   if (!reseller) {
@@ -78,6 +78,15 @@ export function ResellerPanel() {
       </div>
     );
   }
+  if (reseller.status === "rejected") {
+    return (
+      <div className="rs-pending">
+        <span className="chip sx"><i />تأیید نشد</span>
+        <h2>{reseller.business}</h2>
+        <p className="muted">فعلاً درخواستت تأیید نشد. برای توضیح بیشتر یا بررسی دوباره به پشتیبانی پیام بده.</p>
+      </div>
+    );
+  }
   if (reseller.status === "pending") {
     return (
       <div className="rs-pending">
@@ -85,7 +94,6 @@ export function ResellerPanel() {
         <h2>{reseller.business}</h2>
         <p className="muted">درخواستت در {faDate(reseller.createdAt)} ثبت شد. معمولاً ظرف یک روز کاری بررسی می‌کنیم و نتیجه را پیامک می‌کنیم.</p>
         <dl className="rs-dl"><div><dt>کانال فروش</dt><dd>{reseller.kind}</dd></div><div><dt>حجم فروش</dt><dd>{reseller.volume}</dd></div>{reseller.link && <div><dt>لینک</dt><dd className="en">{reseller.link}</dd></div>}</dl>
-        <button className="link" onClick={approveResellerDemo}>پیش‌نمایش پنل نماینده (فقط در نسخه آزمایشی)</button>
       </div>
     );
   }

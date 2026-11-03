@@ -1,34 +1,39 @@
-// Accounts and orders.
-// DEMO BACKEND: everything below is stored in the browser (localStorage) so the full flow can be tried
-// without a server. Replace these functions with API calls (SMS OTP, payment gateway callback, order service).
+// Accounts and orders: shared types and helpers used by both the browser and the server (lib/server).
 import { productById, type Selection } from "./catalog";
 import { clubPoints } from "./format";
 
 export type User = { mobile: string; name: string; email: string; createdAt: number };
-export type OrderLine = Selection & { price: number; email?: string; username?: string };
-export type Order = { code: string; createdAt: number; lines: OrderLine[]; subtotal: number; discount: number; total: number; mobile: string };
+export type OrderLine = Selection & {
+  price: number; email?: string; username?: string;
+  /** Server fields: line id, and what was delivered (gift code, number or login) once it is ready. */
+  lineId?: number; secret?: string; deliveredAt?: number | null;
+};
+/** pending = waiting for payment, canceled = payment failed or abandoned. */
+export type OrderStatus = "pending" | "paid" | "activating" | "active" | "canceled" | "refunded";
+export type Order = {
+  code: string; createdAt: number; lines: OrderLine[]; subtotal: number; discount: number; total: number; mobile: string;
+  status: OrderStatus; paidAt?: number | null; activatedAt?: number | null; refId?: string; adminNote?: string;
+};
 
 export type Stage = 0 | 1 | 2; // paid, activating, active
 export const STAGES = ["پرداخت شد", "در حال فعال‌سازی", "فعال شد"] as const;
+export const STATUS_TITLE: Record<OrderStatus, string> = {
+  pending: "در انتظار پرداخت", paid: "پرداخت شد", activating: "در حال فعال‌سازی", active: "فعال شد", canceled: "پرداخت نشد", refunded: "بازپرداخت شد",
+};
+export const isPaid = (o: Order) => o.status === "paid" || o.status === "activating" || o.status === "active";
 
-/** Demo timing: an order "activates" this many ms after payment. In production this comes from the order service. */
-export const DEMO_ACTIVATION_MS = 25_000;
 const DAY = 86_400_000;
 
 export const DEMO_OTP = "12345";
 
-export function stageOf(o: Order, now: number): Stage {
-  const t = now - o.createdAt;
-  // Instant products (gift codes, virtual numbers) are delivered automatically right after payment.
-  if (o.lines.every((l) => productById(l.id).etaMinutes === 0)) return t < 1_500 ? 0 : 2;
-  if (t < 3_000) return 0;
-  if (t < DEMO_ACTIVATION_MS) return 1;
-  return 2;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function stageOf(o: Order, _now?: number): Stage {
+  return o.status === "active" ? 2 : o.status === "activating" ? 1 : 0;
 }
 
 /** A purchased line once active: when it started and when it runs out. */
 export function passWindow(o: Order, l: OrderLine) {
-  const start = o.createdAt + DEMO_ACTIVATION_MS;
+  const start = o.activatedAt ?? o.paidAt ?? o.createdAt;
   const end = start + Number(l.plan) * 30 * DAY;
   return { start, end, totalDays: Number(l.plan) * 30 };
 }
@@ -41,18 +46,14 @@ export const TIERS = [
   { key: "PRIME", title: "پرایم", from: 10, perks: ["دراپ‌های اختصاصی", "کارشناس شخصی"] },
 ] as const;
 
-export function clubOf(orders: Order[]) {
+export function clubOf(all: Order[]) {
+  const orders = all.filter(isPaid);
   const points = orders.reduce((s, o) => s + clubPoints(o.total), 0);
   const n = orders.length;
   const tierIndex = n >= 10 ? 2 : n >= 3 ? 1 : 0;
   const next = TIERS[tierIndex + 1];
   return { points, orders: n, tier: TIERS[tierIndex], next, toNext: next ? next.from - n : 0 };
 }
-
-/** Sample discount codes for the demo. */
-export const DISCOUNTS: Record<string, number> = { WELCOME: 0.1 };
-
-export const newOrderCode = () => `AD-${Math.floor(40000 + Math.random() * 59999)}`;
 
 export const lineTitle = (l: Selection) => productById(l.id).name;
 
@@ -69,7 +70,7 @@ export const normalizeUsername = (u: string) => "@" + u.trim().replace(/^@/, "")
 // ----- Reseller program (sample terms; confirm the real percentages before launch) -----
 export type ResellerApp = {
   mobile: string; business: string; kind: string; link: string; volume: string; note: string;
-  createdAt: number; status: "pending" | "approved";
+  createdAt: number; status: "pending" | "approved" | "rejected";
 };
 
 export const RESELLER_TIERS = [

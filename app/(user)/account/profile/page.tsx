@@ -16,11 +16,10 @@ export default function ProfilePage() {
   return (
     <>
       <header className="dash-h"><h1>حساب کاربری</h1><p className="muted">عضو از {faDate(user.createdAt, false)}</p></header>
-      <form className="dash-sec prof" noValidate onSubmit={(e) => {
+      <form className="dash-sec prof" noValidate onSubmit={async (e) => {
         e.preventDefault();
         if (email && !validEmail(email)) { setBad(true); return; }
-        updateProfile({ name: name.trim(), email: email.trim() });
-        notify("ذخیره شد");
+        notify((await updateProfile({ name: name.trim(), email: email.trim() })) ? "ذخیره شد" : "ذخیره نشد. دوباره امتحان کن.");
       }}>
         <div className="fld"><label htmlFor="pf-n">نام و نام خانوادگی</label><input id="pf-n" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" /></div>
         <div className="fld"><label htmlFor="pf-m">شماره موبایل</label><input id="pf-m" className="ltr" value={fa(user.mobile)} disabled /><small className="muted">برای تغییر شماره به پشتیبانی پیام بده.</small></div>

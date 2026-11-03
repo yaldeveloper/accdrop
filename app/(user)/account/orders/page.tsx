@@ -1,11 +1,13 @@
 "use client";
 
+import { useEffect } from "react";
 import { useAccount } from "@/components/account";
 import { EmptyState } from "@/components/dashboard";
 import { OrderRow } from "@/components/orders";
 
 export default function OrdersPage() {
-  const { orders, now } = useAccount();
+  const { orders, now, refreshOrders } = useAccount();
+  useEffect(() => { refreshOrders(); }, [refreshOrders]);
   return (
     <>
       <header className="dash-h"><h1>سفارش‌ها</h1><p className="muted">روی هر سفارش بزن تا مراحلش را ببینی.</p></header>

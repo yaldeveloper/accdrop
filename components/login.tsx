@@ -8,7 +8,7 @@ import { useAccount } from "./account";
 
 /** Mobile + one-time code login. New users are asked for a name in a third, skippable step. */
 export function LoginFlow({ onDone, compact = false }: { onDone: () => void; compact?: boolean }) {
-  const { requestOtp, verifyOtp, updateProfile } = useAccount();
+  const { requestOtp, verifyOtp, updateProfile, demo } = useAccount();
   const [step, setStep] = useState<"mobile" | "code" | "name">("mobile");
   const [mobile, setMobile] = useState("");
   const [code, setCode] = useState("");
@@ -27,8 +27,14 @@ export function LoginFlow({ onDone, compact = false }: { onDone: () => void; com
   const send = async () => {
     if (!validMobile(mobile)) { setErr("شماره موبایل را درست وارد کن، مثل ۰۹۱۲۱۲۳۴۵۶۷"); return; }
     setErr(""); setBusy(true);
-    await requestOtp(normalizeMobile(mobile));
-    setBusy(false); setStep("code"); setWait(60); setCode("");
+    const r = await requestOtp(normalizeMobile(mobile));
+    setBusy(false);
+    if (!r.ok) {
+      if (r.error === "too_soon") { setStep("code"); setWait(r.wait ?? 60); setErr(""); return; }
+      setErr(r.error === "too_many" ? "تعداد درخواست‌ها زیاد بود. یک ساعت دیگر امتحان کن." : "ارسال پیامک انجام نشد. چند لحظه دیگر دوباره امتحان کن.");
+      return;
+    }
+    setStep("code"); setWait(60); setCode("");
     setTimeout(() => codeRef.current?.focus(), 50);
   };
 
@@ -37,7 +43,10 @@ export function LoginFlow({ onDone, compact = false }: { onDone: () => void; com
     setBusy(true);
     const r = await verifyOtp(mobile, c);
     setBusy(false);
-    if (!r.ok) { setErr("کد درست نیست. دوباره امتحان کن."); setCode(""); return; }
+    if (!r.ok) {
+      setErr({ expired: "کد منقضی شده. یک کد تازه بگیر.", too_many: "چند بار اشتباه زدی. یک کد تازه بگیر.", blocked: "این حساب مسدود شده. با پشتیبانی تماس بگیر." }[r.error ?? ""] ?? "کد درست نیست. دوباره امتحان کن.");
+      setCode(""); return;
+    }
     setErr("");
     if (r.isNew) setStep("name"); else onDone();
   };
@@ -68,14 +77,14 @@ export function LoginFlow({ onDone, compact = false }: { onDone: () => void; com
             <label htmlFor="lg-c">کد تأیید</label>
             <input id="lg-c" ref={codeRef} className={`ltr otp ${err ? "bad" : ""}`} type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={5} placeholder="– – – – –"
               value={code} onChange={(e) => { const v = toEn(e.target.value).slice(0, 5); setCode(v); setErr(""); if (v.length === 5) verify(v); }} />
-            {err ? <small className="err">{err}</small> : <small className="muted">نسخه آزمایشی: کد <b className="num">{fa(DEMO_OTP)}</b> است.</small>}
+            {err ? <small className="err">{err}</small> : demo.login ? <small className="muted">نسخه آزمایشی: کد <b className="num">{fa(DEMO_OTP)}</b> است.</small> : null}
           </div>
           <button className="btn btn-paper btn-block" disabled={busy || code.length < 5}>{busy ? "در حال بررسی…" : "ورود"}</button>
           <small className="muted fine">{wait > 0 ? <>ارسال دوباره تا <span className="num">{fa(wait)}</span> ثانیه دیگر</> : <button type="button" className="link" onClick={send}>ارسال دوباره کد</button>}</small>
         </form>
       )}
       {step === "name" && (
-        <form onSubmit={(e) => { e.preventDefault(); if (name.trim()) updateProfile({ name: name.trim() }); onDone(); }} noValidate>
+        <form onSubmit={async (e) => { e.preventDefault(); if (name.trim()) { setBusy(true); await updateProfile({ name: name.trim() }); setBusy(false); } onDone(); }} noValidate>
           {!compact && <h1>خوش آمدی</h1>}
           <p className="muted">اسمت را بگو تا سفارش‌ها و پاس‌هایت به نامت باشد.</p>
           <div className="fld">
