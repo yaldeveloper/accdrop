@@ -14,6 +14,7 @@ import { useStore } from "./store";
 const NAV = [
   ["/admin", "خلاصه"],
   ["/admin/orders", "سفارش‌ها"],
+  ["/admin/tickets", "تیکت‌ها"],
   ["/admin/codes", "انبار کد"],
   ["/admin/resellers", "نماینده‌ها"],
   ["/admin/users", "کاربران"],
@@ -60,7 +61,7 @@ const lineText = (l: Order["lines"][number]) => {
 };
 
 // ----- Overview -----
-type Stats = { today: number; todayCount: number; month: number; monthCount: number; open: number; pendingResellers: number; users: number;
+type Stats = { today: number; todayCount: number; month: number; monthCount: number; open: number; pendingResellers: number; users: number; openTickets: number;
   lowStock: { productId: string; plan: string; free: number; waiting: number }[] };
 
 export function AdminHome() {
@@ -73,7 +74,7 @@ export function AdminHome() {
         <div><small>فروش امروز</small><b className="num">{s ? money(s.today) : "…"}</b><span className="muted">{s ? `${fa(s.todayCount)} سفارش` : ""}</span></div>
         <div><small>۳۰ روز اخیر</small><b className="num">{s ? money(s.month) : "…"}</b><span className="muted">{s ? `${fa(s.monthCount)} سفارش` : ""}</span></div>
         <Link href="/admin/orders?status=open"><small>منتظر فعال‌سازی</small><b className="num">{s ? fa(s.open) : "…"}</b><span className="muted">سفارش باز</span></Link>
-        <Link href="/admin/resellers"><small>درخواست نمایندگی</small><b className="num">{s ? fa(s.pendingResellers) : "…"}</b><span className="muted">{s ? `${fa(s.users)} کاربر` : ""}</span></Link>
+        <Link href="/admin/tickets"><small>تیکت بی‌پاسخ</small><b className={`num ${s?.openTickets ? "warn" : ""}`}>{s ? fa(s.openTickets) : "…"}</b><span className="muted">{s ? `${fa(s.pendingResellers)} درخواست نمایندگی` : ""}</span></Link>
       </div>
       {!!s?.lowStock.length && (
         <div className="dash-sec">

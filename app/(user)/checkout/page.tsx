@@ -74,7 +74,7 @@ export default function CheckoutPage() {
         <Dots size={8} />
         <h1>سبد خرید خالی است</h1>
         <p className="muted">یک ابزار انتخاب کن تا اینجا برگردیم.</p>
-        <Link className="btn btn-paper" href="/#collection">دیدن همه سرویس‌ها <Icon id="arrow" className="arrow" /></Link>
+        <Link className="btn btn-paper" href="/services">دیدن همه سرویس‌ها <Icon id="arrow" className="arrow" /></Link>
       </div>
     );
   }

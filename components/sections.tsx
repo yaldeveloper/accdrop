@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { CATEGORIES, CURRENT_DROP, DELIVERY, PRODUCTS, minPrice, optionLabel, productById, type Category, type Product } from "@/lib/catalog";
 import { duration, fa, money, pad2 } from "@/lib/format";
 import { BrandLogo, Dots, Eyebrow, Glyph, Icon, Wordmark } from "./brand";
@@ -12,6 +12,7 @@ import { productHref } from "@/lib/content";
 import { splitName } from "./pass";
 import { useStore } from "./store";
 import { useAccount } from "./account";
+import { ServiceBrowser } from "./browser";
 
 /** Fades sections in on scroll. */
 export function useReveal() {
@@ -40,7 +41,7 @@ export function Header() {
       <div className="wrap">
         <a href="/" aria-label="اک‌دراپ، صفحه اصلی"><Wordmark /></a>
         <nav aria-label="منوی اصلی">
-          <Link href="/#collection">همه سرویس‌ها</Link><Link href="/#drop">دراپ هفته</Link><Link href="/guarantee">ضمانت</Link><Link href="/reseller">نمایندگی فروش</Link><Link href="/contact">پشتیبانی</Link>
+          <Link href="/services">همه سرویس‌ها</Link><Link href="/#drop">دراپ هفته</Link><Link href="/guarantee">ضمانت</Link><Link href="/reseller">نمایندگی فروش</Link><Link href="/contact">پشتیبانی</Link>
         </nav>
         <div className="sp" />
         <div className="tools">
@@ -134,7 +135,7 @@ export function Hero() {
                 <BrandLogo id={id} size={16} />{CHIP[id] ?? splitName(productById(id).name)[0]}
               </button>
             ))}
-            <a href="/#collection" className="more">همه سرویس‌ها</a>
+            <Link href="/services" className="more">همه سرویس‌ها</Link>
           </div>
           <div className="hero2-cta">
             <Link className="btn btn-paper" href={productHref(p)}>
@@ -177,8 +178,6 @@ export function Steps() {
 }
 
 export function Collection() {
-  const [cat, setCat] = useState<"all" | Category>("all");
-  const list = PRODUCTS.filter((p) => cat === "all" || p.category === cat);
   return (
     <section className="light" id="collection">
       <div className="wrap">
@@ -187,17 +186,9 @@ export function Collection() {
             <Eyebrow dotColor="var(--ink)">همه سرویس‌ها</Eyebrow>
             <h2>به چه چیزی<br /><b>نیاز داری؟</b></h2>
           </div>
-          <p className="muted">کاتالوگ دست‌چین؛ فقط سرویس‌هایی که واقعاً هر روز به کار می‌آیند.</p>
+          <p className="muted">اسمش را بنویس، دسته را انتخاب کن، یا بگو برای چه کاری می‌خواهی‌اش.</p>
         </div>
-        <div className="filters" role="tablist">
-          {(Object.keys(CATEGORIES) as ("all" | Category)[]).map((k) => (
-            <button key={k} className={k === cat ? "on" : ""} onClick={() => setCat(k)} role="tab" aria-selected={k === cat}>{CATEGORIES[k]}</button>
-          ))}
-        </div>
-        <div className="tiles">
-          {list.map((p) => <ToolCard key={p.id} p={p} />)}
-        </div>
-        <div className="foot-note"><span>قیمت‌ها نهایی‌اند.</span><span>داده نمونه</span></div>
+        <Suspense fallback={<div className="sb-wait" />}><ServiceBrowser /></Suspense>
       </div>
     </section>
   );
@@ -371,7 +362,7 @@ export function Footer() {
         <div className="fg">
           <div><h5 className="fa">سرویس‌ها</h5><ul className="f-products">{PRODUCTS.map((p) => <li key={p.id}><Link href={productHref(p)} className="en">{p.name}</Link></li>)}</ul></div>
           <div><h5 className="fa">اک‌دراپ</h5><ul><li><Link href="/#drop">دراپ هفته</Link></li><li><Link href="/#club">باشگاه مشتریان</Link></li><li><Link href="/reseller">نمایندگی فروش</Link></li></ul></div>
-          <div><h5 className="fa">راهنما</h5><ul><li><Link href="/account/orders">پیگیری سفارش</Link></li><li><Link href="/guarantee">شرایط ضمانت و بازگشت وجه</Link></li><li><Link href="/terms">قوانین و مقررات</Link></li><li><Link href="/#concierge">سؤالات پرتکرار</Link></li></ul></div>
+          <div><h5 className="fa">راهنما</h5><ul><li><Link href="/account/orders">پیگیری سفارش</Link></li><li><Link href="/guarantee">شرایط ضمانت و بازگشت وجه</Link></li><li><Link href="/terms">قوانین و مقررات</Link></li><li><Link href="/#concierge">سؤالات پرتکرار</Link></li><li><Link href="/account/tickets">تیکت پشتیبانی</Link></li></ul></div>
           <div><h5 className="fa">تماس</h5><ul><li><Link href="/contact">پشتیبانی، هر روز ۹ تا ۲۴</Link></li><li><a href="#">تلگرام</a></li><li><a href="#">اینستاگرام</a></li><li><a href="mailto:hello@accdrop.ir" className="en">hello@accdrop.ir</a></li></ul></div>
         </div>
         <Wordmark className="f-wm" />
@@ -386,7 +377,7 @@ export function MobileBar() {
   const { user } = useAccount();
   return (
     <nav className="mbar" aria-label="ناوبری موبایل">
-      <a href="/#collection"><Icon id="grid" />مجموعه</a>
+      <Link href="/services"><Icon id="grid" />سرویس‌ها</Link>
       <button onClick={openSearch}><Icon id="search" />جست‌وجو</button>
       <Link href={user ? "/account" : "/login"}><Icon id="user" />{user ? "حساب من" : "ورود"}</Link>
       <button onClick={() => setView("cart")}><Icon id="bag" /><span>سبد <span className="num">({fa(cart.length)})</span></span></button>

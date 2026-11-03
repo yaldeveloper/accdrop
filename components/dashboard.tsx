@@ -79,7 +79,7 @@ export function EmptyState({ title, text }: { title: string; text: string }) {
       <Dots size={6} />
       <b>{title}</b>
       <p className="muted">{text}</p>
-      <Link className="btn btn-paper" href="/#collection">انتخاب ابزار <Icon id="arrow" className="arrow" /></Link>
+      <Link className="btn btn-paper" href="/services">انتخاب ابزار <Icon id="arrow" className="arrow" /></Link>
     </div>
   );
 }

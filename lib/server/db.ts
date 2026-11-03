@@ -101,6 +101,26 @@ create table if not exists resellers (
   created_at timestamptz not null default now(),
   decided_at timestamptz
 );
+create table if not exists tickets (
+  id serial primary key,
+  mobile text not null references users(mobile),
+  topic text not null,
+  subject text not null,
+  order_code text,
+  status text not null default 'open',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists tickets_mobile on tickets(mobile);
+create index if not exists tickets_status on tickets(status);
+create table if not exists ticket_messages (
+  id serial primary key,
+  ticket_id int not null references tickets(id) on delete cascade,
+  author text not null,
+  body text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists ticket_messages_ticket on ticket_messages(ticket_id);
 insert into discounts (code, rate) values ('WELCOME', 0.1) on conflict do nothing;
 `;
 

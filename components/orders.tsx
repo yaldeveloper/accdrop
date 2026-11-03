@@ -104,7 +104,7 @@ export function OrderDetail({ order, now, onPay, paying }: { order: Order; now: 
       </div>
       <div className="od-actions">
         <Link className="btn btn-paper" href="/account">رفتن به داشبورد <Icon id="arrow" className="arrow" /></Link>
-        <a className="btn btn-ghost" href="#">پشتیبانی در تلگرام</a>
+        <Link className="btn btn-ghost" href={`/account/tickets/new?topic=order&order=${order.code}`}>تیکت برای این سفارش</Link>
       </div>
     </div>
   );

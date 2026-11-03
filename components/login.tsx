@@ -31,7 +31,8 @@ export function LoginFlow({ onDone, compact = false }: { onDone: () => void; com
     setBusy(false);
     if (!r.ok) {
       if (r.error === "too_soon") { setStep("code"); setWait(r.wait ?? 60); setErr(""); return; }
-      setErr(r.error === "too_many" ? "تعداد درخواست‌ها زیاد بود. یک ساعت دیگر امتحان کن." : "ارسال پیامک انجام نشد. چند لحظه دیگر دوباره امتحان کن.");
+      setErr(r.error === "too_many" ? "تعداد درخواست‌ها زیاد بود. یک ساعت دیگر امتحان کن."
+        : r.error === "sms_failed" ? "ارسال پیامک انجام نشد. چند لحظه دیگر دوباره امتحان کن." : "مشکلی پیش آمد. چند لحظه دیگر دوباره امتحان کن.");
       return;
     }
     setStep("code"); setWait(60); setCode("");

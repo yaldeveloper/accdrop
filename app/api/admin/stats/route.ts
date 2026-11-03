@@ -14,10 +14,11 @@ export const GET = route(async () => withAdmin(async () => {
     from orders`;
   const [r] = await sql`select count(*)::int as n from resellers where status = 'pending'`;
   const [u] = await sql`select count(*)::int as n from users`;
+  const [t] = await sql`select count(*)::int as n from tickets where status = 'open'`;
   const stock = await stockSummary();
   return json({
     today: Number(s.today), todayCount: s.today_n, month: Number(s.month), monthCount: s.month_n, open: s.open,
-    pendingResellers: r.n, users: u.n,
+    pendingResellers: r.n, users: u.n, openTickets: t.n,
     lowStock: stock.filter((x) => x.free < 3 || x.waiting > 0),
   });
 }));
