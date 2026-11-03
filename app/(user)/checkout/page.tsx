@@ -24,6 +24,8 @@ export default function CheckoutPage() {
   const [agree, setAgree] = useState(true);
   const [paying, setPaying] = useState(false);
   const [method, setMethod] = useState<"card" | "crypto">("card");
+  const [usdt, setUsdt] = useState(0);
+  useEffect(() => { if (method === "crypto" && !usdt) api<{ rate: number }>("/api/rate").then((r) => r.rate && setUsdt(r.rate)); }, [method, usdt]);
   const [bad, setBad] = useState<number[]>([]);
   // Keep the login form mounted until it finishes (it may still ask a new user for their name).
   const [inFlow, setInFlow] = useState(false);
@@ -187,7 +189,7 @@ export default function CheckoutPage() {
             <div className="opts v co-pay">
               <button className={`opt ${method === "card" ? "on" : ""}`} type="button" aria-pressed={method === "card"} onClick={() => setMethod("card")}><b>درگاه بانکی</b><small>همه کارت‌های عضو شتاب، پرداخت امن</small></button>
               <button className={`opt ${method === "crypto" ? "on" : ""}`} type="button" aria-pressed={method === "crypto"} onClick={() => setMethod("crypto")}>
-                <b>ارز دیجیتال</b><small>USDT (ترون، اتریوم، BSC)، بیت‌کوین و بیشتر{demo.usd ? <> • حدود <span className="num">{fa(Math.ceil((total / demo.usd) * 100) / 100)}</span> دلار</> : null}</small>
+                <b>ارز دیجیتال</b><small>USDT (ترون، اتریوم، BSC)، بیت‌کوین و بیشتر{method === "crypto" && usdt ? <> • <span className="num">{fa(Math.ceil((total / usdt) * 100) / 100)}</span> تتر (هر تتر <span className="num">{money(usdt)}</span> تومان)</> : null}</small>
               </button>
             </div>
           </section>
