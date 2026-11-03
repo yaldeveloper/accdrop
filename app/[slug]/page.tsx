@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CATEGORIES, DELIVERY, PRICES_UPDATED, PRODUCTS, deliveryExplain, deliveryTypes, minPrice, planKeys, priceOf, type Product } from "@/lib/catalog";
+import { CATEGORIES, DELIVERY, PRICES_UPDATED, PRODUCTS, axisOf, deliveryExplain, deliveryTypes, etaText, guaranteeOf, isSub, kindOf, minPrice, nounOf, optionLabel, planKeys, priceOf, type DeliveryType, type Product } from "@/lib/catalog";
 import { seoOf } from "@/lib/seo";
 import { Toc } from "@/components/toc";
 import { CONTENT, contentOf } from "@/lib/content";
-import { duration, fa, money } from "@/lib/format";
+import { fa, money } from "@/lib/format";
 import { BrandLogo, Icon } from "@/components/brand";
 import { ToolCard } from "@/components/sections";
 import { BuyPanel } from "@/components/buy-panel";
@@ -23,8 +23,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const p = bySlug((await params).slug);
   if (!p) return {};
   const c = contentOf(p);
-  const title = `خرید اکانت ${p.name} (${c.faName}) | فعال‌سازی روی ایمیل شما`;
-  const description = `خرید اکانت ${p.name} با تحویل فوری و تومان، از ${money(minPrice(p))} تومان. فعال‌سازی روی ایمیل خودت در حدود ${fa(p.etaMinutes)} دقیقه، ضمانت بازگشت وجه و پشتیبانی فارسی.`;
+  const kw = keywordOf(p);
+  const tail = { sub: deliveryTypes(p).includes("username") ? "فعال‌سازی روی آیدی شما" : "فعال‌سازی روی ایمیل شما", gift: "تحویل فوری کد", account: "اکانت اختصاصی", qty: "تحویل روی آیدی شما", number: "تحویل فوری" }[kindOf(p)];
+  const title = `${kw.includes(c.faName) ? kw : `${kw} (${c.faName})`} | ${tail}`;
+  const description = `${kw} با پرداخت تومانی، از ${money(minPrice(p))} تومان. تحویل ${etaText(p)}، ${DELIVERY[deliveryTypes(p)[0]].detail}؛ ضمانت بازگشت وجه و پشتیبانی فارسی.`;
   return {
     title, description,
     alternates: { canonical: `/${c.slug}` },
@@ -32,7 +34,40 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
+const keywordOf = (p: Product) => contentOf(p).keyword ?? `خرید اکانت ${p.name}`;
+
+/** The three steps of one delivery method. */
+function stepsFor(p: Product, t: DeliveryType): [string, string][] {
+  const pay: [string, string] = ["پرداخت", `${axisOf(p)} را انتخاب کن و با کارت بانکی بپرداز.`];
+  switch (t) {
+    case "own": return [pay, ["ایمیل اکانت", `ایمیل اکانت ${p.maker} خودت را وارد کن. رمز لازم نیست.`], [`فعال‌سازی، ${etaText(p)}`, "اشتراک روی همان اکانت فعال می‌شود و پیامک می‌گیری."]];
+    case "ready": return [pay, ["ساخت اکانت", "یک اکانت تازه فقط برای تو ساخته می‌شود."], [`تحویل، ${etaText(p)}`, "اطلاعات ورود را در حساب کاربری و پیامک می‌بینی."]];
+    case "username": return [pay, ["یوزرنیم تلگرام", "آیدی خودت یا کسی که می‌خواهی هدیه بگیرد را وارد کن."], [`ارسال، ${etaText(p)}`, "روی همان آیدی فعال می‌شود و پیامک می‌گیری."]];
+    case "code": return [pay, ["دریافت فوری کد", "کد بلافاصله در صفحه سفارش و پیامک نمایش داده می‌شود."], ["شارژ اپل آیدی", "در App Store گزینه Redeem را بزن و کد را وارد کن."]];
+    case "number": return [pay, ["دریافت فوری شماره", "شماره در صفحه سفارش نمایش داده می‌شود."], ["دریافت کد تأیید", "شماره را در تلگرام یا واتس‌اپ بزن؛ کد همان‌جا می‌آید."]];
+  }
+}
+
+function promisesFor(p: Product): [string, string][] {
+  const tail: [string, string] = ["قیمت همان است که می‌بینی.", "بدون کارمزد پنهان، به تومان و نهایی."];
+  switch (kindOf(p)) {
+    case "sub": return [["فعال نشد؟", "کل مبلغ را برمی‌گردانیم."], ["وسط دوره قطع شد؟", "ظرف ۲۴ ساعت جایگزین می‌کنیم؛ اگر نشد، مبلغ روزهای باقی‌مانده برمی‌گردد."], ["رمز عبورت امن است.", "هیچ‌وقت رمز عبور نمی‌خواهیم."], tail];
+    case "gift": return [["کد کار نکرد؟", "کد جایگزین یا بازگشت کامل وجه."], ["از منبع رسمی.", "کدها قانونی‌اند، نه کارت‌های دست‌دوم."], ["تحویل فوری.", "بدون انتظار، حتی نیمه‌شب."], tail];
+    case "account": return [["ورود نشد؟", "اکانت جایگزین یا بازگشت وجه."], ["فقط مال توست.", "اکانت با کسی به اشتراک گذاشته نمی‌شود و رمز را عوض می‌کنی."], ["اطلاعات کامل.", "ایمیل، رمز و سؤال‌های امنیتی را تحویل می‌گیری."], tail];
+    case "qty": return [["کامل نرسید؟", "باقی‌مانده را می‌فرستیم یا مبلغش را برمی‌گردانیم."], ["امن.", "فقط یوزرنیم؛ هرگز کد ورود تلگرام نمی‌خواهیم."], ["هدیه هم می‌شود.", "روی آیدی هر کسی که بخواهی."], tail];
+    case "number": return [["کد نیامد؟", "کل مبلغ خودکار به حسابت برمی‌گردد."], ["فوری.", "شماره چند ثانیه بعد از پرداخت آماده است."], ["کشور به انتخاب تو.", "آمریکا، انگلیس، کانادا یا هلند."], tail];
+  }
+}
+
 function faqFor(p: Product): [string, string][] {
+  const pay: [string, string] = ["پرداخت چطور انجام می‌شود؟", "با هر کارت بانکی عضو شتاب، از درگاه پرداخت رسمی و به تومان. نیازی به کارت ارزی یا حساب خارجی نیست."];
+  if (!isSub(p) || deliveryTypes(p).includes("username")) {
+    return [
+      [`بعد از پرداخت، ${p.name} چقدر طول می‌کشد؟`, p.etaMinutes === 0 ? "فوری. تحویل خودکار است و بلافاصله بعد از پرداخت در صفحه سفارش و حساب کاربری‌ات نمایش داده می‌شود." : `معمولاً ${etaText(p)}. وضعیت سفارش را لحظه‌به‌لحظه در حساب کاربری‌ات می‌بینی و پیامک می‌گیری.`],
+      ["اگر مشکلی پیش آمد چه می‌شود؟", `ضمانت ما: ${guaranteeOf(p)}. پشتیبانی فارسی هر روز ۹ تا ۲۴ پاسخ می‌دهد.`],
+      pay,
+    ];
+  }
   const own = deliveryTypes(p).includes("own"), ready = deliveryTypes(p).includes("ready");
   return [
     [`بعد از پرداخت، ${p.name} چقدر طول می‌کشد تا فعال شود؟`, `معمولاً حدود ${fa(p.etaMinutes)} دقیقه. وضعیت سفارش را لحظه‌به‌لحظه در حساب کاربری‌ات می‌بینی و وقتی فعال شد پیامک می‌گیری. ساعت کاری فعال‌سازی ۹ صبح تا ۱۲ شب است؛ سفارش‌های بعد از آن صبح روز بعد انجام می‌شوند.`],
@@ -59,13 +94,13 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const jsonLd = [
     {
       "@context": "https://schema.org", "@type": "Product",
-      name: `اکانت ${p.name}`, description: c.intro, brand: { "@type": "Brand", name: p.maker }, sku: c.slug,
+      name: c.faName ? `${p.name} (${c.faName})` : p.name, description: c.intro, brand: { "@type": "Brand", name: p.maker }, sku: c.slug,
       offers: {
         "@type": "AggregateOffer", priceCurrency: "IRR", lowPrice: Math.min(...prices) * 10, highPrice: Math.max(...prices) * 10,
         offerCount: prices.length, availability: "https://schema.org/InStock", url: `https://accdrop.ir/${c.slug}`,
         seller: { "@type": "Organization", name: "AccDrop" },
         offers: months.flatMap((m) => deliveryTypes(p).filter((t) => p.plans[m]?.[t]).map((t) => ({
-          "@type": "Offer", name: `${p.name}، ${duration(m)}، ${DELIVERY[t].title}`, priceCurrency: "IRR",
+          "@type": "Offer", name: `${p.name}، ${optionLabel(p, m)}، ${DELIVERY[t].title}`, priceCurrency: "IRR",
           price: priceOf({ id: p.id, plan: m, type: t }).price * 10, availability: "https://schema.org/InStock",
           url: `https://accdrop.ir/${c.slug}?plan=${m}&type=${t}`,
         }))),
@@ -82,7 +117,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       ],
     },
     {
-      "@context": "https://schema.org", "@type": "WebPage", name: `خرید اکانت ${p.name}`, inLanguage: "fa-IR",
+      "@context": "https://schema.org", "@type": "WebPage", name: keywordOf(p), inLanguage: "fa-IR",
       dateModified: PRICES_UPDATED.iso, url: `https://accdrop.ir/${c.slug}`,
     },
     {
@@ -103,19 +138,19 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           </nav>
           <div className="p2-g">
             <div className="p2-info p2-head">
-              <div className="p2-brand"><span className="p2-logo"><BrandLogo id={p.id} size={30} /></span><div><small>اشتراک رسمی</small><b className="en">{p.maker}</b></div></div>
-              <h1><small>خرید اکانت</small><span className="en">{tool}{tier && <i> {tier}</i>}</span></h1>
+              <div className="p2-brand"><span className="p2-logo"><BrandLogo id={p.id} size={30} /></span><div><small>{isSub(p) ? "اشتراک رسمی" : "رسمی و قانونی"}</small><b className="en">{p.maker}</b></div></div>
+              <h1><small>{c.prefix ?? "خرید اکانت"}</small><span className="en">{tool}{tier && <i> {tier}</i>}</span></h1>
               <p className="p2-lead">{c.intro}</p>
             </div>
             <BuyPanel product={p} />
             <div className="p2-info p2-more">
               <div className="p2-incl">
-                <h2>با این اشتراک</h2>
+                <h2>{isSub(p) ? "با این اشتراک" : "با این خرید"}</h2>
                 <ul>{p.includes.map((x) => <li key={x}><Icon id="check" />{x}</li>)}</ul>
               </div>
               <ul className="p2-facts">
-                <li><Icon id="clock" /><div><b>حدود {fa(p.etaMinutes)} دقیقه</b><small>تحویل بعد از پرداخت</small></div></li>
-                <li><Icon id="shield" /><div><b>ضمانت تا روز آخر</b><small>جایگزینی یا بازگشت وجه</small></div></li>
+                <li><Icon id="clock" /><div><b>{p.etaMinutes === 0 ? "تحویل فوری" : etaText(p)}</b><small>{p.etaMinutes === 0 ? "خودکار، بعد از پرداخت" : "تحویل بعد از پرداخت"}</small></div></li>
+                <li><Icon id="shield" /><div><b>ضمانت</b><small>{guaranteeOf(p)}</small></div></li>
                 <li><Icon id="chat" /><div><b>پشتیبانی فارسی</b><small>هر روز ۹ تا ۲۴</small></div></li>
               </ul>
             </div>
@@ -126,7 +161,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       <Toc items={[
         ...(seo ? [["about", "معرفی"], ["features", "امکانات"]] as [string, string][] : []),
         ["prices", "قیمت‌ها"], ["delivery", "نحوه تحویل"],
-        ...(seo ? [["free-vs-paid", "رایگان یا پولی"]] as [string, string][] : []),
+        ...(seo?.freeVsPaid.length ? [["free-vs-paid", "رایگان یا پولی"]] as [string, string][] : []),
         ["guarantee", "ضمانت"], ["compare", "چرا اک‌دراپ"], ["faq", "سؤالات"],
       ]} />
 
@@ -147,13 +182,13 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                   <div><dt>سرویس</dt><dd className="en">{p.name}</dd></div>
                   <div><dt>سازنده</dt><dd className="en">{p.maker}</dd></div>
                   <div><dt>دسته</dt><dd>{CATEGORIES[p.category]}</dd></div>
-                  <div><dt>نوع</dt><dd>اشتراک رسمی</dd></div>
-                  <div><dt>مدت</dt><dd>{months.map(duration).join("، ")}</dd></div>
+                  <div><dt>نوع</dt><dd>{isSub(p) ? "اشتراک رسمی" : `${nounOf(p)}، رسمی و قانونی`}</dd></div>
+                  <div><dt>{axisOf(p).replace(" (آمریکا)", "")}</dt><dd>{months.map((m) => optionLabel(p, m)).join("، ")}</dd></div>
                   <div><dt>روش تحویل</dt><dd>{types.map((t) => DELIVERY[t].title).join("، ")}</dd></div>
-                  <div><dt>زمان تحویل</dt><dd>حدود {fa(p.etaMinutes)} دقیقه</dd></div>
+                  <div><dt>زمان تحویل</dt><dd>{etaText(p)}</dd></div>
                   <div><dt>پلتفرم‌ها</dt><dd>{seo.platforms.join("، ")}</dd></div>
                   <div><dt>شروع قیمت</dt><dd><b>{money(minPrice(p))}</b> تومان</dd></div>
-                  <div><dt>ضمانت</dt><dd>تا روز آخر اشتراک</dd></div>
+                  <div><dt>ضمانت</dt><dd>{guaranteeOf(p)}</dd></div>
                 </dl>
               </aside>
             </div>
@@ -181,18 +216,18 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           <div className="wrap p2-two">
             <div className="p2-h">
               <span className="p2-k">قیمت</span>
-              <h2>قیمت خرید اکانت {p.name}</h2>
+              <h2>قیمت {keywordOf(p)}</h2>
               <p>قیمت‌ها به تومان و نهایی‌اند؛ بدون کارمزد و هزینه پنهان. پرداخت با همه کارت‌های بانکی عضو شتاب.</p>
               <p className="p2-upd"><Icon id="clock" />به‌روزرسانی قیمت: <time dateTime={PRICES_UPDATED.iso}>{PRICES_UPDATED.fa}</time></p>
             </div>
             <div className="p2-tbl-w">
               <table className="p2-tbl">
                 <caption className="sr">جدول قیمت {p.name}</caption>
-                <thead><tr><th scope="col">مدت</th>{types.map((t) => <th scope="col" key={t}>{DELIVERY[t].title}</th>)}</tr></thead>
+                <thead><tr><th scope="col">{axisOf(p)}</th>{types.map((t) => <th scope="col" key={t}>{DELIVERY[t].title}</th>)}</tr></thead>
                 <tbody>
                   {months.map((m) => (
                     <tr key={m}>
-                      <th scope="row">{duration(m)}</th>
+                      <th scope="row">{optionLabel(p, m)}</th>
                       {types.map((t) => {
                         if (!p.plans[m]?.[t]) return <td key={t} className="na">ندارد</td>;
                         const pr = priceOf({ id: p.id, plan: m, type: t });
@@ -200,7 +235,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                           <td key={t}>
                             <b>{money(pr.price)}</b> <small>تومان</small>
                             {pr.was && <><s>{money(pr.was)}</s><span className="p2-drop">دراپ هفته</span></>}
-                            {Number(m) > 1 && <em>ماهی {money(Math.round(pr.price / Number(m) / 1000) * 1000)}</em>}
+                            {isSub(p) && Number(m) > 1 && <em>ماهی {money(Math.round(pr.price / Number(m) / 1000) * 1000)}</em>}
                           </td>
                         );
                       })}
@@ -220,20 +255,14 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                 <div className="p2-way" key={t}>
                   <h3>{DELIVERY[t].title}{t === "own" && types.length > 1 && <span className="p2-rec">پیشنهاد ما</span>}</h3>
                   <p>{deliveryExplain(p, t)}</p>
-                  <ol>
-                    <li><b>پرداخت</b><span>مدت را انتخاب کن و با کارت بانکی بپرداز.</span></li>
-                    {t === "own"
-                      ? <li><b>ایمیل اکانت</b><span>ایمیل اکانت <span className="en">{p.maker}</span> خودت را وارد کن. رمز لازم نیست.</span></li>
-                      : <li><b>ساخت اکانت</b><span>یک اکانت تازه فقط برای تو ساخته می‌شود.</span></li>}
-                    <li><b>فعال‌سازی، حدود {fa(p.etaMinutes)} دقیقه</b><span>{t === "own" ? "اشتراک روی همان اکانت فعال می‌شود و پیامک می‌گیری." : "ایمیل و رمز را در حساب کاربری و پیامک می‌بینی."}</span></li>
-                  </ol>
+                  <ol>{stepsFor(p, t).map(([b, d]) => <li key={b}><b>{b}</b><span>{d}</span></li>)}</ol>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {seo && (
+        {seo && seo.freeVsPaid.length > 0 && (
           <section className="p2-sec" id="free-vs-paid">
             <div className="wrap p2-two">
               <div className="p2-h">
@@ -255,26 +284,23 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
         <section className="p2-sec" id="guarantee">
           <div className="wrap p2-two">
-            <div className="p2-h"><span className="p2-k">ضمانت</span><h2>ضمانت اک‌دراپ</h2><p>اشتراکی که می‌خری تا روز آخر بیمه است. این‌ها تعهد ماست، نه شعار.</p><Link className="link" href="/guarantee">شرایط کامل ضمانت</Link></div>
+            <div className="p2-h"><span className="p2-k">ضمانت</span><h2>ضمانت اک‌دراپ</h2><p>{isSub(p) ? "اشتراکی که می‌خری تا روز آخر بیمه است." : "هر خرید ضمانت مشخص دارد."} این‌ها تعهد ماست، نه شعار.</p><Link className="link" href="/guarantee">شرایط کامل ضمانت</Link></div>
             <ul className="p2-promise">
-              <li><b>فعال نشد؟</b><span>کل مبلغ را برمی‌گردانیم.</span></li>
-              <li><b>وسط دوره قطع شد؟</b><span>ظرف ۲۴ ساعت جایگزین می‌کنیم؛ اگر نشد، مبلغ روزهای باقی‌مانده برمی‌گردد.</span></li>
-              <li><b>رمز عبورت امن است.</b><span>برای فعال‌سازی روی ایمیل خودت، هیچ‌وقت رمز نمی‌خواهیم.</span></li>
-              <li><b>قیمت همان است که می‌بینی.</b><span>بدون کارمزد پنهان، به تومان و نهایی.</span></li>
+              {promisesFor(p).map(([b, d]) => <li key={b}><b>{b}</b><span>{d}</span></li>)}
             </ul>
           </div>
         </section>
 
         <section className="p2-sec" id="compare">
           <div className="wrap p2-two">
-            <div className="p2-h"><span className="p2-k">مقایسه</span><h2>خرید مستقیم یا اک‌دراپ؟</h2><p>همان اشتراک رسمی <span className="en">{p.maker}</span>، بدون دردسر کارت ارزی.</p></div>
+            <div className="p2-h"><span className="p2-k">مقایسه</span><h2>خرید مستقیم یا اک‌دراپ؟</h2><p>همان {nounOf(p)} رسمی <span className="en">{p.maker === "AccDrop" ? "" : p.maker}</span>، بدون دردسر کارت ارزی.</p></div>
             <div className="cmp" role="table" aria-label="مقایسه">
               <div className="cmp-r cmp-h" role="row"><span role="columnheader" /><span role="columnheader">خرید مستقیم</span><span role="columnheader">اک‌دراپ</span></div>
               {([
                 ["پرداخت", "کارت ارزی بین‌المللی", "کارت بانکی، به تومان"],
                 ["قیمت", "دلاری، با کارمزد و نوسان", "تومانی و نهایی"],
-                ["شروع", "حساب و آدرس خارجی لازم است", `حدود ${fa(p.etaMinutes)} دقیقه`],
-                ["ضمانت", "ندارد", "تا روز آخر اشتراک"],
+                ["شروع", "حساب و آدرس خارجی لازم است", etaText(p)],
+                ["ضمانت", "ندارد", guaranteeOf(p)],
                 ["پشتیبانی", "ایمیلی، انگلیسی", "فارسی و انسانی"],
               ] as const).map(([k, a, b]) => (
                 <div className="cmp-r" role="row" key={k}><span role="cell" className="muted">{k}</span><span role="cell" className="muted">{a}</span><span role="cell"><Icon id="check" />{b}</span></div>

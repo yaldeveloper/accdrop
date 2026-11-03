@@ -8,6 +8,10 @@ export type ProductContent = {
   faName: string;
   intro: string;
   forWho: string[];
+  /** Small line above the h1; defaults to «خرید اکانت». */
+  prefix?: string;
+  /** Main search phrase for the title; defaults to «خرید اکانت {name}». */
+  keyword?: string;
 };
 
 export const CONTENT: Record<string, ProductContent> = {
@@ -47,6 +51,27 @@ export const CONTENT: Record<string, ProductContent> = {
   notion: { slug: "notion-plus", faName: "نوشن",
     intro: "Notion Plus فضای نوشتن، برنامه‌ریزی و دانش تیم توست، همراه Notion AI برای خلاصه‌کردن، نوشتن و جست‌وجو.",
     forWho: ["تیم‌ها و استارتاپ‌ها", "مدیر پروژه‌ها", "دانشجوها"] },
+  tgpremium: { slug: "telegram-premium", faName: "تلگرام پرمیوم", prefix: "خرید", keyword: "خرید تلگرام پرمیوم",
+    intro: "Telegram Premium را فقط با یوزرنیم، روی آیدی خودت فعال کن: آپلود ۴ گیگابایتی، دانلود سریع‌تر، تبدیل ویس به متن و بدون تبلیغ.",
+    forWho: ["کاربرهای حرفه‌ای تلگرام", "ادمین کانال‌ها و گروه‌ها", "کسب‌وکارهای تلگرامی"] },
+  tgstars: { slug: "telegram-stars", faName: "استارز تلگرام", prefix: "خرید", keyword: "خرید استارز تلگرام",
+    intro: "استارز ارز داخلی تلگرام است؛ برای خرید در ربات‌ها و مینی‌اپ‌ها، حمایت از کانال‌ها و هدیه دادن. فقط یوزرنیم را بده، روی آیدی‌ات می‌نشیند.",
+    forWho: ["کاربرهای مینی‌اپ‌ها و بازی‌ها", "حامیان کانال‌ها", "هر کسی که می‌خواهد هدیه بدهد"] },
+  appleid: { slug: "apple-id", faName: "اپل آیدی", prefix: "خرید", keyword: "خرید اپل آیدی آماده",
+    intro: "اپل آیدی آماده و اختصاصی آمریکا، ترکیه یا انگلیس؛ با ایمیل تازه و اطلاعات امنیتی کامل، فقط برای تو. برای App Store و iCloud همان کشور.",
+    forWho: ["کاربرهای آیفون و آیپد", "کسانی که اپ‌های خارجی لازم دارند", "خریداران گیفت‌کارت"] },
+  applegift: { slug: "apple-gift-card", faName: "گیفت کارت اپل", prefix: "خرید", keyword: "خرید گیفت کارت اپل (آیتونز)",
+    intro: "گیفت‌کارت اپل آمریکا (همان آیتونز سابق) با تحویل فوری: کد را بلافاصله بعد از پرداخت می‌گیری و اپل آیدی‌ات را شارژ می‌کنی.",
+    forWho: ["خرید اپ و بازی", "تمدید اشتراک‌های اپل", "هدیه دادن"] },
+  linkedin: { slug: "linkedin-premium", faName: "لینکدین پرمیوم",
+    intro: "LinkedIn Premium روی اکانت خودت: پیام مستقیم به استخدام‌کننده‌ها، دیدن بازدیدکننده‌های پروفایل و دسترسی به LinkedIn Learning.",
+    forWho: ["کارجوها و مهاجرت کاری", "فریلنسرها", "فروش و توسعه بازار"] },
+  duolingo: { slug: "super-duolingo", faName: "سوپر دولینگو", prefix: "خرید", keyword: "خرید سوپر دولینگو",
+    intro: "Super Duolingo روی اکانت خودت: بدون تبلیغ، قلب نامحدود و تمرین شخصی‌سازی‌شده، تا هر روز بدون وقفه زبان یاد بگیری.",
+    forWho: ["زبان‌آموزها", "آماده‌شدن برای مهاجرت", "دانش‌آموزها و دانشجوها"] },
+  vnumber: { slug: "virtual-number", faName: "شماره مجازی", prefix: "خرید", keyword: "خرید شماره مجازی تلگرام و واتس‌اپ",
+    intro: "شماره مجازی آمریکا، انگلیس، کانادا یا هلند برای ثبت‌نام در تلگرام و واتس‌اپ؛ تحویل فوری و کد تأیید در حساب کاربری. اگر کد نیامد، پولت برمی‌گردد.",
+    forWho: ["ساخت اکانت دوم تلگرام", "کسب‌وکارها", "ثبت‌نام در سرویس‌های خارجی"] },
 };
 
 export const contentOf = (p: Product) => CONTENT[p.id];

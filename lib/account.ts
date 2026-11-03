@@ -5,7 +5,7 @@ import { productById, type Selection } from "./catalog";
 import { clubPoints } from "./format";
 
 export type User = { mobile: string; name: string; email: string; createdAt: number };
-export type OrderLine = Selection & { price: number; email?: string };
+export type OrderLine = Selection & { price: number; email?: string; username?: string };
 export type Order = { code: string; createdAt: number; lines: OrderLine[]; subtotal: number; discount: number; total: number; mobile: string };
 
 export type Stage = 0 | 1 | 2; // paid, activating, active
@@ -19,6 +19,8 @@ export const DEMO_OTP = "12345";
 
 export function stageOf(o: Order, now: number): Stage {
   const t = now - o.createdAt;
+  // Instant products (gift codes, virtual numbers) are delivered automatically right after payment.
+  if (o.lines.every((l) => productById(l.id).etaMinutes === 0)) return t < 1_500 ? 0 : 2;
   if (t < 3_000) return 0;
   if (t < DEMO_ACTIVATION_MS) return 1;
   return 2;
@@ -60,6 +62,9 @@ export const normalizeMobile = (m: string) => {
   return d.startsWith("98") ? `0${d.slice(2)}` : d.startsWith("9") ? `0${d}` : d;
 };
 export const validEmail = (e: string) => /^\S+@\S+\.\S+$/.test(e.trim());
+/** Telegram username: 5–32 letters, digits or underscores, with or without @. */
+export const validUsername = (u: string) => /^@?[A-Za-z][A-Za-z0-9_]{4,31}$/.test(u.trim());
+export const normalizeUsername = (u: string) => "@" + u.trim().replace(/^@/, "");
 
 // ----- Reseller program (sample terms; confirm the real percentages before launch) -----
 export type ResellerApp = {

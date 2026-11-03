@@ -2,8 +2,8 @@
 
 import { type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
-import { DELIVERY, deliveryTypes, planKeys, priceOf, productById, type Months } from "@/lib/catalog";
-import { clubPoints, duration, fa, money } from "@/lib/format";
+import { DELIVERY, axisOf, deliveryTypes, etaText, guaranteeOf, isSub, optionLabel, planKeys, priceOf, productById, type Months } from "@/lib/catalog";
+import { clubPoints, fa, money } from "@/lib/format";
 import { BrandLogo, Dots, Icon } from "./brand";
 import { useStore } from "./store";
 
@@ -28,14 +28,14 @@ function ProductView() {
       </div>
       <div className="s-b">
         <div className="grp">
-          <h4>چه مدت؟</h4>
+          <h4>{axisOf(p)}</h4>
           <div className="opts h" style={{ "--n": months.length } as CSSProperties}>
             {months.map((m: Months, i) => {
-              const save = i > 0 ? Math.round((1 - perMonth[i] / perMonth[0]) * 100) : 0;
+              const save = isSub(p) && i > 0 ? Math.round((1 - perMonth[i] / perMonth[0]) * 100) : 0;
               return (
                 <button key={m} className={`opt ${m === selection.plan ? "on" : ""}`} onClick={() => select({ plan: m })}>
                   {save > 0 && <span className="sv">−{save}%</span>}
-                  <b>{duration(m)}</b>
+                  <b>{optionLabel(p, m)}</b>
                   <small className="num">{money(Math.min(...(Object.values(p.plans[m] ?? {}) as number[])))} تومان</small>
                 </button>
               );
@@ -59,12 +59,12 @@ function ProductView() {
         <div className="grp">
           <h4>چه می‌گیری</h4>
           <ul className="incl">
-            {[...p.includes, "گارانتی تا روز آخر"].map((x) => <li key={x}><Dots size={3} /><span>{x}</span></li>)}
+            {[...p.includes, `ضمانت: ${guaranteeOf(p)}`].map((x) => <li key={x}><Dots size={3} /><span>{x}</span></li>)}
           </ul>
         </div>
         <p className="assure">
-          فعال در حدود <b>{fa(p.etaMinutes)} دقیقه</b>.{" "}
-          {selection.type === "own" ? "فقط ایمیلت را می‌خواهیم، نه رمز." : "ایمیل و رمز را پیامک می‌کنیم."}
+          تحویل: <b>{etaText(p)}</b>.{" "}
+          {DELIVERY[selection.type].detail}.
         </p>
       </div>
       <div className="s-f">
@@ -96,7 +96,7 @@ function CartView() {
                 return (
                   <div className="ln" key={i}>
                     <span className="mono"><BrandLogo id={p.id} size={22} /></span>
-                    <div className="t"><b>{p.name}</b><small>{duration(l.plan)} · {DELIVERY[l.type].title}</small></div>
+                    <div className="t"><b>{p.name}</b><small>{optionLabel(p, l.plan)} · {DELIVERY[l.type].title}</small></div>
                     <div style={{ textAlign: "left" }}><span className="num">{money(l.price)}</span><button className="rm" onClick={() => removeLine(i)}>حذف</button></div>
                   </div>
                 );

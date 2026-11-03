@@ -1,10 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { DELIVERY, productById } from "@/lib/catalog";
+import { DELIVERY, isSub, optionLabel, productById } from "@/lib/catalog";
 import { DEMO_ACTIVATION_MS, STAGES, passWindow, stageOf, type Order } from "@/lib/account";
-import { duration, fa, faDate, money } from "@/lib/format";
+import { fa, faDate, money } from "@/lib/format";
 import { BrandLogo, Icon } from "./brand";
+
+/** DEMO: a stable fake gift-card code or phone number per order line, until real fulfilment exists. */
+function demoSecret(code: string, i: number, kind: "code" | "number") {
+  let h = i + 7;
+  for (const ch of code) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const digits = String(h).padStart(10, "0");
+  if (kind === "number") return `+1 (555) ${digits.slice(0, 3)}-${digits.slice(3, 7)}`;
+  const abc = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let x = h, s = "";
+  for (let k = 0; k < 16; k++) { x = (x * 1103515245 + 12345) >>> 0; s += abc[x % abc.length]; }
+  return `${s.slice(0, 4)}-${s.slice(4, 8)}-${s.slice(8, 12)}-${s.slice(12)}`;
+}
 
 export function StatusChip({ order, now }: { order: Order; now: number }) {
   const s = stageOf(order, now);
@@ -75,9 +87,12 @@ export function OrderDetail({ order, now }: { order: Order; now: number }) {
                   <span className="mono"><BrandLogo id={p.id} size={22} /></span>
                   <div className="od-l">
                     <b className="en">{p.name}</b>
-                    <small>{duration(l.plan)} • {DELIVERY[l.type].title}</small>
+                    <small>{optionLabel(p, l.plan)} • {DELIVERY[l.type].title}</small>
                     {l.type === "own" && l.email && <small className="ltr-i">فعال‌سازی روی <span className="en">{l.email}</span></small>}
-                    {s === 2 && <small className="ok">فعال تا {faDate(w.end, false)}</small>}
+                    {l.type === "username" && l.username && <small className="ltr-i">ارسال به <span className="en">{l.username}</span></small>}
+                    {s === 2 && isSub(p) && <small className="ok">فعال تا {faDate(w.end, false)}</small>}
+                    {s === 2 && l.type === "code" && <small className="od-secret"><span>کد گیفت‌کارت</span><b className="en">{demoSecret(order.code, i, "code")}</b></small>}
+                    {s === 2 && l.type === "number" && <small className="od-secret"><span>شماره</span><b className="en">{demoSecret(order.code, i, "number")}</b></small>}
                     {s === 2 && l.type === "ready" && <small className="muted">اطلاعات ورود اکانت اینجا و در پیامک نمایش داده می‌شود (نسخه آزمایشی).</small>}
                   </div>
                   <span className="num">{money(l.price)}</span>

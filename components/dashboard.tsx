@@ -1,17 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { productById, type Selection } from "@/lib/catalog";
+import { isSub, optionLabel, productById, type Selection } from "@/lib/catalog";
 import { contentOf } from "@/lib/content";
 import { clubOf, daysLeft, passWindow, stageOf, TIERS, type Order, type OrderLine } from "@/lib/account";
-import { duration, fa, faDate } from "@/lib/format";
+import { fa, faDate } from "@/lib/format";
 import { BrandLogo, Dots, Glyph, Icon, Wordmark } from "./brand";
 import { splitName } from "./pass";
 
 type Held = { order: Order; line: OrderLine; stage: number; start: number; end: number; left: number; total: number };
 
 export function heldPasses(orders: Order[], now: number): Held[] {
-  return orders.flatMap((o) => o.lines.map((l) => {
+  return orders.flatMap((o) => o.lines.filter((l) => isSub(productById(l.id))).map((l) => {
     const w = passWindow(o, l);
     return { order: o, line: l, stage: stageOf(o, now), start: w.start, end: w.end, left: daysLeft(w.end, now), total: w.totalDays };
   }));
@@ -31,7 +31,7 @@ export function HeldPass({ h }: { h: Held }) {
         <span className={`chip ${active ? "s2" : "s1"}`}><i />{active ? "فعال" : h.stage < 2 ? "در حال فعال‌سازی" : "تمام شده"}</span>
       </div>
       <b className="en held-tool">{tool}{tier && <small> {tier}</small>}</b>
-      <small className="muted">{duration(h.line.plan)}{h.line.email ? <> • <span className="en">{h.line.email}</span></> : null}</small>
+      <small className="muted">{optionLabel(p, h.line.plan)}{h.line.email || h.line.username ? <> • <span className="en">{h.line.email || h.line.username}</span></> : null}</small>
       <div className="held-bar" aria-hidden="true"><i style={{ width: `${pct}%` }} /></div>
       <div className="held-foot">
         <span>{active ? <><b className="num">{fa(h.left)}</b> روز مانده • تا {faDate(h.end, false)}</> : <Link className="link" href={`/orders/${h.order.code}`}>پیگیری سفارش</Link>}</span>

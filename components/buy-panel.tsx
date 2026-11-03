@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
-import { CURRENT_DROP, DELIVERY, deliveryTypes, planKeys, priceOf, type DeliveryType, type Months, type Product, type Selection } from "@/lib/catalog";
-import { clubPoints, duration, fa, money } from "@/lib/format";
+import { CURRENT_DROP, DELIVERY, axisOf, deliveryTypes, etaText, isSub, nounOf, optionLabel, planKeys, priceOf, type DeliveryType, type Months, type Product, type Selection } from "@/lib/catalog";
+import { clubPoints, fa, money } from "@/lib/format";
 import { Icon } from "./brand";
 import { useStore } from "./store";
 
@@ -54,13 +54,13 @@ export function BuyPanel({ product: p }: { product: Product }) {
 
   return (
     <div className="bx" id="buy">
-      <h2 className="bx-t">انتخاب اشتراک</h2>
+      <h2 className="bx-t">انتخاب {nounOf(p)}</h2>
 
       <fieldset className="bx-g">
-        <legend>مدت اشتراک</legend>
-        <div className="bx-seg" style={{ "--n": months.length } as CSSProperties}>
+        <legend>{axisOf(p)}</legend>
+        <div className={`bx-seg ${months.length > 3 ? "bx-seg4" : ""}`} style={{ "--n": Math.min(months.length, 4) } as CSSProperties}>
           {months.map((m, i) => {
-            const save = i > 0 ? Math.round((1 - perMonth[i] / perMonth[0]) * 100) : 0;
+            const save = isSub(p) && i > 0 ? Math.round((1 - perMonth[i] / perMonth[0]) * 100) : 0;
             const on = m === sel.plan;
             const t = p.plans[m]?.[sel.type] ? sel.type : (Object.keys(p.plans[m] ?? {})[0] as DeliveryType);
             const pr = priceOf({ id: p.id, plan: m, type: t }).price;
@@ -68,7 +68,7 @@ export function BuyPanel({ product: p }: { product: Product }) {
               <label key={m} className={`bx-s ${on ? "on" : ""}`}>
                 <input type="radio" name="plan" checked={on} onChange={() => choose({ plan: m })} />
                 {save > 0 && <span className="bx-tag">{fa(save)}٪ ارزان‌تر</span>}
-                <b>{duration(m)}</b>
+                <b>{optionLabel(p, m)}</b>
                 <small className="num">{money(pr)}</small>
               </label>
             );
@@ -77,7 +77,7 @@ export function BuyPanel({ product: p }: { product: Product }) {
       </fieldset>
 
       <fieldset className="bx-g">
-        <legend>روش تحویل {types.length > 1 && <a href="#delivery" className="bx-help">فرقشان چیست؟</a>}</legend>
+        <legend>نحوه تحویل {types.length > 1 && <a href="#delivery" className="bx-help">فرقشان چیست؟</a>}</legend>
         {types.map((t) => {
           const amount = offers[t];
           const on = t === sel.type;
@@ -85,7 +85,7 @@ export function BuyPanel({ product: p }: { product: Product }) {
             <label key={t} className={`bx-o bx-o2 ${on ? "on" : ""} ${amount ? "" : "dis"}`}>
               <input type="radio" name="type" checked={on} disabled={!amount} onChange={() => choose({ type: t })} />
               <span className="bx-r" aria-hidden="true" />
-              <span className="bx-l"><b>{DELIVERY[t].title}</b><small>{amount ? DELIVERY[t].detail : "برای این مدت موجود نیست"}</small></span>
+              <span className="bx-l"><b>{DELIVERY[t].title}</b><small>{amount ? DELIVERY[t].detail : "برای این گزینه موجود نیست"}</small></span>
               {types.length > 1 && amount ? <span className="bx-p num">{money(priceOf({ id: p.id, plan: sel.plan, type: t }).price)}</span> : null}
             </label>
           );
@@ -94,7 +94,7 @@ export function BuyPanel({ product: p }: { product: Product }) {
 
       <div className="bx-sum">
         <div className="bx-row"><span>مبلغ قابل پرداخت</span><span>{was ? <s className="num">{money(was)}</s> : null}<b className="num">{money(price)}</b> <small>تومان</small></span></div>
-        <div className="bx-row sub"><span>تحویل</span><span>حدود {fa(p.etaMinutes)} دقیقه بعد از پرداخت</span></div>
+        <div className="bx-row sub"><span>تحویل</span><span>{p.etaMinutes === 0 ? "فوری و خودکار، بلافاصله بعد از پرداخت" : `${etaText(p)} بعد از پرداخت`}</span></div>
         <div className="bx-row sub"><span>امتیاز کلاب</span><span className="num">{fa(clubPoints(price))} امتیاز</span></div>
       </div>
 
@@ -107,7 +107,7 @@ export function BuyPanel({ product: p }: { product: Product }) {
       </ul>
 
       <div className={`buybar ${ctaVisible ? "" : "on"}`} role="region" aria-label="خرید سریع">
-        <div><small>{duration(sel.plan)} • {DELIVERY[sel.type].title}</small><b className="num">{money(price)} <small>تومان</small></b></div>
+        <div><small>{optionLabel(p, sel.plan)} • {DELIVERY[sel.type].title}</small><b className="num">{money(price)} <small>تومان</small></b></div>
         <button className="btn btn-paper" onClick={buy}>ادامه خرید</button>
       </div>
     </div>
