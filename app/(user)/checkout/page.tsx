@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { DELIVERY, extrasLabel, linePrice, optionLabel, productById } from "@/lib/catalog";
+import { DELIVERY, STATIC_IP, extrasLabel, ipPrice, linePrice, optionLabel, productById } from "@/lib/catalog";
 import { normalizeUsername, validEmail, validUsername } from "@/lib/account";
 import { fa, money } from "@/lib/format";
 import { BrandLogo, Dots, Icon } from "@/components/brand";
@@ -13,7 +13,7 @@ import { useStore } from "@/components/store";
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { cart, removeLine, clearCart, notify } = useStore();
+  const { cart, removeLine, updateLine, clearCart, notify } = useStore();
   const { ready, user, placeOrder, demo } = useAccount();
   const [emails, setEmails] = useState<Record<number, string>>({});
   /** Group-buy teammates: members[line][k] is the email of seat k+2. */
@@ -23,6 +23,7 @@ export default function CheckoutPage() {
   const [rate, setRate] = useState(0);
   const [agree, setAgree] = useState(true);
   const [paying, setPaying] = useState(false);
+  const [method, setMethod] = useState<"card" | "crypto">("card");
   const [bad, setBad] = useState<number[]>([]);
   // Keep the login form mounted until it finishes (it may still ask a new user for their name).
   const [inFlow, setInFlow] = useState(false);
@@ -68,12 +69,12 @@ export default function CheckoutPage() {
       email: l.type === "own" ? emails[i]?.trim() : undefined,
       username: l.type === "username" ? normalizeUsername(emails[i] ?? "") : undefined,
       seats: l.seats, ip: l.ip,
-      members: l.type === "own" && (l.seats ?? 1) > 1 ? Array.from({ length: l.seats! - 1 }, (_, k) => members[i]?.[k]?.trim() ?? "") : undefined })), applied);
+      members: l.type === "own" && (l.seats ?? 1) > 1 ? Array.from({ length: l.seats! - 1 }, (_, k) => members[i]?.[k]?.trim() ?? "") : undefined })), applied, method);
     if ("error" in r) {
       setPaying(false);
       if (r.index !== undefined && (r.error === "bad_email" || r.error === "bad_username")) { setBad([r.index]); document.getElementById(`co-em-${r.index}`)?.focus(); }
       if (r.index !== undefined && r.error === "bad_members") setBad([100 + r.index]);
-      notify(r.error === "bad_item" ? "یکی از اقلام سبد دیگر موجود نیست. حذفش کن و دوباره امتحان کن." : r.error === "unauthorized" ? "اول وارد حسابت شو" : "ثبت سفارش انجام نشد. دوباره امتحان کن.");
+      notify(r.error === "crypto_unavailable" ? "پرداخت با ارز دیجیتال فعلاً فعال نیست؛ از درگاه بانکی استفاده کن." : r.error === "bad_item" ? "یکی از اقلام سبد دیگر موجود نیست. حذفش کن و دوباره امتحان کن." : r.error === "unauthorized" ? "اول وارد حسابت شو" : "ثبت سفارش انجام نشد. دوباره امتحان کن.");
       return;
     }
     clearCart();
@@ -115,7 +116,6 @@ export default function CheckoutPage() {
                 return (
                   <div className="co-act" key={i}>
                     <div className="co-act-h"><span className="mono"><BrandLogo id={p.id} size={22} /></span><b className="en">{p.name}</b><small className="muted">{DELIVERY[l.type].title}</small></div>
-                    {l.ip && <p className="co-ipnote"><Icon id="shield" />{extrasLabel({ ...l, seats: 1 })}؛ مشخصات اتصال بعد از فعال‌سازی در صفحه سفارش نمایش داده می‌شود.</p>}
                     {l.type === "own" ? (
                       <div className="fld">
                         <label htmlFor={`co-em-${i}`}>ایمیل اکانت {p.maker} تو</label>
@@ -153,11 +153,42 @@ export default function CheckoutPage() {
             </div>
           </section>
 
+          {cart.some((l) => ipPrice(productById(l.id), l.plan) > 0) && (
+            <section className={`co-step ${step1Done ? "on" : "off"}`}>
+              <header><span className="co-n">۳</span><h2>افزودنی‌ها <small className="muted">اختیاری</small></h2></header>
+              <div className="co-addons">
+                {cart.map((l, i) => {
+                  const p = productById(l.id), cost = ipPrice(p, l.plan);
+                  if (!cost) return null;
+                  return (
+                    <div key={i} className={`co-ad ${l.ip ? "on" : ""}`}>
+                      <label className="co-ad-h">
+                        <input type="checkbox" checked={!!l.ip} disabled={!step1Done} onChange={(e) => updateLine(i, { ip: e.target.checked ? "de" : undefined })} />
+                        <span className="co-ck" aria-hidden="true"><Icon id="check" /></span>
+                        <span><b>{STATIC_IP.title} برای <span className="en">{p.name}</span></b><small>یک آی‌پی خارج فقط برای تو؛ ورود پایدار و کمتر بسته شدن اکانت. مشخصات اتصال بعد از فعال‌سازی در صفحه سفارش.</small></span>
+                        <span className="num co-ad-p">+{money(cost)}</span>
+                      </label>
+                      {l.ip && (
+                        <div className="co-ip" role="radiogroup" aria-label="کشور">
+                          {Object.entries(STATIC_IP.countries).map(([k, v]) => (
+                            <button key={k} type="button" role="radio" aria-checked={l.ip === k} className={l.ip === k ? "on" : ""} onClick={() => updateLine(i, { ip: k })}>{v}</button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
           <section className={`co-step ${step1Done ? "on" : "off"}`}>
-            <header><span className="co-n">۳</span><h2>روش پرداخت</h2></header>
+            <header><span className="co-n">{cart.some((l) => ipPrice(productById(l.id), l.plan) > 0) ? "۴" : "۳"}</span><h2>روش پرداخت</h2></header>
             <div className="opts v co-pay">
-              <button className="opt on" type="button" aria-pressed="true"><b>درگاه بانکی</b><small>همه کارت‌های عضو شتاب، پرداخت امن</small></button>
-              <button className="opt" type="button" disabled><b>کیف پول اک‌دراپ</b><small>به‌زودی</small></button>
+              <button className={`opt ${method === "card" ? "on" : ""}`} type="button" aria-pressed={method === "card"} onClick={() => setMethod("card")}><b>درگاه بانکی</b><small>همه کارت‌های عضو شتاب، پرداخت امن</small></button>
+              <button className={`opt ${method === "crypto" ? "on" : ""}`} type="button" aria-pressed={method === "crypto"} onClick={() => setMethod("crypto")}>
+                <b>ارز دیجیتال</b><small>USDT (ترون، اتریوم، BSC)، بیت‌کوین و بیشتر{demo.usd ? <> • حدود <span className="num">{fa(Math.ceil((total / demo.usd) * 100) / 100)}</span> دلار</> : null}</small>
+              </button>
             </div>
           </section>
         </div>
@@ -187,7 +218,7 @@ export default function CheckoutPage() {
           </dl>
           <label className="co-agree"><input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} /><span>قوانین و <a className="link" href="#">شرایط گارانتی</a> را می‌پذیرم.</span></label>
           <button className="btn btn-paper btn-block co-btn" onClick={pay} disabled={paying}>
-            {paying ? "در حال اتصال به درگاه…" : <>پرداخت <span className="num">{money(total)}</span> تومان</>}
+            {paying ? "در حال اتصال به درگاه…" : method === "crypto" ? <>پرداخت با ارز دیجیتال</> : <>پرداخت <span className="num">{money(total)}</span> تومان</>}
           </button>
           <ul className="co-trust">
             <li><Dots size={3} />پرداخت امن شاپرک</li>

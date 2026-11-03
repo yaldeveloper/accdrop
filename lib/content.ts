@@ -72,6 +72,18 @@ export const CONTENT: Record<string, ProductContent> = {
   vnumber: { slug: "virtual-number", faName: "شماره مجازی", prefix: "خرید", keyword: "خرید شماره مجازی تلگرام و واتس‌اپ",
     intro: "شماره مجازی آمریکا، انگلیس، کانادا یا هلند برای ثبت‌نام در تلگرام و واتس‌اپ؛ تحویل فوری و کد تأیید در حساب کاربری. اگر کد نیامد، پولت برمی‌گردد.",
     forWho: ["ساخت اکانت دوم تلگرام", "کسب‌وکارها", "ثبت‌نام در سرویس‌های خارجی"] },
+  "chatgpt-go": { slug: "chatgpt-go", faName: "چت جی پی تی گو",
+    intro: "ChatGPT Go نسخه اقتصادی ChatGPT است: سقف پیام، تصویر و آپلود فایل خیلی بیشتر از نسخه رایگان، با کمتر از نصف قیمت Plus.",
+    forWho: ["دانشجوها", "استفاده روزمره و سبک", "کسی که تازه شروع کرده"] },
+  "chatgpt-pro": { slug: "chatgpt-pro", faName: "چت جی پی تی پرو",
+    intro: "ChatGPT Pro قوی‌ترین نسخه ChatGPT است؛ برای پژوهش، کدنویسی و تحلیل سنگین، با استفاده تقریباً نامحدود و حالت Pro.",
+    forWho: ["پژوهشگرها", "برنامه‌نویس‌های حرفه‌ای", "تیم‌های داده و تحلیل"] },
+  "claude-max": { slug: "claude-max", faName: "کلاد مکس",
+    intro: "Claude Max پنج برابر سقف Claude Pro را می‌دهد؛ مناسب کسی که هر روز ساعت‌ها با Claude و Claude Code کار می‌کند.",
+    forWho: ["برنامه‌نویس‌ها با Claude Code", "نویسنده‌ها و تحلیلگرهای حرفه‌ای"] },
+  "gemini-ultra": { slug: "google-ai-ultra", faName: "جمنای اولترا",
+    intro: "Google AI Ultra بالاترین سطح هوش گوگل است: Gemini با Deep Think، ساخت ویدئو با Veo و ۳۰ ترابایت فضای ابری.",
+    forWho: ["تولیدکننده‌های ویدئو", "پژوهشگرها", "تیم‌هایی که فضای ابری زیاد لازم دارند"] },
 };
 
 export const contentOf = (p: Product) => CONTENT[p.id];

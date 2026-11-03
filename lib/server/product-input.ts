@@ -10,7 +10,7 @@ export function cleanPatch(id: string, isNew: boolean, b: { product?: Record<str
   if (!/^[a-z0-9-]{2,32}$/.test(id)) return { error: "bad_id" };
   const p = b.product ?? {};
   const out: Partial<Product> = {};
-  for (const k of ["name", "maker", "description", "use", "badge", "axis", "monogram"] as const) {
+  for (const k of ["name", "maker", "description", "use", "badge", "axis", "monogram", "tier"] as const) {
     const v = str(p[k]);
     if (v !== undefined) out[k] = v;
   }
@@ -23,6 +23,11 @@ export function cleanPatch(id: string, isNew: boolean, b: { product?: Record<str
   if (p.kind !== undefined) { if (!KINDS.includes(String(p.kind))) return { error: "bad_kind" }; out.kind = p.kind as Product["kind"]; }
   if (p.etaMinutes !== undefined) out.etaMinutes = Math.max(0, Math.min(1440, Math.round(Number(p.etaMinutes) || 0)));
   if (p.includes !== undefined) out.includes = (Array.isArray(p.includes) ? p.includes : []).map((x) => str(x, 120)!).filter(Boolean).slice(0, 8);
+  if (p.family !== undefined) {
+    const fam = String(p.family ?? "").trim();
+    if (fam && (fam === id || !/^[a-z0-9-]{2,32}$/.test(fam))) return { error: "bad_family" };
+    out.family = fam || undefined;
+  }
   if (p.hidden !== undefined) out.hidden = !!p.hidden;
   if (p.ip !== undefined) out.ip = !!p.ip;
   if (p.color !== undefined) out.color = /^#[0-9a-fA-F]{6}$/.test(String(p.color)) ? String(p.color) : undefined;

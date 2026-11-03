@@ -1,10 +1,11 @@
+import { tomanPerUsd } from "@/lib/server/crypto";
 import { validEmail } from "@/lib/account";
 import { currentUser, demoLogin } from "@/lib/server/auth";
 import { db } from "@/lib/server/db";
 import { body, fail, json, route, withUser } from "@/lib/server/http";
 import { gatewayConfigured } from "@/lib/server/pay";
 
-export const GET = route(async () => json({ user: await currentUser(), demo: { login: demoLogin(), gateway: !gatewayConfigured() } }));
+export const GET = route(async () => json({ user: await currentUser(), demo: { login: demoLogin(), gateway: !gatewayConfigured(), usd: tomanPerUsd() } }));
 
 export const PATCH = route(async (req: Request) => withUser(async (u) => {
   const { name, email } = await body<{ name: string; email: string }>(req);

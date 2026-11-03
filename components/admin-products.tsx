@@ -18,7 +18,7 @@ const ERR: Record<string, string> = {
   bad_id: "شناسه فقط حروف کوچک انگلیسی، عدد و خط تیره (۲ تا ۳۲ حرف)",
   exists: "محصولی با این شناسه هست", bad_name: "نام محصول را بنویس", bad_category: "دسته را انتخاب کن",
   no_prices: "حداقل یک قیمت وارد کن", bad_plan: "کلید گزینه‌ها فقط حروف انگلیسی و عدد", bad_slug: "آدرس صفحه فقط حروف انگلیسی، عدد و خط تیره",
-  slug_taken: "این آدرس صفحه برای محصول دیگری است",
+  slug_taken: "این آدرس صفحه برای محصول دیگری است", bad_family: "محصول اصلی درست انتخاب نشده",
 };
 
 function useCatalog() {
@@ -71,14 +71,14 @@ export function AdminProducts() {
 type Row = { key: string; label: string; prices: Partial<Record<DeliveryType, string>> };
 type Draft = {
   id: string; name: string; maker: string; category: Category; kind: ProductKind; axis: string; description: string; use: string;
-  etaMinutes: string; includes: string; badge: string; color: string; hidden: boolean; ip: boolean;
+  etaMinutes: string; includes: string; badge: string; family: string; tier: string; color: string; hidden: boolean; ip: boolean;
   groupOn: boolean; group: [string, string][]; types: DeliveryType[]; rows: Row[];
   slug: string; faName: string; intro: string; forWho: string;
 };
 
 const BLANK: Draft = {
   id: "", name: "", maker: "", category: "ai", kind: "sub", axis: "", description: "", use: "", etaMinutes: "15", includes: "",
-  badge: "", color: "", hidden: false, ip: false, groupOn: false, group: [["2", "5"], ["3", "8"], ["5", "12"]], types: ["own"],
+  badge: "", family: "", tier: "", color: "", hidden: false, ip: false, groupOn: false, group: [["2", "5"], ["3", "8"], ["5", "12"]], types: ["own"],
   rows: [{ key: "1", label: "", prices: {} }, { key: "12", label: "", prices: {} }], slug: "", faName: "", intro: "", forWho: "",
 };
 
@@ -87,7 +87,7 @@ function toDraft(p: Product, c?: ProductContent): Draft {
   const types = TYPES.filter((t) => keys.some((k) => p.plans[k]?.[t]));
   return {
     id: p.id, name: p.name, maker: p.maker, category: p.category, kind: p.kind ?? "sub", axis: p.axis ?? "", description: p.description, use: p.use,
-    etaMinutes: String(p.etaMinutes), includes: p.includes.join("\n"), badge: p.badge ?? "", color: p.color ?? "", hidden: !!p.hidden, ip: !!p.ip,
+    etaMinutes: String(p.etaMinutes), includes: p.includes.join("\n"), badge: p.badge ?? "", family: p.family ?? "", tier: p.tier ?? "", color: p.color ?? "", hidden: !!p.hidden, ip: !!p.ip,
     groupOn: !!p.group?.length, group: (p.group?.length ? p.group : BLANK.group.map(([a, b]) => [Number(a), Number(b)])).map(([a, b]) => [String(a), String(b)]),
     types, rows: keys.map((k) => ({ key: k, label: p.labels?.[k] ?? "", prices: Object.fromEntries(types.map((t) => [t, p.plans[k]?.[t] ? String(p.plans[k]![t]) : ""])) })),
     slug: c?.slug ?? "", faName: c?.faName ?? "", intro: c?.intro ?? "", forWho: (c?.forWho ?? []).join("\n"),
@@ -112,7 +112,7 @@ function toBody(d: Draft) {
     id: d.id.trim().toLowerCase(),
     product: {
       name: d.name, maker: d.maker, category: d.category, kind: d.kind, axis: d.axis, description: d.description, use: d.use,
-      etaMinutes: Number(digits(d.etaMinutes)) || 0, includes: lines(d.includes), badge: d.badge, color: d.color || undefined,
+      etaMinutes: Number(digits(d.etaMinutes)) || 0, includes: lines(d.includes), badge: d.badge, family: d.family, tier: d.tier, color: d.color || undefined,
       hidden: d.hidden, ip: d.ip, labels, plans, group: d.groupOn ? d.group.map(([a, b]) => [Number(digits(a)), Number(digits(b))]) : [],
     },
     content: { slug: d.slug || undefined, faName: d.faName, intro: d.intro, forWho: lines(d.forWho) },
@@ -183,6 +183,13 @@ export function AdminProduct({ id }: { id: string }) {
                 {(Object.keys(KIND) as ProductKind[]).map((k) => <option key={k} value={k}>{KIND[k]}</option>)}
               </select></Field>
               <Field label="زمان تحویل (دقیقه، ۰ = خودکار)"><input className="adm-in num" inputMode="numeric" value={d.etaMinutes} onChange={(e) => set({ etaMinutes: e.target.value })} /></Field>
+            </div>
+            <div className="ap-2">
+              <Field label="نسخه‌ای از (برای Go / Pro / Max)"><select className="adm-in" value={d.family} onChange={(e) => set({ family: e.target.value })}>
+                <option value="">— محصول مستقل —</option>
+                {(data?.products ?? []).filter((x) => !x.family && x.id !== id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+              </select></Field>
+              <Field label="نام نسخه (مثلاً Pro)"><input className="adm-in ltr" value={d.tier} placeholder="Plus" onChange={(e) => set({ tier: e.target.value })} /></Field>
             </div>
             <Field label="توضیح کوتاه (روی کارت‌ها)"><input className="adm-in" value={d.description} onChange={(e) => set({ description: e.target.value })} /></Field>
             <Field label="به درد چه کاری می‌خورد (یک خط)"><input className="adm-in" value={d.use} onChange={(e) => set({ use: e.target.value })} /></Field>

@@ -38,6 +38,10 @@ export type Product = {
   ip?: boolean;
   /** Brand colour for the product page (overrides the built-in theme). */
   color?: string;
+  /** Variant of another product (its id), e.g. ChatGPT Go and Pro are variants of "chatgpt". Listings show the family once. */
+  family?: string;
+  /** Short variant name shown in the tier switcher: «Go», «Plus», «Pro», «Max». */
+  tier?: string;
 };
 
 export type Drop = {
@@ -72,15 +76,15 @@ export const DELIVERY: Record<DeliveryType, { title: string; detail: string; inp
 };
 
 export const PRODUCTS: Product[] = [
-  { id: "chatgpt", name: "ChatGPT Plus", maker: "OpenAI", category: "ai", monogram: "GPT", group: [[2, 5], [3, 8], [5, 12]], ip: true, badge: "پرفروش", etaMinutes: 10,
+  { id: "chatgpt", tier: "Plus", name: "ChatGPT Plus", maker: "OpenAI", category: "ai", monogram: "GPT", group: [[2, 5], [3, 8], [5, 12]], ip: true, badge: "پرفروش", etaMinutes: 10,
     description: "دستیار همه‌کاره برای نوشتن، تحلیل و ساخت", use: "برای نوشتن، فکر کردن و ساختن",
     plans: { "1": { own: 1890000, ready: 1590000 }, "3": { own: 5390000, ready: 4490000 } },
     includes: ["جدیدترین مدل‌های OpenAI", "تولید تصویر، صدا و Deep Research", "سقف پیام بسیار بالاتر"] },
-  { id: "claude", name: "Claude Pro", maker: "Anthropic", category: "ai", monogram: "CL", group: [[2, 5], [3, 8], [5, 12]], ip: true, etaMinutes: 20,
+  { id: "claude", tier: "Pro", name: "Claude Pro", maker: "Anthropic", category: "ai", monogram: "CL", group: [[2, 5], [3, 8], [5, 12]], ip: true, etaMinutes: 20,
     description: "برای نوشتن دقیق، کدنویسی و اسناد طولانی", use: "برای متن دقیق و کد تمیز",
     plans: { "1": { own: 2090000 }, "3": { own: 5990000 } },
     includes: ["مدل‌های Claude با سقف استفاده بالاتر", "Projects و Claude Code", "پردازش فایل‌های حجیم"] },
-  { id: "gemini", name: "Google AI Pro", maker: "Google", category: "ai", monogram: "GE", group: [[2, 5], [3, 8], [5, 12]], ip: true, etaMinutes: 15,
+  { id: "gemini", tier: "Pro", name: "Google AI Pro", maker: "Google", category: "ai", monogram: "GE", group: [[2, 5], [3, 8], [5, 12]], ip: true, etaMinutes: 15,
     description: "Gemini به‌همراه ۲ ترابایت فضای ابری", use: "هوش گوگل، کنار Gmail و Docs",
     plans: { "1": { own: 1190000 }, "12": { own: 11900000 } },
     includes: ["Gemini Pro و Deep Research", "۲ ترابایت Google One", "Gemini در Gmail و Docs"] },
@@ -152,11 +156,34 @@ export const PRODUCTS: Product[] = [
     description: "شماره مجازی برای تلگرام و واتس‌اپ", use: "ثبت‌نام بدون سیم‌کارت",
     plans: { ca: { number: 250000 }, us: { number: 290000 }, uk: { number: 390000 }, nl: { number: 450000 } },
     includes: ["شماره اختصاصی برای ثبت‌نام", "کد تأیید در حساب کاربری", "اگر کد نیامد، کل مبلغ برمی‌گردد"] },
+  // ----- Variants (one page each, grouped on the product page by `family`) -----
+  { id: "chatgpt-go", family: "chatgpt", tier: "Go", name: "ChatGPT Go", maker: "OpenAI", category: "ai", monogram: "GO", etaMinutes: 10,
+    description: "نسخه اقتصادی ChatGPT با سقف بالاتر از رایگان", use: "برای استفاده روزمره، ارزان",
+    plans: { "1": { own: 690000 }, "3": { own: 1950000 } },
+    includes: ["سقف پیام و تصویر بالاتر از نسخه رایگان", "حافظه طولانی‌تر", "آپلود فایل بیشتر"] },
+  { id: "chatgpt-pro", family: "chatgpt", tier: "Pro", name: "ChatGPT Pro", maker: "OpenAI", category: "ai", monogram: "PRO", etaMinutes: 30, ip: true,
+    description: "قوی‌ترین نسخه ChatGPT برای کار سنگین", use: "برای کار حرفه‌ای بدون سقف",
+    plans: { "1": { own: 19900000 } },
+    includes: ["استفاده تقریباً نامحدود از مدل‌ها", "حالت Pro برای سخت‌ترین سؤال‌ها", "Deep Research و Agent با سقف بالا"] },
+  { id: "claude-max", family: "claude", tier: "Max", name: "Claude Max", maker: "Anthropic", category: "ai", monogram: "MAX", etaMinutes: 30, ip: true,
+    description: "Claude با ۵ برابر سقف Pro", use: "برای کدنویسی و کار سنگین",
+    plans: { "1": { own: 9900000 } },
+    includes: ["۵ برابر سقف استفاده Pro", "Claude Code با سقف بالا", "دسترسی زودتر به امکانات تازه"] },
+  { id: "gemini-ultra", family: "gemini", tier: "Ultra", name: "Google AI Ultra", maker: "Google", category: "ai", monogram: "UL", etaMinutes: 30,
+    description: "بالاترین سطح Gemini به‌همراه ۳۰ ترابایت فضا", use: "همه هوش گوگل، بدون سقف",
+    plans: { "1": { own: 24500000 } },
+    includes: ["Gemini با بالاترین سقف و Deep Think", "ساخت ویدئو با Veo", "۳۰ ترابایت فضای ابری"] },
 ];
 
-export const CURRENT_DROP: Drop = {
-  number: 7, productId: "chatgpt", plan: "1", type: "own", was: 1890000, price: 1490000, left: 7, of: 40,
-};
+/** Limited-price weekly drops, shown as a slider on the home page. */
+export const DROPS: Drop[] = [
+  { number: 7, productId: "chatgpt", plan: "1", type: "own", was: 1890000, price: 1490000, left: 7, of: 40 },
+  { number: 8, productId: "cursor", plan: "1", type: "own", was: 1990000, price: 1690000, left: 12, of: 30 },
+  { number: 9, productId: "tgpremium", plan: "12", type: "username", was: 2790000, price: 2390000, left: 18, of: 50 },
+  { number: 10, productId: "canva", plan: "12", type: "own", was: 2900000, price: 2290000, left: 9, of: 25 },
+];
+export const CURRENT_DROP: Drop = DROPS[0];
+export const dropOf = (id: string) => DROPS.find((d) => d.productId === id);
 
 export const kindOf = (p: Product): ProductKind => p.kind ?? "sub";
 export const isSub = (p: Product) => kindOf(p) === "sub";
@@ -216,8 +243,8 @@ export function extrasLabel(sel: Selection) {
 
 export function priceOf(sel: Selection): { price: number; was?: number } {
   const base = productById(sel.id).plans[sel.plan]?.[sel.type] ?? 0;
-  const d = CURRENT_DROP;
-  if (d.productId === sel.id && d.plan === sel.plan && d.type === sel.type) return { price: d.price, was: base };
+  const d = DROPS.find((x) => x.productId === sel.id && x.plan === sel.plan && x.type === sel.type);
+  if (d) return { price: d.price, was: base };
   return { price: base };
 }
 
@@ -239,3 +266,19 @@ export const guaranteeOf = (p: Product) =>
 
 /** When the sample prices were last reviewed (shown on product pages). */
 export const PRICES_UPDATED = { fa: "آبان ۱۴۰۵", iso: "2026-11-01" };
+
+/** The id that owns a product's brand (logo, colours, page copy fallbacks). */
+export const brandOf = (p: Pick<Product, "id" | "family">) => p.family ?? p.id;
+/** All variants of a product's family, cheapest first (just the product when it has none). */
+export const variantsOf = (p: Product) => {
+  const fam = brandOf(p);
+  return PRODUCTS.filter((x) => brandOf(x) === fam).sort((a, b) => minPrice(a) - minPrice(b));
+};
+/** Products shown in listings: one card per family. */
+export const listed = () => PRODUCTS.filter((p) => !p.family || !PRODUCTS.some((x) => x.id === p.family));
+/** «Go · Plus · Pro» for a family card, or "". */
+export const tiersLabel = (p: Product) => {
+  const v = variantsOf(p);
+  return v.length > 1 ? v.map((x) => x.tier ?? splitTier(x.name)).join(" · ") : "";
+};
+const splitTier = (name: string) => name.split(" ").slice(-1)[0];
