@@ -70,7 +70,7 @@ export function searchProducts(query: string) {
 }
 
 export type SortKey = "featured" | "cheap" | "fast";
-export const SORTS: Record<SortKey, string> = { featured: "پیشنهاد ما", cheap: "ارزان‌ترین", fast: "سریع‌ترین تحویل" };
+export const SORTS: Partial<Record<SortKey, string>> = { featured: "پیشنهاد ما", cheap: "ارزان‌ترین" };
 
 export function browse(opts: { cat: "all" | Category; query: string; sort: SortKey; instant: boolean; need?: string }) {
   const need = NEEDS.find((n) => n.label === opts.need);

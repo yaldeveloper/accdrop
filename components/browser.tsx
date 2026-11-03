@@ -12,16 +12,16 @@ import { ToolCard } from "./sections";
 const CATS = Object.keys(CATEGORIES) as ("all" | Category)[];
 const isCat = (v: string | null): v is "all" | Category => !!v && v in CATEGORIES;
 
-/** Search, categories, needs, sort and an instant-delivery filter over the whole catalog. */
+/** Search, categories, needs and sort over the whole catalog. */
 export function ServiceBrowser({ syncUrl = false }: { syncUrl?: boolean }) {
   const params = useSearchParams();
   const router = useRouter();
   const path = usePathname();
   const [cat, setCat] = useState<"all" | Category>(() => (syncUrl && isCat(params.get("c")) ? (params.get("c") as Category) : "all"));
   const [query, setQuery] = useState(() => (syncUrl ? params.get("q") ?? "" : ""));
-  const [need, setNeed] = useState<string | undefined>();
+  const [need, setNeed] = useState<string | undefined>(() => (syncUrl ? params.get("need") ?? undefined : undefined));
   const [sort, setSort] = useState<SortKey>("featured");
-  const [instant, setInstant] = useState(false);
+  const instant = false;
   const input = useRef<HTMLInputElement>(null);
 
   const list = useMemo(() => browse({ cat, query, sort, instant, need }), [cat, query, sort, instant, need]);
@@ -33,11 +33,12 @@ export function ServiceBrowser({ syncUrl = false }: { syncUrl?: boolean }) {
     const sp = new URLSearchParams();
     if (cat !== "all") sp.set("c", cat);
     if (query.trim()) sp.set("q", query.trim());
+    if (need) sp.set("need", need);
     const next = sp.size ? `${path}?${sp}` : path;
     router.replace(next, { scroll: false });
-  }, [syncUrl, cat, query, path, router]);
+  }, [syncUrl, cat, query, need, path, router]);
 
-  const reset = () => { setCat("all"); setQuery(""); setNeed(undefined); setInstant(false); setSort("featured"); input.current?.focus(); };
+  const reset = () => { setCat("all"); setQuery(""); setNeed(undefined); setSort("featured"); input.current?.focus(); };
 
   return (
     <div className="sb">
@@ -49,7 +50,6 @@ export function ServiceBrowser({ syncUrl = false }: { syncUrl?: boolean }) {
           {query && <button type="button" className="sb-x" onClick={() => { setQuery(""); input.current?.focus(); }} aria-label="پاک کردن">×</button>}
         </label>
         <div className="sb-tools">
-          <label className="sb-sw"><input type="checkbox" checked={instant} onChange={(e) => setInstant(e.target.checked)} /><i />فقط تحویل فوری</label>
           <div className="sb-sort" role="radiogroup" aria-label="مرتب‌سازی">
             {(Object.keys(SORTS) as SortKey[]).map((k) => (
               <button key={k} type="button" role="radio" aria-checked={sort === k} className={sort === k ? "on" : ""} onClick={() => setSort(k)}>{SORTS[k]}</button>

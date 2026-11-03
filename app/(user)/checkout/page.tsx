@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { DELIVERY, optionLabel, productById } from "@/lib/catalog";
+import { DELIVERY, extrasLabel, linePrice, optionLabel, productById } from "@/lib/catalog";
 import { normalizeUsername, validEmail, validUsername } from "@/lib/account";
-import { clubPoints, fa, money } from "@/lib/format";
+import { fa, money } from "@/lib/format";
 import { BrandLogo, Dots, Icon } from "@/components/brand";
 import { LoginFlow } from "@/components/login";
 import { api, useAccount } from "@/components/account";
@@ -16,6 +16,8 @@ export default function CheckoutPage() {
   const { cart, removeLine, clearCart, notify } = useStore();
   const { ready, user, placeOrder, demo } = useAccount();
   const [emails, setEmails] = useState<Record<number, string>>({});
+  /** Group-buy teammates: members[line][k] is the email of seat k+2. */
+  const [members, setMembers] = useState<Record<number, string[]>>({});
   const [code, setCode] = useState("");
   const [applied, setApplied] = useState("");
   const [rate, setRate] = useState(0);
@@ -32,7 +34,7 @@ export default function CheckoutPage() {
     setEmails((e) => Object.fromEntries(cart.map((l, i) => [i, e[i] ?? (l.type === "own" ? user.email : "")])));
   }, [user?.email, cart]);
 
-  const subtotal = cart.reduce((s, l) => s + l.price, 0);
+  const subtotal = cart.reduce((s, l) => s + linePrice(l), 0);
   const discount = Math.round((subtotal * rate) / 1000) * 1000;
   const total = subtotal - discount;
 
@@ -47,6 +49,13 @@ export default function CheckoutPage() {
     if (!user || inFlow) { notify("اول وارد حسابت شو"); document.getElementById("co-account")?.scrollIntoView({ behavior: "smooth", block: "center" }); return; }
     const ok = (t: string, v: string) => (t === "own" ? validEmail(v) : t === "username" ? validUsername(v) : true);
     const missing = cart.map((l, i) => (!ok(l.type, emails[i] ?? "") ? i : -1)).filter((i) => i >= 0);
+    const team = cart.map((l, i) => (l.type === "own" && (l.seats ?? 1) > 1 && !Array.from({ length: l.seats! - 1 }, (_, k) => members[i]?.[k] ?? "").every(validEmail) ? i : -1)).filter((i) => i >= 0);
+    if (!missing.length && team.length) {
+      setBad(team.map((i) => 100 + i));
+      notify("ایمیل همه اعضای گروه را درست وارد کن");
+      document.getElementById(`co-mb-${team[0]}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     if (missing.length) {
       setBad(missing);
       notify(cart[missing[0]].type === "username" ? "یوزرنیم تلگرام را درست وارد کن" : "ایمیل اکانت را درست وارد کن");
@@ -57,10 +66,13 @@ export default function CheckoutPage() {
     setPaying(true);
     const r = await placeOrder(cart.map((l, i) => ({ id: l.id, plan: l.plan, type: l.type,
       email: l.type === "own" ? emails[i]?.trim() : undefined,
-      username: l.type === "username" ? normalizeUsername(emails[i] ?? "") : undefined })), applied);
+      username: l.type === "username" ? normalizeUsername(emails[i] ?? "") : undefined,
+      seats: l.seats, ip: l.ip,
+      members: l.type === "own" && (l.seats ?? 1) > 1 ? Array.from({ length: l.seats! - 1 }, (_, k) => members[i]?.[k]?.trim() ?? "") : undefined })), applied);
     if ("error" in r) {
       setPaying(false);
       if (r.index !== undefined && (r.error === "bad_email" || r.error === "bad_username")) { setBad([r.index]); document.getElementById(`co-em-${r.index}`)?.focus(); }
+      if (r.index !== undefined && r.error === "bad_members") setBad([100 + r.index]);
       notify(r.error === "bad_item" ? "یکی از اقلام سبد دیگر موجود نیست. حذفش کن و دوباره امتحان کن." : r.error === "unauthorized" ? "اول وارد حسابت شو" : "ثبت سفارش انجام نشد. دوباره امتحان کن.");
       return;
     }
@@ -103,12 +115,23 @@ export default function CheckoutPage() {
                 return (
                   <div className="co-act" key={i}>
                     <div className="co-act-h"><span className="mono"><BrandLogo id={p.id} size={22} /></span><b className="en">{p.name}</b><small className="muted">{DELIVERY[l.type].title}</small></div>
+                    {l.ip && <p className="co-ipnote"><Icon id="shield" />{extrasLabel({ ...l, seats: 1 })}؛ مشخصات اتصال بعد از فعال‌سازی در صفحه سفارش نمایش داده می‌شود.</p>}
                     {l.type === "own" ? (
                       <div className="fld">
                         <label htmlFor={`co-em-${i}`}>ایمیل اکانت {p.maker} تو</label>
                         <input id={`co-em-${i}`} type="email" className={`ltr ${bad.includes(i) ? "bad" : ""}`} placeholder="you@gmail.com" disabled={!step1Done}
                           value={emails[i] ?? ""} onChange={(e) => { setEmails({ ...emails, [i]: e.target.value }); setBad(bad.filter((x) => x !== i)); }} />
                         <small className="muted">فقط ایمیل. هیچ‌وقت رمز عبورت را نمی‌خواهیم.</small>
+                        {(l.seats ?? 1) > 1 && (
+                          <div className={`co-team ${bad.includes(100 + i) ? "bad" : ""}`} id={`co-mb-${i}`}>
+                            <b>ایمیل بقیه اعضای گروه</b>
+                            {Array.from({ length: l.seats! - 1 }, (_, k) => (
+                              <input key={k} type="email" className="ltr" placeholder={`member${k + 2}@gmail.com`} disabled={!step1Done} aria-label={`ایمیل نفر ${fa(k + 2)}`}
+                                value={members[i]?.[k] ?? ""} onChange={(e) => { const next = [...(members[i] ?? [])]; next[k] = e.target.value; setMembers({ ...members, [i]: next }); setBad(bad.filter((x) => x !== 100 + i)); }} />
+                            ))}
+                            <small className="muted">هر نفر یک اشتراک جدا روی ایمیل خودش می‌گیرد.</small>
+                          </div>
+                        )}
                       </div>
                     ) : l.type === "username" ? (
                       <div className="fld">
@@ -147,8 +170,8 @@ export default function CheckoutPage() {
               return (
                 <li key={i}>
                   <span className="mono"><BrandLogo id={p.id} size={20} /></span>
-                  <div><b className="en">{p.name}</b><small>{optionLabel(p, l.plan)} • {DELIVERY[l.type].title}</small></div>
-                  <div className="r"><span className="num">{money(l.price)}</span><button className="rm" onClick={() => removeLine(i)} aria-label={`حذف ${p.name}`}>حذف</button></div>
+                  <div><b className="en">{p.name}</b><small>{optionLabel(p, l.plan)} • {DELIVERY[l.type].title}</small>{extrasLabel(l) && <small className="co-x">{extrasLabel(l)}</small>}</div>
+                  <div className="r"><span className="num">{money(linePrice(l))}</span><button className="rm" onClick={() => removeLine(i)} aria-label={`حذف ${p.name}`}>حذف</button></div>
                 </li>
               );
             })}
@@ -162,7 +185,6 @@ export default function CheckoutPage() {
             {discount > 0 && <div className="disc"><dt>تخفیف ({applied})</dt><dd className="num">−{money(discount)}</dd></div>}
             <div className="tot"><dt>قابل پرداخت</dt><dd><b className="num">{money(total)}</b> <small>تومان</small></dd></div>
           </dl>
-          <p className="co-club"><Dots size={3} /><span>با این خرید <b className="num">{fa(clubPoints(total))}</b> امتیاز کلاب می‌گیری.</span></p>
           <label className="co-agree"><input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} /><span>قوانین و <a className="link" href="#">شرایط گارانتی</a> را می‌پذیرم.</span></label>
           <button className="btn btn-paper btn-block co-btn" onClick={pay} disabled={paying}>
             {paying ? "در حال اتصال به درگاه…" : <>پرداخت <span className="num">{money(total)}</span> تومان</>}
@@ -172,6 +194,10 @@ export default function CheckoutPage() {
             <li><Dots size={3} />ضمانت بازگشت وجه</li>
             <li><Dots size={3} />پشتیبانی ۹ تا ۲۴</li>
           </ul>
+          <div className="co-bar" aria-hidden="true">
+            <div><small>قابل پرداخت</small><b className="num">{money(total)} <small>تومان</small></b></div>
+            <button className="btn btn-paper" onClick={pay} disabled={paying} tabIndex={-1}>{paying ? "…" : "پرداخت"}</button>
+          </div>
           {demo.gateway && <small className="muted fine">نسخه آزمایشی: درگاه هنوز وصل نیست و پرداخت در درگاه آزمایشی انجام می‌شود. کد <span className="en">WELCOME</span> ده درصد تخفیف می‌دهد.</small>}
         </aside>
       </div>

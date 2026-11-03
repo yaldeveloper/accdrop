@@ -121,6 +121,35 @@ create table if not exists ticket_messages (
   created_at timestamptz not null default now()
 );
 create index if not exists ticket_messages_ticket on ticket_messages(ticket_id);
+alter table order_lines add column if not exists seats int not null default 1;
+alter table order_lines add column if not exists ip text;
+alter table order_lines add column if not exists members text;
+create table if not exists products (
+  id text primary key,
+  data jsonb not null,
+  updated_at timestamptz not null default now()
+);
+create table if not exists chats (
+  id serial primary key,
+  visitor text not null unique,
+  mobile text,
+  name text not null default '',
+  page text not null default '',
+  status text not null default 'open',
+  unread_admin int not null default 0,
+  unread_user int not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists chats_status on chats(status, updated_at desc);
+create table if not exists chat_messages (
+  id serial primary key,
+  chat_id int not null references chats(id) on delete cascade,
+  author text not null,
+  body text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists chat_messages_chat on chat_messages(chat_id, id);
 insert into discounts (code, rate) values ('WELCOME', 0.1) on conflict do nothing;
 `;
 

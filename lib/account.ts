@@ -5,6 +5,8 @@ import { clubPoints } from "./format";
 export type User = { mobile: string; name: string; email: string; createdAt: number };
 export type OrderLine = Selection & {
   price: number; email?: string; username?: string;
+  /** Extra activation emails for a group buy (seats beyond the first). */
+  members?: string[];
   /** Server fields: line id, and what was delivered (gift code, number or login) once it is ready. */
   lineId?: number; secret?: string; deliveredAt?: number | null;
 };

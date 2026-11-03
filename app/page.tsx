@@ -1,6 +1,6 @@
 "use client";
 
-import { Club, Collection, Concierge, DropSection, Hero, Shield, Steps, useReveal } from "@/components/sections";
+import { Collection, Concierge, DropSection, Hero, Shield, Steps, useReveal } from "@/components/sections";
 
 export default function Home() {
   useReveal();
@@ -11,7 +11,6 @@ export default function Home() {
       <Collection />
       <DropSection />
       <Shield />
-      <Club />
       <Concierge />
     </main>
   );

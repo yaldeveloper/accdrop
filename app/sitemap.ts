@@ -1,10 +1,12 @@
+import { loadCatalog } from "@/lib/server/catalog";
 import type { MetadataRoute } from "next";
 import { PRODUCTS } from "@/lib/catalog";
 import { productHref } from "@/lib/content";
 
 export const dynamic = "force-static";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  await loadCatalog();
   const base = "https://accdrop.ir";
   return [
     { url: `${base}/`, changeFrequency: "daily", priority: 1 },

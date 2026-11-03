@@ -7,12 +7,16 @@ import { CATEGORIES, CURRENT_DROP, DELIVERY, PRODUCTS, minPrice, optionLabel, pr
 import { duration, fa, money, pad2 } from "@/lib/format";
 import { BrandLogo, Dots, Eyebrow, Glyph, Icon, Wordmark } from "./brand";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { productHref } from "@/lib/content";
 import { splitName } from "./pass";
 import { useStore } from "./store";
 import { useAccount } from "./account";
 import { ServiceBrowser } from "./browser";
+import { MegaMenu } from "./mega";
+import { openChat } from "./chat";
+import { searchProducts } from "@/lib/search";
 
 /** Fades sections in on scroll. */
 export function useReveal() {
@@ -41,7 +45,7 @@ export function Header() {
       <div className="wrap">
         <a href="/" aria-label="اک‌دراپ، صفحه اصلی"><Wordmark /></a>
         <nav aria-label="منوی اصلی">
-          <Link href="/services">همه سرویس‌ها</Link><Link href="/#drop">دراپ هفته</Link><Link href="/guarantee">ضمانت</Link><Link href="/reseller">نمایندگی فروش</Link><Link href="/contact">پشتیبانی</Link>
+          <MegaMenu /><Link href="/#drop">دراپ هفته</Link><Link href="/guarantee">ضمانت</Link><Link href="/reseller">نمایندگی فروش</Link><Link href="/contact">پشتیبانی</Link>
         </nav>
         <div className="sp" />
         <div className="tools">
@@ -113,48 +117,80 @@ function Orbit({ active, onPick, onHover }: { active: string; onPick: (id: strin
 }
 
 export function Hero() {
-  const [active, setActive] = useState(FEATURED[0]);
+  const [active, setActive] = useState(ORBIT[0]);
   const [paused, setPaused] = useState(false);
   useEffect(() => {
     if (paused) return;
     const t = setInterval(() => setActive((a) => ORBIT[(ORBIT.indexOf(a) + 1) % ORBIT.length]), 3000);
     return () => clearInterval(t);
   }, [paused]);
-  const p = productById(active);
 
   return (
     <section className="hero2">
       <div className="wrap hero2-g">
-        <div>
-          <Eyebrow>هوش مصنوعی، اپل، تلگرام و بیشتر</Eyebrow>
-          <h1><span>اشتراک و سرویس‌های دیجیتال،</span> <b>به ساده‌ترین شکل.</b></h1>
-          <p className="lead">ChatGPT، Claude، Adobe، تلگرام پرمیوم، گیفت‌کارت اپل و سرویس‌های دیگر را با کارت بانکی بخر. روی ایمیل یا آیدی خودت تحویل می‌گیری، خیلی‌ها فوری؛ اگر نشد، پولت برمی‌گردد.</p>
-          <div className="pick" role="group" aria-label="انتخاب ابزار" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
+        <div className="hero2-copy">
+          <Eyebrow>{`${fa(PRODUCTS.length)} سرویس، یک فروشگاه`}</Eyebrow>
+          <h1>هر اشتراکی که لازم داری،<br /><b>با تومان.</b></h1>
+          <p className="lead">هوش مصنوعی، طراحی، تلگرام، اپل و بیشتر؛ روی ایمیل یا آیدی خودت، با ضمانت بازگشت وجه.</p>
+          <HeroSearch />
+          <div className="pick" aria-label="پرطرفدارها">
+            <span className="muted">پرطرفدار:</span>
             {FEATURED.map((id) => (
-              <button key={id} className={`en ${id === active ? "on" : ""}`} onClick={() => { setActive(id); setPaused(true); }}>
-                <BrandLogo id={id} size={16} />{CHIP[id] ?? splitName(productById(id).name)[0]}
-              </button>
+              <Link key={id} className="en" href={productHref(productById(id))} onMouseEnter={() => { setActive(id); setPaused(true); }} onMouseLeave={() => setPaused(false)}>
+                <BrandLogo id={id} size={15} />{CHIP[id] ?? splitName(productById(id).name)[0]}
+              </Link>
             ))}
-            <Link href="/services" className="more">همه سرویس‌ها</Link>
-          </div>
-          <div className="hero2-cta">
-            <Link className="btn btn-paper" href={productHref(p)}>
-              دریافت <span className="en">{p.name}</span> <Icon id="arrow" className="arrow" />
-            </Link>
-            <span className="muted">از <b className="num" style={{ color: "var(--paper)", fontWeight: 500 }}>{money(fromPrice(p))}</b> تومان</span>
           </div>
         </div>
         <Orbit active={active} onPick={(id) => { setActive(id); setPaused(true); }} onHover={setPaused} />
       </div>
       <div className="wrap">
         <ul className="assure-row">
-          <li><Dots size={3} />تحویل فوری تا حداکثر ۳۰ دقیقه</li>
           <li><Dots size={3} />فقط ایمیل یا آیدی، هرگز رمز عبور</li>
           <li><Dots size={3} /><Link href="/guarantee">ضمانت بازگشت وجه</Link></li>
-          <li><Dots size={3} />پشتیبانی فارسی، هر روز ۹ تا ۲۴</li>
+          <li><Dots size={3} />پرداخت با همه کارت‌های بانکی</li>
+          <li><Dots size={3} />پشتیبانی فارسی و چت آنلاین</li>
         </ul>
       </div>
     </section>
+  );
+}
+
+/** The hero's search: suggestions as you type, Enter opens the best match or the full list. */
+function HeroSearch() {
+  const router = useRouter();
+  const [q, setQ] = useState("");
+  const [open, setOpen] = useState(false);
+  const [act, setAct] = useState(0);
+  const found = q.trim() ? searchProducts(q).slice(0, 5) : [];
+  const go = () => {
+    if (found[act]) router.push(productHref(found[act]));
+    else router.push(q.trim() ? `/services?q=${encodeURIComponent(q.trim())}` : "/services");
+  };
+  return (
+    <form className="hs" role="search" onSubmit={(e) => { e.preventDefault(); go(); }} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setOpen(false); }}>
+      <label className="hs-in">
+        <Icon id="search" />
+        <input value={q} onChange={(e) => { setQ(e.target.value); setOpen(true); setAct(0); }} onFocus={() => setOpen(true)}
+          onKeyDown={(e) => { if (e.key === "ArrowDown") { e.preventDefault(); setAct((a) => Math.min(a + 1, found.length - 1)); } if (e.key === "ArrowUp") { e.preventDefault(); setAct((a) => Math.max(a - 1, 0)); } if (e.key === "Escape") setOpen(false); }}
+          placeholder="دنبال چه سرویسی هستی؟ مثلاً ChatGPT یا فتوشاپ" aria-label="جست‌وجوی سرویس" autoComplete="off"
+          role="combobox" aria-expanded={open && found.length > 0} aria-controls="hs-list" />
+        <button className="btn btn-paper" type="submit">جست‌وجو</button>
+      </label>
+      {open && found.length > 0 && (
+        <ul className="hs-list" id="hs-list" role="listbox">
+          {found.map((p, i) => (
+            <li key={p.id} role="option" aria-selected={i === act}>
+              <Link href={productHref(p)} className={i === act ? "act" : ""} onMouseEnter={() => setAct(i)}>
+                <span className="mono"><BrandLogo id={p.id} size={20} /></span>
+                <span><b className="en">{p.name}</b><small className="muted">{p.description}</small></span>
+                <span className="num muted">از {money(fromPrice(p))}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </form>
   );
 }
 
@@ -291,39 +327,6 @@ const TIERS = [
   { key: "PRIME", title: "پرایم", perks: ["دراپ‌های اختصاصی", "کارشناس شخصی"], req: "خرید دهم" },
 ];
 
-export function Club() {
-  const [tier, setTier] = useState("INSIDER");
-  return (
-    <section id="club">
-      <div className="wrap club-g">
-        <div className="card3d reveal">
-          <div className="mcard">
-            <Glyph />
-            <div className="top"><Wordmark /><span className="tier">{tier}</span></div>
-            <div className="bot"><div><small>MEMBER</small><b>YOUR NAME · 2026</b></div><Dots size={6} /></div>
-          </div>
-        </div>
-        <div className="reveal">
-          <Eyebrow>باشگاه مشتریان</Eyebrow>
-          <div className="head" style={{ gridTemplateColumns: "1fr", margin: "22px 0 48px", gap: 16 }}>
-            <h2 style={{ margin: 0 }}>بیشتر بخر،<br /><b>کمتر بپرداز.</b></h2>
-            <p className="muted" style={{ justifySelf: "start" }}>هر خرید امتیاز دارد. عضویت رایگان و خودکار است.</p>
-          </div>
-          <div className="tiers">
-            {TIERS.map((t) => (
-              <div key={t.key} className={t.key === tier ? "on" : ""} onClick={() => setTier(t.key)} onMouseEnter={() => setTier(t.key)}>
-                <div className="lv">{t.key}</div><h4>{t.title}</h4>
-                <ul>{t.perks.map((x) => <li key={x}>{x}</li>)}</ul>
-                <div className="req">{t.req}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 const FAQ: [string, string][] = [
   ["«روی ایمیل خودم» یعنی چه؟", "اشتراک روی اکانت شخصی خودت فعال می‌شود. تاریخچه‌ات می‌ماند و فقط تو به آن دسترسی داری."],
   ["«اکانت آماده» چیست؟", "یک اکانت تازه که فقط مال توست. ایمیل و رمزش را تحویل می‌گیری. ارزان‌تر و سریع‌تر است."],
@@ -341,8 +344,8 @@ export function Concierge() {
             سؤال داری؟<br /><b style={{ fontWeight: 600 }}>یک آدم جواب می‌دهد.</b>
           </h2>
           <div className="concierge">
-            <p>هر روز، ۹ صبح تا ۱۲ شب، در تلگرام.</p>
-            <a className="btn btn-ghost" href="#">گفت‌وگو در تلگرام <Icon id="arrow" className="arrow" /></a>
+            <p>هر روز، ۹ صبح تا ۱۲ شب، همین‌جا در چت آنلاین.</p>
+            <button className="btn btn-paper" onClick={openChat}>شروع گفت‌وگو <Icon id="arrow" className="arrow" /></button>
           </div>
         </div>
         <div className="faq reveal">
@@ -361,7 +364,7 @@ export function Footer() {
       <div className="wrap">
         <div className="fg">
           <div><h5 className="fa">سرویس‌ها</h5><ul className="f-products">{PRODUCTS.map((p) => <li key={p.id}><Link href={productHref(p)} className="en">{p.name}</Link></li>)}</ul></div>
-          <div><h5 className="fa">اک‌دراپ</h5><ul><li><Link href="/#drop">دراپ هفته</Link></li><li><Link href="/#club">باشگاه مشتریان</Link></li><li><Link href="/reseller">نمایندگی فروش</Link></li></ul></div>
+          <div><h5 className="fa">اک‌دراپ</h5><ul><li><Link href="/#drop">دراپ هفته</Link></li><li><Link href="/reseller">نمایندگی فروش</Link></li></ul></div>
           <div><h5 className="fa">راهنما</h5><ul><li><Link href="/account/orders">پیگیری سفارش</Link></li><li><Link href="/guarantee">شرایط ضمانت و بازگشت وجه</Link></li><li><Link href="/terms">قوانین و مقررات</Link></li><li><Link href="/#concierge">سؤالات پرتکرار</Link></li><li><Link href="/account/tickets">تیکت پشتیبانی</Link></li></ul></div>
           <div><h5 className="fa">تماس</h5><ul><li><Link href="/contact">پشتیبانی، هر روز ۹ تا ۲۴</Link></li><li><a href="#">تلگرام</a></li><li><a href="#">اینستاگرام</a></li><li><a href="mailto:hello@accdrop.ir" className="en">hello@accdrop.ir</a></li></ul></div>
         </div>
@@ -375,6 +378,8 @@ export function Footer() {
 export function MobileBar() {
   const { cart, openSearch, setView } = useStore();
   const { user } = useAccount();
+  // Checkout has its own sticky pay bar.
+  if (usePathname() === "/checkout") return null;
   return (
     <nav className="mbar" aria-label="ناوبری موبایل">
       <Link href="/services"><Icon id="grid" />سرویس‌ها</Link>

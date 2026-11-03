@@ -1,6 +1,7 @@
 import { db } from "@/lib/server/db";
 import { json, route, withAdmin } from "@/lib/server/http";
 import { stockSummary } from "@/lib/server/orders";
+import { openChatCount } from "@/lib/server/chat";
 
 export const GET = route(async () => withAdmin(async () => {
   const sql = await db();
@@ -18,7 +19,7 @@ export const GET = route(async () => withAdmin(async () => {
   const stock = await stockSummary();
   return json({
     today: Number(s.today), todayCount: s.today_n, month: Number(s.month), monthCount: s.month_n, open: s.open,
-    pendingResellers: r.n, users: u.n, openTickets: t.n,
+    pendingResellers: r.n, users: u.n, openTickets: t.n, openChats: await openChatCount(),
     lowStock: stock.filter((x) => x.free < 3 || x.waiting > 0),
   });
 }));

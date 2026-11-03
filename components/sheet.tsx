@@ -2,8 +2,8 @@
 
 import { type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
-import { DELIVERY, axisOf, deliveryTypes, etaText, guaranteeOf, isSub, optionLabel, planKeys, priceOf, productById, type Months } from "@/lib/catalog";
-import { clubPoints, fa, money } from "@/lib/format";
+import { DELIVERY, extrasLabel, linePrice, axisOf, deliveryTypes, etaText, guaranteeOf, isSub, optionLabel, planKeys, priceOf, productById, type Months } from "@/lib/catalog";
+import { fa, money } from "@/lib/format";
 import { BrandLogo, Dots, Icon } from "./brand";
 import { useStore } from "./store";
 
@@ -70,7 +70,6 @@ function ProductView() {
       <div className="s-f">
         <div className="total">
           <div>{was ? <s className="num">{money(was)}</s> : null}<b className="num">{money(price)}</b> <small>تومان</small></div>
-          <small><span className="num">{fa(clubPoints(price))}</span> امتیاز کلاب</small>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: 10 }}>
           <button className="btn btn-ghost" onClick={() => { addSelection(); close(); notify(`${p.name} به سبد اضافه شد`); }}>افزودن به سبد</button>
@@ -96,13 +95,12 @@ function CartView() {
                 return (
                   <div className="ln" key={i}>
                     <span className="mono"><BrandLogo id={p.id} size={22} /></span>
-                    <div className="t"><b>{p.name}</b><small>{optionLabel(p, l.plan)} · {DELIVERY[l.type].title}</small></div>
-                    <div style={{ textAlign: "left" }}><span className="num">{money(l.price)}</span><button className="rm" onClick={() => removeLine(i)}>حذف</button></div>
+                    <div className="t"><b>{p.name}</b><small>{optionLabel(p, l.plan)} · {DELIVERY[l.type].title}{extrasLabel(l) ? ` · ${extrasLabel(l)}` : ""}</small></div>
+                    <div style={{ textAlign: "left" }}><span className="num">{money(linePrice(l))}</span><button className="rm" onClick={() => removeLine(i)}>حذف</button></div>
                   </div>
                 );
               })}
             </div>
-            <p className="assure">با این خرید <b className="num">{fa(clubPoints(total))}</b> امتیاز کلاب می‌گیری.</p>
           </>
         ) : (
           <div className="empty"><Dots size={8} /><br />سبد خرید خالی است.<br /><br />

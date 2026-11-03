@@ -1,5 +1,6 @@
 import { randomInt } from "node:crypto";
-import { DELIVERY, priceOf, productById, PRODUCTS, type DeliveryType } from "@/lib/catalog";
+import { DELIVERY, MAX_SEATS, STATIC_IP, linePrice, productById, PRODUCTS, type DeliveryType } from "@/lib/catalog";
+import { loadCatalog } from "./catalog";
 import { normalizeUsername, validEmail, validUsername, type Order, type OrderLine, type OrderStatus } from "@/lib/account";
 import { db } from "./db";
 import { startPayment, verifyPayment } from "./pay";
@@ -8,7 +9,7 @@ import { sendOrderSms } from "./sms";
 type Sql = Awaited<ReturnType<typeof db>>;
 const ms = (d: Date | null) => (d ? new Date(d).getTime() : null);
 
-export type LineInput = { id: string; plan: string; type: DeliveryType; email?: string; username?: string };
+export type LineInput = { id: string; plan: string; type: DeliveryType; email?: string; username?: string; seats?: number; ip?: string; members?: string[] };
 
 /** Validates the cart and prices it from the catalog. Prices sent by the browser are ignored. */
 export function priceLines(input: LineInput[]): { lines: OrderLine[] } | { error: string; index?: number } {
@@ -16,12 +17,22 @@ export function priceLines(input: LineInput[]): { lines: OrderLine[] } | { error
   const lines: OrderLine[] = [];
   for (const [i, l] of input.entries()) {
     const p = PRODUCTS.find((x) => x.id === l?.id);
-    if (!p || !(l.type in DELIVERY) || !p.plans[l.plan]?.[l.type]) return { error: "bad_item", index: i };
+    if (!p || p.hidden || !(l.type in DELIVERY) || !p.plans[l.plan]?.[l.type]) return { error: "bad_item", index: i };
+    const seats = p.group?.length ? Math.trunc(Number(l.seats ?? 1)) : 1;
+    if (!(seats >= 1 && seats <= MAX_SEATS)) return { error: "bad_item", index: i };
+    const ip = l.ip ? String(l.ip) : undefined;
+    if (ip && (!p.ip || !STATIC_IP.countries[ip])) return { error: "bad_item", index: i };
+    let members: string[] | undefined;
+    if (seats > 1 && DELIVERY[l.type].input === "email") {
+      members = (Array.isArray(l.members) ? l.members : []).map((m) => String(m).trim().toLowerCase()).slice(0, seats - 1);
+      if (members.length !== seats - 1 || !members.every(validEmail)) return { error: "bad_members", index: i };
+    }
     const need = DELIVERY[l.type].input;
     if (need === "email" && !validEmail(l.email ?? "")) return { error: "bad_email", index: i };
     if (need === "username" && !validUsername(l.username ?? "")) return { error: "bad_username", index: i };
     lines.push({
-      id: p.id, plan: l.plan, type: l.type, price: priceOf({ id: p.id, plan: l.plan, type: l.type }).price,
+      id: p.id, plan: l.plan, type: l.type, seats, ip, members,
+      price: linePrice({ id: p.id, plan: l.plan, type: l.type, seats, ip }),
       email: need === "email" ? l.email!.trim().toLowerCase() : undefined,
       username: need === "username" ? normalizeUsername(l.username!) : undefined,
     });
@@ -38,6 +49,7 @@ export async function discountRate(code: string): Promise<number> {
 }
 
 export async function createOrder(mobile: string, input: LineInput[], discountCode: string) {
+  await loadCatalog();
   const priced = priceLines(input);
   if ("error" in priced) return priced;
   const sql = await db();
@@ -58,8 +70,9 @@ export async function createOrder(mobile: string, input: LineInput[], discountCo
       if (tries > 5) throw new Error("could not allocate order code");
     }
     for (const [i, l] of priced.lines.entries()) {
-      await tx`insert into order_lines (order_code, idx, product_id, plan, delivery, price, email, username)
-        values (${orderCode}, ${i}, ${l.id}, ${l.plan}, ${l.type}, ${l.price}, ${l.email ?? null}, ${l.username ?? null})`;
+      await tx`insert into order_lines (order_code, idx, product_id, plan, delivery, price, email, username, seats, ip, members)
+        values (${orderCode}, ${i}, ${l.id}, ${l.plan}, ${l.type}, ${l.price}, ${l.email ?? null}, ${l.username ?? null},
+          ${l.seats ?? 1}, ${l.ip ?? null}, ${l.members?.length ? l.members.join(",") : null})`;
     }
     const email = priced.lines.find((l) => l.email)?.email;
     if (email) await tx`update users set email = ${email} where mobile = ${mobile} and email = ''`;
@@ -150,7 +163,8 @@ export async function loadOrders(where: { mobile?: string; code?: string; status
     refId: o.ref_id ?? undefined, adminNote: o.admin_note,
     lines: lines.filter((l) => l.order_code === o.code).map((l) => ({
       lineId: l.id, id: l.product_id, plan: l.plan, type: l.delivery as DeliveryType, price: Number(l.price),
-      email: l.email ?? undefined, username: l.username ?? undefined, secret: l.secret ?? undefined, deliveredAt: ms(l.delivered_at),
+      email: l.email ?? undefined, username: l.username ?? undefined,
+      seats: Number(l.seats ?? 1), ip: l.ip ?? undefined, members: l.members ? String(l.members).split(",") : undefined, secret: l.secret ?? undefined, deliveredAt: ms(l.delivered_at),
     })),
   }));
 }

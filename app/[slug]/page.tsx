@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import type React from "react";
+import { Scene } from "@/components/scene";
+import { themeOf } from "@/lib/theme";
 import { notFound } from "next/navigation";
-import { CATEGORIES, DELIVERY, PRICES_UPDATED, PRODUCTS, axisOf, deliveryExplain, deliveryTypes, etaText, guaranteeOf, isSub, kindOf, minPrice, nounOf, optionLabel, planKeys, priceOf, type DeliveryType, type Product } from "@/lib/catalog";
+import { loadCatalog } from "@/lib/server/catalog";
+import { CATEGORIES, DELIVERY, PRICES_UPDATED, PRODUCTS, STATIC_IP, axisOf, deliveryExplain, deliveryTypes, etaText, guaranteeOf, isSub, kindOf, minPrice, nounOf, optionLabel, planKeys, priceOf, type DeliveryType, type Product } from "@/lib/catalog";
 import { seoOf } from "@/lib/seo";
 import { Toc } from "@/components/toc";
 import { CONTENT, contentOf } from "@/lib/content";
@@ -11,7 +15,8 @@ import { ToolCard } from "@/components/sections";
 import { BuyPanel } from "@/components/buy-panel";
 import { splitName } from "@/components/pass";
 
-export const dynamicParams = false;
+export const dynamicParams = true;
+export const revalidate = 60;
 
 const bySlug = (slug: string) => PRODUCTS.find((p) => CONTENT[p.id]?.slug === slug);
 
@@ -20,11 +25,12 @@ export function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  await loadCatalog();
   const p = bySlug((await params).slug);
   if (!p) return {};
   const c = contentOf(p);
   const kw = keywordOf(p);
-  const tail = { sub: deliveryTypes(p).includes("username") ? "فعال‌سازی روی آیدی شما" : "فعال‌سازی روی ایمیل شما", gift: "تحویل فوری کد", account: "اکانت اختصاصی", qty: "تحویل روی آیدی شما", number: "تحویل فوری" }[kindOf(p)];
+  const tail = { sub: deliveryTypes(p).includes("username") ? "فعال‌سازی روی آیدی شما" : "فعال‌سازی روی ایمیل شما", gift: "کد قانونی از منبع رسمی", account: "اکانت اختصاصی", qty: "تحویل روی آیدی شما", number: "کد تأیید در پنل" }[kindOf(p)];
   const title = `${kw.includes(c.faName) ? kw : `${kw} (${c.faName})`} | ${tail}`;
   const description = `${kw} با پرداخت تومانی، از ${money(minPrice(p))} تومان. تحویل ${etaText(p)}، ${DELIVERY[deliveryTypes(p)[0]].detail}؛ ضمانت بازگشت وجه و پشتیبانی فارسی.`;
   return {
@@ -43,8 +49,8 @@ function stepsFor(p: Product, t: DeliveryType): [string, string][] {
     case "own": return [pay, ["ایمیل اکانت", `ایمیل اکانت ${p.maker} خودت را وارد کن. رمز لازم نیست.`], [`فعال‌سازی، ${etaText(p)}`, "اشتراک روی همان اکانت فعال می‌شود و پیامک می‌گیری."]];
     case "ready": return [pay, ["ساخت اکانت", "یک اکانت تازه فقط برای تو ساخته می‌شود."], [`تحویل، ${etaText(p)}`, "اطلاعات ورود را در حساب کاربری و پیامک می‌بینی."]];
     case "username": return [pay, ["یوزرنیم تلگرام", "آیدی خودت یا کسی که می‌خواهی هدیه بگیرد را وارد کن."], [`ارسال، ${etaText(p)}`, "روی همان آیدی فعال می‌شود و پیامک می‌گیری."]];
-    case "code": return [pay, ["دریافت فوری کد", "کد بلافاصله در صفحه سفارش و پیامک نمایش داده می‌شود."], ["شارژ اپل آیدی", "در App Store گزینه Redeem را بزن و کد را وارد کن."]];
-    case "number": return [pay, ["دریافت فوری شماره", "شماره در صفحه سفارش نمایش داده می‌شود."], ["دریافت کد تأیید", "شماره را در تلگرام یا واتس‌اپ بزن؛ کد همان‌جا می‌آید."]];
+    case "code": return [pay, ["دریافت کد", "کد در صفحه سفارش و پیامک نمایش داده می‌شود."], ["شارژ اپل آیدی", "در App Store گزینه Redeem را بزن و کد را وارد کن."]];
+    case "number": return [pay, ["دریافت شماره", "شماره در صفحه سفارش نمایش داده می‌شود."], ["دریافت کد تأیید", "شماره را در تلگرام یا واتس‌اپ بزن؛ کد همان‌جا می‌آید."]];
   }
 }
 
@@ -52,10 +58,10 @@ function promisesFor(p: Product): [string, string][] {
   const tail: [string, string] = ["قیمت همان است که می‌بینی.", "بدون کارمزد پنهان، به تومان و نهایی."];
   switch (kindOf(p)) {
     case "sub": return [["فعال نشد؟", "کل مبلغ را برمی‌گردانیم."], ["وسط دوره قطع شد؟", "ظرف ۲۴ ساعت جایگزین می‌کنیم؛ اگر نشد، مبلغ روزهای باقی‌مانده برمی‌گردد."], ["رمز عبورت امن است.", "هیچ‌وقت رمز عبور نمی‌خواهیم."], tail];
-    case "gift": return [["کد کار نکرد؟", "کد جایگزین یا بازگشت کامل وجه."], ["از منبع رسمی.", "کدها قانونی‌اند، نه کارت‌های دست‌دوم."], ["تحویل فوری.", "بدون انتظار، حتی نیمه‌شب."], tail];
+    case "gift": return [["کد کار نکرد؟", "کد جایگزین یا بازگشت کامل وجه."], ["از منبع رسمی.", "کدها قانونی‌اند، نه کارت‌های دست‌دوم."], ["تحویل در حساب کاربری.", "کد در صفحه سفارش و پیامک."], tail];
     case "account": return [["ورود نشد؟", "اکانت جایگزین یا بازگشت وجه."], ["فقط مال توست.", "اکانت با کسی به اشتراک گذاشته نمی‌شود و رمز را عوض می‌کنی."], ["اطلاعات کامل.", "ایمیل، رمز و سؤال‌های امنیتی را تحویل می‌گیری."], tail];
     case "qty": return [["کامل نرسید؟", "باقی‌مانده را می‌فرستیم یا مبلغش را برمی‌گردانیم."], ["امن.", "فقط یوزرنیم؛ هرگز کد ورود تلگرام نمی‌خواهیم."], ["هدیه هم می‌شود.", "روی آیدی هر کسی که بخواهی."], tail];
-    case "number": return [["کد نیامد؟", "کل مبلغ خودکار به حسابت برمی‌گردد."], ["فوری.", "شماره چند ثانیه بعد از پرداخت آماده است."], ["کشور به انتخاب تو.", "آمریکا، انگلیس، کانادا یا هلند."], tail];
+    case "number": return [["کد نیامد؟", "کل مبلغ خودکار به حسابت برمی‌گردد."], ["کد تأیید در پنل.", "کد پیامکی همان‌جا نمایش داده می‌شود."], ["کشور به انتخاب تو.", "آمریکا، انگلیس، کانادا یا هلند."], tail];
   }
 }
 
@@ -63,7 +69,7 @@ function faqFor(p: Product): [string, string][] {
   const pay: [string, string] = ["پرداخت چطور انجام می‌شود؟", "با هر کارت بانکی عضو شتاب، از درگاه پرداخت رسمی و به تومان. نیازی به کارت ارزی یا حساب خارجی نیست."];
   if (!isSub(p) || deliveryTypes(p).includes("username")) {
     return [
-      [`بعد از پرداخت، ${p.name} چقدر طول می‌کشد؟`, p.etaMinutes === 0 ? "فوری. تحویل خودکار است و بلافاصله بعد از پرداخت در صفحه سفارش و حساب کاربری‌ات نمایش داده می‌شود." : `معمولاً ${etaText(p)}. وضعیت سفارش را لحظه‌به‌لحظه در حساب کاربری‌ات می‌بینی و پیامک می‌گیری.`],
+      [`بعد از پرداخت، ${p.name} چقدر طول می‌کشد؟`, p.etaMinutes === 0 ? "تحویل خودکار است و بعد از پرداخت در صفحه سفارش و حساب کاربری‌ات نمایش داده می‌شود." : `معمولاً ${etaText(p)}. وضعیت سفارش را لحظه‌به‌لحظه در حساب کاربری‌ات می‌بینی و پیامک می‌گیری.`],
       ["اگر مشکلی پیش آمد چه می‌شود؟", `ضمانت ما: ${guaranteeOf(p)}. پشتیبانی فارسی هر روز ۹ تا ۲۴ پاسخ می‌دهد.`],
       pay,
     ];
@@ -81,6 +87,7 @@ function faqFor(p: Product): [string, string][] {
 }
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
+  await loadCatalog();
   const p = bySlug((await params).slug);
   if (!p) notFound();
   const c = contentOf(p);
@@ -128,7 +135,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   const types = deliveryTypes(p);
   return (
-    <main className="pdp2">
+    <main className={`pdp2 pt-${themeOf(p.id).motif}`} style={{ "--b": themeOf(p.id).c, "--b2": themeOf(p.id).c2 } as React.CSSProperties}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
       <section className="p2-top">
@@ -144,14 +151,17 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             </div>
             <BuyPanel product={p} />
             <div className="p2-info p2-more">
+              <Scene id={p.id} />
               <div className="p2-incl">
                 <h2>{isSub(p) ? "با این اشتراک" : "با این خرید"}</h2>
                 <ul>{p.includes.map((x) => <li key={x}><Icon id="check" />{x}</li>)}</ul>
               </div>
               <ul className="p2-facts">
-                <li><Icon id="clock" /><div><b>{p.etaMinutes === 0 ? "تحویل فوری" : etaText(p)}</b><small>{p.etaMinutes === 0 ? "خودکار، بعد از پرداخت" : "تحویل بعد از پرداخت"}</small></div></li>
+                <li><Icon id="clock" /><div><b>{isSub(p) ? "روی اکانت خودت" : "در حساب کاربری"}</b><small>تحویل بعد از پرداخت</small></div></li>
                 <li><Icon id="shield" /><div><b>ضمانت</b><small>{guaranteeOf(p)}</small></div></li>
                 <li><Icon id="chat" /><div><b>پشتیبانی فارسی</b><small>هر روز ۹ تا ۲۴</small></div></li>
+                {p.group?.length ? <li><Icon id="user" /><div><b>خرید گروهی</b><small>تا {fa(p.group[p.group.length - 1][1])}٪ ارزان‌تر برای هر نفر</small></div></li> : null}
+                {p.ip && isSub(p) ? <li><Icon id="lock" /><div><b>آی‌پی ثابت اختصاصی</b><small>افزودنی اختیاری، {Object.keys(STATIC_IP.countries).length > 3 ? "چند کشور" : "خارج"}</small></div></li> : null}
               </ul>
             </div>
           </div>

@@ -6,6 +6,11 @@ import { Sprites } from "@/components/brand";
 import { StoreProvider } from "@/components/store";
 import { AccountProvider } from "@/components/account";
 import { SiteChrome } from "@/components/chrome";
+import { CatalogBoot } from "@/components/catalog-boot";
+import { loadCatalog } from "@/lib/server/catalog";
+
+/** Product edits from the admin panel reach static pages within a minute (and instantly via revalidatePath). */
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://accdrop.ir"),
@@ -17,12 +22,13 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = { themeColor: "#111418", viewportFit: "cover" };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const catalog = await loadCatalog();
   return (
     <html lang="fa" dir="rtl">
       <body>
         <Sprites />
-        <AccountProvider><StoreProvider><SiteChrome>{children}</SiteChrome></StoreProvider></AccountProvider>
+        <CatalogBoot data={catalog}><AccountProvider><StoreProvider><SiteChrome>{children}</SiteChrome></StoreProvider></AccountProvider></CatalogBoot>
       </body>
     </html>
   );

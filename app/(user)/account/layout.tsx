@@ -10,7 +10,6 @@ import { fa } from "@/lib/format";
 const NAV = [
   ["/account", "پاس‌های من"],
   ["/account/orders", "سفارش‌ها"],
-  ["/account/club", "کلاب"],
   ["/account/tickets", "تیکت‌ها"],
   ["/account/reseller", "نمایندگی"],
   ["/account/profile", "حساب کاربری"],

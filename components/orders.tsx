@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { DELIVERY, isSub, optionLabel, productById } from "@/lib/catalog";
+import { DELIVERY, extrasLabel, isSub, optionLabel, productById } from "@/lib/catalog";
 import { STAGES, STATUS_TITLE, isPaid, passWindow, stageOf, type Order } from "@/lib/account";
 import { fa, faDate, money } from "@/lib/format";
 import { BrandLogo, Icon } from "./brand";
@@ -84,10 +84,12 @@ export function OrderDetail({ order, now, onPay, paying }: { order: Order; now: 
                   <div className="od-l">
                     <b className="en">{p.name}</b>
                     <small>{optionLabel(p, l.plan)} • {DELIVERY[l.type].title}</small>
+                    {extrasLabel(l) && <small className="od-x">{extrasLabel(l)}</small>}
+                    {l.members?.length ? <small className="ltr-i">بقیه اعضا: <span className="en">{l.members.join("، ")}</span></small> : null}
                     {l.type === "own" && l.email && <small className="ltr-i">فعال‌سازی روی <span className="en">{l.email}</span></small>}
                     {l.type === "username" && l.username && <small className="ltr-i">ارسال به <span className="en">{l.username}</span></small>}
                     {s === 2 && isSub(p) && <small className="ok">فعال تا {faDate(w.end, false)}</small>}
-                    {l.secret && <small className="od-secret"><span>{{ code: "کد گیفت‌کارت", number: "شماره", ready: "اطلاعات ورود" }[l.type as "code"] ?? "اطلاعات تحویل"}</span><b className="en">{l.secret}</b></small>}
+                    {l.secret && <small className="od-secret"><span>{{ code: "کد گیفت‌کارت", number: "شماره", ready: "اطلاعات ورود" }[l.type as "code"] ?? (l.ip ? "مشخصات آی‌پی ثابت" : "اطلاعات تحویل")}</span><b className="en">{l.secret}</b></small>}
                     {paid && !l.secret && (l.type === "code" || l.type === "number" || l.type === "ready") && <small className="muted">به‌محض آماده شدن همین‌جا نمایش داده می‌شود و پیامک می‌گیری.</small>}
                   </div>
                   <span className="num">{money(l.price)}</span>
