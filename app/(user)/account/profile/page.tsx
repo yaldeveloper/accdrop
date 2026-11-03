@@ -5,6 +5,32 @@ import { validEmail } from "@/lib/account";
 import { fa, faDate } from "@/lib/format";
 import { useAccount } from "@/components/account";
 import { useStore } from "@/components/store";
+import { api } from "@/components/account";
+import { EMPTY_LEGAL, LegalForm, useLegal } from "@/components/legal";
+import type { LegalInfo } from "@/lib/billing";
+import { useEffect } from "react";
+
+/** Saved buyer details for official invoices («فاکتور رسمی»). */
+function LegalSection() {
+  const { notify } = useStore();
+  const saved = useLegal();
+  const [v, setV] = useState<LegalInfo>(EMPTY_LEGAL);
+  const [bad, setBad] = useState<keyof LegalInfo | "">("");
+  useEffect(() => { if (saved) setV(saved); }, [saved]);
+  if (saved === undefined) return null;
+  return (
+    <form className="dash-sec prof" noValidate onSubmit={async (e) => {
+      e.preventDefault();
+      const r = await api<{ legal: LegalInfo }>("/api/account/legal", { body: v });
+      if (r.legal) { setV(r.legal); notify("ذخیره شد"); } else setBad((r.field as keyof LegalInfo) ?? "name");
+    }}>
+      <h2>اطلاعات فاکتور رسمی</h2>
+      <p className="muted">اگر برای شرکت خرید می‌کنی، یک بار اینجا وارد کن تا در تسویه حساب خودکار پر شود. از صفحه هر سفارش هم می‌توانی فاکتور بگیری.</p>
+      <LegalForm value={v} onChange={(x) => { setV(x); setBad(""); }} bad={bad} />
+      <button className="btn btn-paper">ذخیره اطلاعات فاکتور</button>
+    </form>
+  );
+}
 
 export default function ProfilePage() {
   const { user, updateProfile } = useAccount();
@@ -26,6 +52,7 @@ export default function ProfilePage() {
         <div className="fld"><label htmlFor="pf-e">ایمیل پیش‌فرض اکانت‌ها</label><input id="pf-e" className={`ltr ${bad ? "bad" : ""}`} type="email" value={email} onChange={(e) => { setEmail(e.target.value); setBad(false); }} placeholder="you@gmail.com" /><small className="muted">در تسویه حساب خودکار پر می‌شود.</small></div>
         <button className="btn btn-paper">ذخیره</button>
       </form>
+      <LegalSection />
     </>
   );
 }

@@ -177,6 +177,29 @@ create table if not exists posts (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+create table if not exists splits (
+  code text primary key,
+  owner text not null references users(mobile),
+  product_id text not null,
+  plan text not null,
+  delivery text not null,
+  seats int not null,
+  unit bigint not null,
+  status text not null default 'open',
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null
+);
+create index if not exists splits_owner on splits(owner);
+alter table orders add column if not exists split text;
+create index if not exists orders_split on orders(split) where split is not null;
+alter table orders add column if not exists pay_token text;
+alter table orders add column if not exists invoice jsonb;
+alter table orders add column if not exists tax_id text not null default '';
+create table if not exists legal_profiles (
+  mobile text primary key references users(mobile),
+  data jsonb not null,
+  updated_at timestamptz not null default now()
+);
 insert into discounts (code, rate) values ('WELCOME', 0.1) on conflict do nothing;
 `;
 

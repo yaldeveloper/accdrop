@@ -23,7 +23,7 @@ export default async function GroupPage() {
         <div className="wrap">
           <nav className="crumbs" aria-label="مسیر"><Link href="/">اک‌دراپ</Link><span>/</span><span>خرید گروهی</span></nav>
           <h1>با هم بخرید،<br /><b>هر نفر ارزان‌تر.</b></h1>
-          <p className="grp-lead">برای خودت و دوستان، خانواده یا تیمت یک‌جا سفارش بده. هر نفر یک اشتراک جدا و شخصی روی ایمیل خودش می‌گیرد؛ هیچ اکانتی اشتراکی نیست.</p>
+          <p className="grp-lead">دنگی بخرید: یک گروه بساز، لینکش را در گروه تلگرام بفرست و هر نفر فقط سهم خودش را بدهد. لازم نیست کسی پول جمع کند. هر نفر یک اشتراک جدا و شخصی روی ایمیل خودش می‌گیرد؛ هیچ اکانتی اشتراکی نیست.</p>
           <ol className="grp-tiers">
             {(ex?.group ?? []).map(([n, o]) => (
               <li key={n}><b className="num">{fa(o)}٪</b><span>از {fa(n)} نفر به بالا</span></li>
@@ -36,9 +36,9 @@ export default async function GroupPage() {
         <section className="wrap grp-sec">
           <h2>چطور کار می‌کند؟</h2>
           <ol className="grp-steps">
-            <li><span className="num">۱</span><b>سرویس را انتخاب کن</b><p>در صفحه محصول، گزینه «خرید گروهی» را بزن و تعداد نفرات را تا {fa(MAX_SEATS)} نفر انتخاب کن.</p></li>
-            <li><span className="num">۲</span><b>ایمیل‌ها را وارد کن</b><p>در مرحله پرداخت، ایمیل اکانت هر نفر را می‌نویسی. رمز هیچ‌کس را نمی‌خواهیم.</p></li>
-            <li><span className="num">۳</span><b>یک بار پرداخت کن</b><p>همه اشتراک‌ها جداگانه فعال می‌شوند و وضعیت هر کدام را در صفحه سفارش می‌بینی.</p></li>
+            <li><span className="num">۱</span><b>گروه را بساز</b><p>در صفحه سرویس «خرید گروهی» و بعد «دنگی» را بزن و تعداد نفرات را تا {fa(MAX_SEATS)} نفر انتخاب کن. قیمت هر نفر از همین لحظه تا ۷۲ ساعت قفل می‌شود.</p></li>
+            <li><span className="num">۲</span><b>لینک را بفرست</b><p>لینک گروه را در تلگرام، واتساپ یا ایتا بفرست. هر نفر با شماره خودش وارد می‌شود، ایمیلش را می‌زند و فقط سهم خودش را می‌دهد.</p></li>
+            <li><span className="num">۳</span><b>با هم فعال می‌شود</b><p>وقتی همه پرداخت کردند، اشتراک‌ها جداگانه فعال می‌شوند و هر نفر پیامک می‌گیرد. اگر می‌خواهی خودت برای همه حساب کنی، «من حساب می‌کنم» را بزن.</p></li>
           </ol>
           {ex && (
             <div className="grp-ex">
@@ -52,12 +52,12 @@ export default async function GroupPage() {
           <h2>سرویس‌هایی که گروهی می‌شوند</h2>
           <div className="grp-grid">
             {items.map((p) => (
-              <Link key={p.id} href={`${productHref(p)}?seats=3#buy`} className="grp-card">
+              <Link key={p.id} href={`${productHref(p)}?seats=3&dong=1#buy`} className="grp-card">
                 <span className="mono"><BrandLogo id={p.id} size={24} /></span>
                 <b className="en">{p.name}</b>
                 <small>{p.use}</small>
                 <span className="grp-p">نفری از <b className="num">{money(Math.round((minPrice(p) * (100 - groupOff(p, MAX_SEATS))) / 100 / 1000) * 1000)}</b> تومان</span>
-                <span className="grp-go">خرید گروهی <Icon id="arrow" className="arrow" /></span>
+                <span className="grp-go">ساختن دنگ <Icon id="arrow" className="arrow" /></span>
               </Link>
             ))}
           </div>

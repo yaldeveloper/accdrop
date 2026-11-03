@@ -4,6 +4,7 @@ import Link from "next/link";
 import { DELIVERY, extrasLabel, isSub, optionLabel, productById } from "@/lib/catalog";
 import { STAGES, STATUS_TITLE, isPaid, passWindow, stageOf, type Order } from "@/lib/account";
 import { fa, faDate, money } from "@/lib/format";
+import { INSTALLMENTS } from "@/lib/billing";
 import { BrandLogo, Icon } from "./brand";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -50,6 +51,9 @@ export function OrderRow({ order, now }: { order: Order; now: number }) {
 export function OrderDetail({ order, now, onPay, paying }: { order: Order; now: number; onPay?: () => void; paying?: boolean }) {
   const s = stageOf(order);
   const paid = isPaid(order);
+  const sp = order.split;
+  /** A paid «دنگ» share waits for the rest of the group before activation. */
+  const waiting = paid && sp && sp.status === "open";
   return (
     <div className="od">
       <div className="od-h">
@@ -63,7 +67,15 @@ export function OrderDetail({ order, now, onPay, paying }: { order: Order; now: 
       <div className="od-g">
         <div className="od-card">
           <h2>وضعیت</h2>
-          {paid ? <>
+          {waiting ? <>
+            <div className="od-split">
+              <b>منتظر بقیه گروه</b>
+              <div className="dg-bar"><i style={{ width: `${Math.min(100, (sp.paid / Math.max(1, sp.seats)) * 100)}%` }} /></div>
+              <small className="muted"><span className="num">{fa(sp.paid)}</span> از <span className="num">{fa(sp.seats)}</span> نفر سهمشان را داده‌اند. وقتی گروه کامل شود، اشتراکت فعال می‌شود و پیامک می‌گیری.</small>
+            </div>
+            <Link className="btn btn-paper" href={`/dong/${sp.code}`}>صفحه دنگ و لینک دعوت <Icon id="arrow" className="arrow" /></Link>
+          </> : paid ? <>
+            {sp && <p className="od-tip"><Link className="link" href={`/dong/${sp.code}`}>سهم تو از دنگ <span className="en">{sp.code}</span></Link></p>}
             <OrderTimeline order={order} now={now} />
             {s < 2 ? <p className="muted od-tip">لازم نیست این صفحه باز بماند؛ وقتی فعال شد پیامک می‌گیری.</p>
               : <p className="od-tip ok">همه‌چیز فعال است. از خریدت لذت ببر.</p>}
@@ -102,10 +114,12 @@ export function OrderDetail({ order, now, onPay, paying }: { order: Order; now: 
             {order.discount > 0 && <div className="disc"><dt>تخفیف</dt><dd className="num">−{money(order.discount)}</dd></div>}
             <div className="tot"><dt>{paid ? "پرداخت شده" : "مبلغ سفارش"}</dt><dd><b className="num">{money(order.total)}</b> <small>تومان</small></dd></div>
           </dl>
+          {paid && order.payMethod === "bnpl" && <p className="muted od-tip">پرداخت اقساطی با {INSTALLMENTS.provider}؛ قسط‌های بعدی را در اپ {INSTALLMENTS.provider} می‌بینی.</p>}
         </div>
       </div>
       <div className="od-actions">
         <Link className="btn btn-paper" href="/account">رفتن به داشبورد <Icon id="arrow" className="arrow" /></Link>
+        {paid && <Link className="btn btn-ghost" href={`/orders/${order.code}/invoice`}>{order.invoice ? "فاکتور رسمی" : "فاکتور"}</Link>}
         <Link className="btn btn-ghost" href={`/account/tickets/new?topic=order&order=${order.code}`}>تیکت برای این سفارش</Link>
       </div>
     </div>

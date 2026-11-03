@@ -1,6 +1,7 @@
 // Accounts and orders: shared types and helpers used by both the browser and the server (lib/server).
 import { productById, type Selection } from "./catalog";
 import { clubPoints } from "./format";
+import type { LegalInfo } from "./billing";
 
 export type User = { mobile: string; name: string; email: string; createdAt: number };
 export type OrderLine = Selection & {
@@ -15,6 +16,13 @@ export type OrderStatus = "pending" | "paid" | "activating" | "active" | "cancel
 export type Order = {
   code: string; createdAt: number; lines: OrderLine[]; subtotal: number; discount: number; total: number; mobile: string;
   status: OrderStatus; paidAt?: number | null; activatedAt?: number | null; refId?: string; adminNote?: string;
+  payMethod?: string;
+  /** «دنگ»: the group this order pays one share of. Activation waits until the group is complete. */
+  split?: { code: string; seats: number; paid: number; status: string } | null;
+  /** Buyer details for an official invoice, when requested. */
+  invoice?: LegalInfo | null;
+  /** Unique tax id from the national taxpayer system, once the invoice is registered there. */
+  taxId?: string;
 };
 
 export type Stage = 0 | 1 | 2; // paid, activating, active
