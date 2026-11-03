@@ -14,7 +14,7 @@ type Account = {
   orders: Order[];
   now: number;
   /** While no SMS panel or gateway is connected the site says so (fixed login code, test gateway). */
-  demo: { login: boolean; gateway: boolean; usd?: number };
+  demo: { login: boolean; gateway: boolean };
   requestOtp: (mobile: string) => Promise<{ ok: boolean; error?: string; wait?: number }>;
   verifyOtp: (mobile: string, code: string) => Promise<{ ok: boolean; isNew: boolean; error?: string }>;
   updateProfile: (patch: Partial<Pick<User, "name" | "email">>) => Promise<boolean>;
@@ -47,7 +47,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Me | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [reseller, setReseller] = useState<ResellerApp | null>(null);
-  const [demo, setDemo] = useState<{ login: boolean; gateway: boolean; usd?: number }>({ login: false, gateway: false });
+  const [demo, setDemo] = useState({ login: false, gateway: false });
   const [now, setNow] = useState(() => Date.now());
 
   const loadMine = useCallback(async () => {
