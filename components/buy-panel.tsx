@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
-import { CURRENT_DROP, DELIVERY, axisOf, deliveryTypes, etaText, isSub, nounOf, optionLabel, planKeys, priceOf, type DeliveryType, type Months, type Product, type Selection } from "@/lib/catalog";
-import { clubPoints, fa, money } from "@/lib/format";
+import { CURRENT_DROP, DELIVERY, MAX_SEATS, STATIC_IP, axisOf, deliveryTypes, groupOff, ipPrice, isSub, linePrice, nounOf, optionLabel, planKeys, priceOf, type DeliveryType, type Months, type Product, type Selection } from "@/lib/catalog";
+import { fa, money } from "@/lib/format";
 import { Icon } from "./brand";
 import { useStore } from "./store";
 
@@ -24,13 +24,21 @@ export function BuyPanel({ product: p }: { product: Product }) {
   const types = deliveryTypes(p);
   const offers = p.plans[sel.plan] ?? {};
   const perMonth = months.map((m) => lowest(p, m) / Number(m));
-  const { price, was } = priceOf(sel);
+  const unit = priceOf(sel);
+  const seats = sel.seats ?? 1;
+  const price = linePrice(sel);
+  const full = (unit.was ?? unit.price) * seats + (sel.ip ? ipPrice(p, sel.plan) : 0);
+  const was = full > price ? full : undefined;
+  const off = groupOff(p, seats);
+  const ipCost = ipPrice(p, sel.plan);
 
   // Renewal links from the dashboard carry ?plan=&type=.
   useEffect(() => {
     const q = new URLSearchParams(location.search);
     const plan = q.get("plan") as Months | null, type = q.get("type") as DeliveryType | null;
-    if (plan && type && p.plans[plan]?.[type]) setSel({ id: p.id, plan, type });
+    if (plan && type && p.plans[plan]?.[type]) setSel((s) => ({ ...s, plan, type }));
+    const seats = Number(q.get("seats"));
+    if (p.group?.length && seats > 1 && seats <= MAX_SEATS) setSel((s) => ({ ...s, seats }));
   }, [p]);
 
   const cta = useRef<HTMLButtonElement>(null);
@@ -50,7 +58,7 @@ export function BuyPanel({ product: p }: { product: Product }) {
     return next;
   });
   const buy = () => { addLine(sel); router.push("/checkout"); };
-  const add = () => { addLine(sel); notify(`${p.name} به سبد اضافه شد`); };
+  const add = () => notify(addLine(sel) ? `${p.name} به سبد اضافه شد` : "این مورد از قبل در سبد هست");
 
   return (
     <div className="bx" id="buy">
@@ -92,10 +100,49 @@ export function BuyPanel({ product: p }: { product: Product }) {
         })}
       </fieldset>
 
+      {p.group?.length ? (
+        <fieldset className="bx-g">
+          <legend>برای چند نفر؟ <span className="bx-help bx-help-t">خرید گروهی = تخفیف بیشتر</span></legend>
+          <div className="bx-seats" role="radiogroup" aria-label="تعداد نفرات">
+            {Array.from({ length: MAX_SEATS }, (_, i) => i + 1).map((n) => {
+              const o = groupOff(p, n);
+              return (
+                <button key={n} type="button" role="radio" aria-checked={n === seats} className={n === seats ? "on" : ""} onClick={() => setSel((s) => ({ ...s, seats: n }))}>
+                  <b className="num">{fa(n)}</b><small>{n === 1 ? "فقط من" : o ? `${fa(o)}٪ تخفیف` : "نفر"}</small>
+                </button>
+              );
+            })}
+          </div>
+          {seats > 1 && (
+            <p className="bx-note">
+              {DELIVERY[sel.type].input === "email" ? `هر نفر روی ایمیل خودش فعال می‌شود و ایمیل‌ها را در مرحله بعد می‌گیریم.` : `${fa(seats)} اکانت جدا تحویل می‌گیری.`}
+              {" "}نفری <b className="num">{money(Math.round((price - (sel.ip ? ipCost : 0)) / seats / 1000) * 1000)}</b> تومان{off ? `، ${fa(off)}٪ ارزان‌تر از خرید تکی` : ""}.
+            </p>
+          )}
+        </fieldset>
+      ) : null}
+
+      {ipCost > 0 && (
+        <div className={`bx-addon ${sel.ip ? "on" : ""}`}>
+          <label className="bx-ad-h">
+            <input type="checkbox" checked={!!sel.ip} onChange={(e) => setSel((s) => ({ ...s, ip: e.target.checked ? "de" : undefined }))} />
+            <span className="bx-ck" aria-hidden="true"><Icon id="check" /></span>
+            <span className="bx-ad-t"><b>{STATIC_IP.title} خارج از کشور</b><small>یک آی‌پی ثابت فقط برای تو؛ ورود پایدار و بدون ریسک بسته شدن اکانت</small></span>
+            <span className="bx-ad-p num">+{money(ipCost)}</span>
+          </label>
+          {sel.ip && (
+            <div className="bx-ip" role="radiogroup" aria-label="کشور آی‌پی">
+              {Object.entries(STATIC_IP.countries).map(([k, v]) => (
+                <button key={k} type="button" role="radio" aria-checked={sel.ip === k} className={sel.ip === k ? "on" : ""} onClick={() => setSel((s) => ({ ...s, ip: k }))}>{v}</button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="bx-sum">
         <div className="bx-row"><span>مبلغ قابل پرداخت</span><span>{was ? <s className="num">{money(was)}</s> : null}<b className="num">{money(price)}</b> <small>تومان</small></span></div>
-        <div className="bx-row sub"><span>تحویل</span><span>{p.etaMinutes === 0 ? "فوری و خودکار، بلافاصله بعد از پرداخت" : `${etaText(p)} بعد از پرداخت`}</span></div>
-        <div className="bx-row sub"><span>امتیاز کلاب</span><span className="num">{fa(clubPoints(price))} امتیاز</span></div>
+        <div className="bx-row sub"><span>تحویل</span><span>{isSub(p) ? "روی اکانت خودت، بعد از پرداخت" : "در حساب کاربری و پیامک، بعد از پرداخت"}</span></div>
       </div>
 
       <button ref={cta} className="btn btn-paper btn-block bx-cta" onClick={buy}>ادامه خرید <Icon id="arrow" className="arrow" /></button>
@@ -107,7 +154,7 @@ export function BuyPanel({ product: p }: { product: Product }) {
       </ul>
 
       <div className={`buybar ${ctaVisible ? "" : "on"}`} role="region" aria-label="خرید سریع">
-        <div><small>{optionLabel(p, sel.plan)} • {DELIVERY[sel.type].title}</small><b className="num">{money(price)} <small>تومان</small></b></div>
+        <div><small>{optionLabel(p, sel.plan)}{seats > 1 ? ` • ${fa(seats)} نفر` : ""}{sel.ip ? " • آی‌پی ثابت" : ""}</small><b className="num">{money(price)} <small>تومان</small></b></div>
         <button className="btn btn-paper" onClick={buy}>ادامه خرید</button>
       </div>
     </div>

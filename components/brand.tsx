@@ -1,5 +1,6 @@
 import { BRAND_SPRITE } from "@/lib/sprite";
 import { LOGOS } from "@/lib/logos";
+import { ALL_PRODUCTS } from "@/lib/catalog";
 import type { CSSProperties } from "react";
 
 /** Inline SVG symbols for the logo (#wm = Persian wordmark, #ig = «پ» glyph) and UI icons. Render once in the layout. */
@@ -56,7 +57,10 @@ export function Eyebrow({ children, dotColor, start = true }: { children: string
 /** Official mark of a tool we sell, single-colour (inherits currentColor). */
 export function BrandLogo({ id, size = 24, className = "", label }: { id: string; size?: number; className?: string; label?: string }) {
   const d = LOGOS[id];
-  if (!d) return null;
+  if (!d) {
+    const mono = ALL_PRODUCTS.find((p) => p.id === id)?.monogram ?? id.slice(0, 2).toUpperCase();
+    return <span className={`blogo blogo-m en ${className}`} style={{ width: size, height: size, fontSize: Math.round(size * 0.4) }} aria-hidden={label ? undefined : true} aria-label={label}>{mono}</span>;
+  }
   return (
     <svg className={`blogo ${className}`} width={size} height={size} viewBox="0 0 24 24" fill="currentColor" fillRule="evenodd"
       role={label ? "img" : undefined} aria-label={label} aria-hidden={label ? undefined : true}>

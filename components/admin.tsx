@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { DELIVERY, optionLabel, productById } from "@/lib/catalog";
+import { DELIVERY, extrasLabel, optionLabel, productById } from "@/lib/catalog";
 import { STATUS_TITLE, type Order, type OrderStatus } from "@/lib/account";
 import { fa, faDate, money } from "@/lib/format";
 import { api, useAccount } from "./account";
@@ -14,6 +14,8 @@ import { useStore } from "./store";
 const NAV = [
   ["/admin", "خلاصه"],
   ["/admin/orders", "سفارش‌ها"],
+  ["/admin/products", "محصولات"],
+  ["/admin/chat", "چت آنلاین"],
   ["/admin/tickets", "تیکت‌ها"],
   ["/admin/codes", "انبار کد"],
   ["/admin/resellers", "نماینده‌ها"],
@@ -57,11 +59,12 @@ function useApi<T>(path: string) {
 
 const lineText = (l: Order["lines"][number]) => {
   const p = productById(l.id);
-  return `${p.name} • ${optionLabel(p, l.plan)} • ${DELIVERY[l.type].title}`;
+  const x = extrasLabel(l);
+  return `${p.name} • ${optionLabel(p, l.plan)} • ${DELIVERY[l.type].title}${x ? ` • ${x}` : ""}`;
 };
 
 // ----- Overview -----
-type Stats = { today: number; todayCount: number; month: number; monthCount: number; open: number; pendingResellers: number; users: number; openTickets: number;
+type Stats = { today: number; todayCount: number; month: number; monthCount: number; open: number; pendingResellers: number; users: number; openTickets: number; openChats: number;
   lowStock: { productId: string; plan: string; free: number; waiting: number }[] };
 
 export function AdminHome() {
@@ -74,7 +77,7 @@ export function AdminHome() {
         <div><small>فروش امروز</small><b className="num">{s ? money(s.today) : "…"}</b><span className="muted">{s ? `${fa(s.todayCount)} سفارش` : ""}</span></div>
         <div><small>۳۰ روز اخیر</small><b className="num">{s ? money(s.month) : "…"}</b><span className="muted">{s ? `${fa(s.monthCount)} سفارش` : ""}</span></div>
         <Link href="/admin/orders?status=open"><small>منتظر فعال‌سازی</small><b className="num">{s ? fa(s.open) : "…"}</b><span className="muted">سفارش باز</span></Link>
-        <Link href="/admin/tickets"><small>تیکت بی‌پاسخ</small><b className={`num ${s?.openTickets ? "warn" : ""}`}>{s ? fa(s.openTickets) : "…"}</b><span className="muted">{s ? `${fa(s.pendingResellers)} درخواست نمایندگی` : ""}</span></Link>
+        <Link href="/admin/tickets"><small>تیکت و چت بی‌پاسخ</small><b className={`num ${s?.openTickets || s?.openChats ? "warn" : ""}`}>{s ? fa(s.openTickets + s.openChats) : "…"}</b><span className="muted">{s ? `${fa(s.openChats)} چت • ${fa(s.pendingResellers)} نمایندگی` : ""}</span></Link>
       </div>
       {!!s?.lowStock.length && (
         <div className="dash-sec">
@@ -168,6 +171,8 @@ export function AdminOrder({ code }: { code: string }) {
                 <div className="adm-lh"><BrandLogo id={l.id} size={20} /><b>{lineText(l)}</b><span className="num">{money(l.price)}</span></div>
                 {l.email && <p>ایمیل مشتری: <b className="en sel">{l.email}</b></p>}
                 {l.username && <p>آیدی تلگرام: <b className="en sel">{l.username}</b></p>}
+                {l.members?.length ? <p>اعضای گروه: {l.members.map((m) => <b key={m} className="en sel" style={{ marginInlineEnd: 8 }}>{m}</b>)}</p> : null}
+                {l.ip && <p>آی‌پی ثابت: <b>{extrasLabel({ ...l, seats: 1 })}</b> (مشخصات اتصال را در «اطلاعات تحویل» بنویس)</p>}
                 {(l.type === "code" || l.type === "number" || l.type === "ready" || l.secret) && (
                   <div className="fld">
                     <label>{{ code: "کد گیفت‌کارت", number: "شماره تحویلی", ready: "اطلاعات ورود اکانت" }[l.type as "code"] ?? "اطلاعات تحویل"} (به مشتری نمایش داده می‌شود)</label>

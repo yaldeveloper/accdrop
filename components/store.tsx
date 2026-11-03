@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { CURRENT_DROP, planKeys, priceOf, productById, type Selection } from "@/lib/catalog";
+import { ALL_PRODUCTS, CURRENT_DROP, linePrice, planKeys, priceOf, productById, type Selection } from "@/lib/catalog";
 
 export type CartLine = Selection & { price: number };
 export type SheetView = "product" | "cart" | "checkout" | "done" | null;
@@ -18,7 +18,8 @@ type Store = {
   select: (patch: Partial<Selection>) => void;
   addSelection: () => void;
   /** Add an explicit selection (used by product pages). */
-  addLine: (sel: Selection) => void;
+  /** Returns false when the same line is already in the cart. */
+  addLine: (sel: Selection) => boolean;
   removeLine: (i: number) => void;
   clearCart: () => void;
   setView: (v: SheetView) => void;
@@ -41,7 +42,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
-    try { setCart(JSON.parse(localStorage.getItem(KEY) || "[]")); } catch { /* storage unavailable */ }
+    try {
+      const saved = JSON.parse(localStorage.getItem(KEY) || "[]") as CartLine[];
+      // Drop lines whose product or option no longer exists, and re-price the rest.
+      setCart(saved.filter((l) => ALL_PRODUCTS.some((p) => p.id === l.id && !p.hidden && p.plans[l.plan]?.[l.type])).map((l) => ({ ...l, price: linePrice(l) })));
+    } catch { /* storage unavailable */ }
   }, []);
   const persist = (next: CartLine[]) => {
     setCart(next);
@@ -91,7 +96,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return next;
     }),
     addSelection: () => { if (selection) persist([...cart, { ...selection, price: priceOf(selection).price }]); },
-    addLine: (sel) => persist([...cart, { ...sel, price: priceOf(sel).price }]),
+    addLine: (sel) => {
+      const same = (l: Selection) => l.id === sel.id && l.plan === sel.plan && l.type === sel.type && (l.seats ?? 1) === (sel.seats ?? 1) && (l.ip ?? "") === (sel.ip ?? "");
+      if (cart.some(same)) return false;
+      persist([...cart, { ...sel, price: linePrice(sel) }]);
+      return true;
+    },
     removeLine: (i) => persist(cart.filter((_, j) => j !== i)),
     clearCart: () => persist([]),
     setView: (v) => setViewState(v),

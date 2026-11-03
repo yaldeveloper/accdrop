@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useAccount } from "@/components/account";
-import { ClubCard, EmptyState, HeldPass, heldPasses } from "@/components/dashboard";
+import { EmptyState, HeldPass, heldPasses } from "@/components/dashboard";
 import { OrderRow } from "@/components/orders";
 
 export default function AccountHome() {
@@ -11,7 +11,7 @@ export default function AccountHome() {
   const first = (user?.name || "").split(" ")[0];
   return (
     <>
-      <header className="dash-h"><h1>{first ? `سلام ${first}` : "سلام"}</h1><p className="muted">پاس‌هایت، سفارش‌ها و امتیازت، یک‌جا.</p></header>
+      <header className="dash-h"><h1>{first ? `سلام ${first}` : "سلام"}</h1><p className="muted">اشتراک‌ها، سفارش‌ها و تیکت‌هایت، یک‌جا.</p></header>
       <div className="dash-sec">
         <h2>پاس‌های من</h2>
         {held.length ? <div className="held-g">{held.map((h, i) => <HeldPass key={i} h={h} />)}</div>
@@ -23,8 +23,9 @@ export default function AccountHome() {
           {orders.length ? <div className="ord-list">{orders.slice(0, 3).map((o) => <OrderRow key={o.code} order={o} now={now} />)}</div> : <p className="muted">سفارشی ثبت نشده.</p>}
         </div>
         <div className="dash-sec">
-          <h2>کلاب <Link className="link" href="/account/club">جزئیات</Link></h2>
-          <ClubCard orders={orders} />
+          <h2>پشتیبانی <Link className="link" href="/account/tickets">تیکت‌ها</Link></h2>
+          <p className="muted">سؤال یا مشکلی داری؟ از چت آنلاین پایین صفحه یا با یک تیکت بپرس.</p>
+          <Link className="btn btn-ghost" href="/account/tickets/new">تیکت جدید</Link>
         </div>
       </div>
     </>

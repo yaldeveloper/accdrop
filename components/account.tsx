@@ -5,7 +5,7 @@ import { normalizeMobile, type Order, type ResellerApp, type User } from "@/lib/
 import type { DeliveryType } from "@/lib/catalog";
 
 export type Me = User & { isAdmin: boolean };
-export type PlaceLine = { id: string; plan: string; type: DeliveryType; email?: string; username?: string };
+export type PlaceLine = { id: string; plan: string; type: DeliveryType; email?: string; username?: string; seats?: number; ip?: string; members?: string[] };
 export type ApiError = { error: string; index?: number; wait?: number };
 
 type Account = {

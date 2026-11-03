@@ -1,3 +1,4 @@
+import { loadCatalog } from "@/lib/server/catalog";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
@@ -12,7 +13,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/services" },
 };
 
-export default function ServicesPage() {
+export default async function ServicesPage() {
+  await loadCatalog();
   return (
     <main className="sv">
       <div className="wrap sv-top">
