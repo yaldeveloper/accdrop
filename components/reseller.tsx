@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { PRODUCTS, minPrice, planKeys, priceOf } from "@/lib/catalog";
+import { PRODUCTS, minPrice, optionLabel, planKeys, priceOf, type DeliveryType } from "@/lib/catalog";
 import { RESELLER_KINDS, RESELLER_TIERS, RESELLER_VOLUMES } from "@/lib/account";
-import { duration, faDate, money } from "@/lib/format";
+import { faDate, money } from "@/lib/format";
 import { BrandLogo, Icon } from "./brand";
 import { LoginFlow } from "./login";
 import { useAccount } from "./account";
@@ -106,12 +106,12 @@ export function ResellerPanel() {
           {PRODUCTS.map((p) => {
             const m = planKeys(p)[0];
             const site = minPrice(p);
-            const t = (Object.keys(p.plans[m] ?? {})[0] ?? "own") as "own";
+            const t = (Object.keys(p.plans[m] ?? {})[0] ?? "own") as DeliveryType;
             const base = priceOf({ id: p.id, plan: m, type: t }).price;
             const yours = Math.round((Math.min(site, base) * (1 - tier.rate)) / 1000) * 1000;
             return (
               <div className="rs-tr" role="row" key={p.id}>
-                <span className="rs-p"><span className="mono"><BrandLogo id={p.id} size={18} /></span><b className="en">{p.name}</b><small className="muted">{duration(m)}</small></span>
+                <span className="rs-p"><span className="mono"><BrandLogo id={p.id} size={18} /></span><b className="en">{p.name}</b><small className="muted">{optionLabel(p, m)}</small></span>
                 <span className="num muted">{money(site)}</span><span className="num">{money(yours)}</span><span className="num ok">{money(site - yours)}</span>
               </div>
             );

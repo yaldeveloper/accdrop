@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { DELIVERY, productById } from "@/lib/catalog";
-import { DISCOUNTS, validEmail } from "@/lib/account";
-import { clubPoints, duration, fa, money } from "@/lib/format";
+import { DELIVERY, optionLabel, productById } from "@/lib/catalog";
+import { DISCOUNTS, normalizeUsername, validEmail, validUsername } from "@/lib/account";
+import { clubPoints, fa, money } from "@/lib/format";
 import { BrandLogo, Dots, Icon } from "@/components/brand";
 import { LoginFlow } from "@/components/login";
 import { useAccount } from "@/components/account";
@@ -43,13 +43,21 @@ export default function CheckoutPage() {
 
   const pay = () => {
     if (!user || inFlow) { notify("اول وارد حسابت شو"); document.getElementById("co-account")?.scrollIntoView({ behavior: "smooth", block: "center" }); return; }
-    const missing = cart.map((l, i) => (l.type === "own" && !validEmail(emails[i] ?? "") ? i : -1)).filter((i) => i >= 0);
-    if (missing.length) { setBad(missing); notify("ایمیل اکانت را درست وارد کن"); document.getElementById(`co-em-${missing[0]}`)?.focus(); return; }
+    const ok = (t: string, v: string) => (t === "own" ? validEmail(v) : t === "username" ? validUsername(v) : true);
+    const missing = cart.map((l, i) => (!ok(l.type, emails[i] ?? "") ? i : -1)).filter((i) => i >= 0);
+    if (missing.length) {
+      setBad(missing);
+      notify(cart[missing[0]].type === "username" ? "یوزرنیم تلگرام را درست وارد کن" : "ایمیل اکانت را درست وارد کن");
+      document.getElementById(`co-em-${missing[0]}`)?.focus();
+      return;
+    }
     if (!agree) { notify("قوانین را بپذیر"); return; }
     setPaying(true);
     // DEMO: stands in for the redirect to the payment gateway and its callback.
     setTimeout(() => {
-      const o = placeOrder(cart.map((l, i) => ({ ...l, email: l.type === "own" ? emails[i]?.trim() : undefined })), applied);
+      const o = placeOrder(cart.map((l, i) => ({ ...l,
+        email: l.type === "own" ? emails[i]?.trim() : undefined,
+        username: l.type === "username" ? normalizeUsername(emails[i] ?? "") : undefined })), applied);
       clearCart();
       router.push(`/orders/${o.code}`);
     }, 1400);
@@ -61,7 +69,7 @@ export default function CheckoutPage() {
         <Dots size={8} />
         <h1>سبد خرید خالی است</h1>
         <p className="muted">یک ابزار انتخاب کن تا اینجا برگردیم.</p>
-        <Link className="btn btn-paper" href="/#collection">دیدن همه ابزارها <Icon id="arrow" className="arrow" /></Link>
+        <Link className="btn btn-paper" href="/#collection">دیدن همه سرویس‌ها <Icon id="arrow" className="arrow" /></Link>
       </div>
     );
   }
@@ -97,8 +105,19 @@ export default function CheckoutPage() {
                           value={emails[i] ?? ""} onChange={(e) => { setEmails({ ...emails, [i]: e.target.value }); setBad(bad.filter((x) => x !== i)); }} />
                         <small className="muted">فقط ایمیل. هیچ‌وقت رمز عبورت را نمی‌خواهیم.</small>
                       </div>
+                    ) : l.type === "username" ? (
+                      <div className="fld">
+                        <label htmlFor={`co-em-${i}`}>یوزرنیم تلگرام گیرنده</label>
+                        <input id={`co-em-${i}`} type="text" autoCapitalize="off" spellCheck={false} className={`ltr ${bad.includes(i) ? "bad" : ""}`} placeholder="@username" disabled={!step1Done}
+                          value={emails[i] ?? ""} onChange={(e) => { setEmails({ ...emails, [i]: e.target.value }); setBad(bad.filter((x) => x !== i)); }} />
+                        <small className="muted">می‌توانی آیدی خودت یا دوستت را بزنی. کد ورود و رمز نمی‌خواهیم.</small>
+                      </div>
                     ) : (
-                      <p className="muted co-note">یک اکانت تازه برایت ساخته می‌شود. ایمیل و رمزش را در داشبورد و پیامک می‌بینی.</p>
+                      <p className="muted co-note">{{
+                        ready: "یک اکانت تازه برایت ساخته می‌شود. اطلاعات ورودش را در داشبورد و پیامک می‌بینی.",
+                        code: "کد گیفت‌کارت بلافاصله بعد از پرداخت در صفحه سفارش و پیامک نمایش داده می‌شود.",
+                        number: "شماره بلافاصله بعد از پرداخت در صفحه سفارش نمایش داده می‌شود و کد تأیید هم همان‌جا می‌آید.",
+                      }[l.type as "ready" | "code" | "number"]}</p>
                     )}
                   </div>
                 );
@@ -123,7 +142,7 @@ export default function CheckoutPage() {
               return (
                 <li key={i}>
                   <span className="mono"><BrandLogo id={p.id} size={20} /></span>
-                  <div><b className="en">{p.name}</b><small>{duration(l.plan)} • {DELIVERY[l.type].title}</small></div>
+                  <div><b className="en">{p.name}</b><small>{optionLabel(p, l.plan)} • {DELIVERY[l.type].title}</small></div>
                   <div className="r"><span className="num">{money(l.price)}</span><button className="rm" onClick={() => removeLine(i)} aria-label={`حذف ${p.name}`}>حذف</button></div>
                 </li>
               );
@@ -145,7 +164,7 @@ export default function CheckoutPage() {
           </button>
           <ul className="co-trust">
             <li><Dots size={3} />پرداخت امن شاپرک</li>
-            <li><Dots size={3} />گارانتی تا روز آخر</li>
+            <li><Dots size={3} />ضمانت بازگشت وجه</li>
             <li><Dots size={3} />پشتیبانی ۹ تا ۲۴</li>
           </ul>
           <small className="muted fine">نسخه آزمایشی: درگاه هنوز وصل نیست و پرداخت شبیه‌سازی می‌شود. کد <span className="en">WELCOME</span> ده درصد تخفیف می‌دهد.</small>

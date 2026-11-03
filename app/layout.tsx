@@ -10,9 +10,9 @@ import { SiteChrome } from "@/components/chrome";
 export const metadata: Metadata = {
   metadataBase: new URL("https://accdrop.ir"),
   title: { default: "اک‌دراپ | خرید اکانت ChatGPT، هوش مصنوعی و نرم‌افزارهای حرفه‌ای", template: "%s | اک‌دراپ" },
-  description: "خرید اکانت و اشتراک ChatGPT، Claude، Cursor، Adobe، Canva و ابزارهای حرفه‌ای دیگر با تومان؛ فعال‌سازی روی ایمیل خودت در چند دقیقه و گارانتی تا روز آخر.",
+  description: "خرید اکانت و اشتراک ChatGPT، Claude، Adobe، تلگرام پرمیوم، گیفت‌کارت اپل، شماره مجازی و سرویس‌های دیجیتال دیگر با تومان؛ تحویل روی ایمیل یا آیدی خودت با ضمانت بازگشت وجه.",
   alternates: { canonical: "/" },
-  openGraph: { title: "اک‌دراپ", description: "دسترسی ممتاز به ابزارهای هوشمند", locale: "fa_IR", siteName: "AccDrop" },
+  openGraph: { title: "اک‌دراپ", description: "اشتراک و سرویس‌های دیجیتال، به ساده‌ترین شکل", locale: "fa_IR", siteName: "AccDrop" },
 };
 
 export const viewport: Viewport = { themeColor: "#111418", viewportFit: "cover" };

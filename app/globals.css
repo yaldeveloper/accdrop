@@ -1201,3 +1201,10 @@ footer h5.fa{font-family:inherit;letter-spacing:0;font-size:13px;direction:rtl}
 }
 @media (prefers-reduced-motion:reduce){.orb-ring,.orb-i>span{animation:none!important}}
 .orbit{margin-bottom:58px}
+
+/* ---------- v10: product kinds ---------- */
+.bx-seg.bx-seg4{grid-template-columns:repeat(2,minmax(0,1fr))}
+.od-secret{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px}
+.od-secret span{color:var(--gray-d)}
+.od-secret b{font-weight:600;letter-spacing:.06em;background:var(--ink-2);border:1px dashed var(--hair-2);border-radius:8px;padding:4px 10px;direction:ltr;user-select:all}
+.bx .num,.bx-s small,.p2-tbl td b{font-variant-numeric:normal}

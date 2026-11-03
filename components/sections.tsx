@@ -3,7 +3,7 @@
 import type React from "react";
 
 import { useEffect, useState } from "react";
-import { CATEGORIES, CURRENT_DROP, DELIVERY, PRODUCTS, minPrice, productById, type Category, type Product } from "@/lib/catalog";
+import { CATEGORIES, CURRENT_DROP, DELIVERY, PRODUCTS, minPrice, optionLabel, productById, type Category, type Product } from "@/lib/catalog";
 import { duration, fa, money, pad2 } from "@/lib/format";
 import { BrandLogo, Dots, Eyebrow, Glyph, Icon, Wordmark } from "./brand";
 import Link from "next/link";
@@ -40,7 +40,7 @@ export function Header() {
       <div className="wrap">
         <a href="/" aria-label="اک‌دراپ، صفحه اصلی"><Wordmark /></a>
         <nav aria-label="منوی اصلی">
-          <Link href="/#collection">همه ابزارها</Link><Link href="/#drop">دراپ هفته</Link><Link href="/guarantee">ضمانت</Link><Link href="/reseller">نمایندگی فروش</Link><Link href="/contact">پشتیبانی</Link>
+          <Link href="/#collection">همه سرویس‌ها</Link><Link href="/#drop">دراپ هفته</Link><Link href="/guarantee">ضمانت</Link><Link href="/reseller">نمایندگی فروش</Link><Link href="/contact">پشتیبانی</Link>
         </nav>
         <div className="sp" />
         <div className="tools">
@@ -73,10 +73,11 @@ export function ToolCard({ p }: { p: Product }) {
   );
 }
 
-const FEATURED = ["chatgpt", "claude", "cursor", "adobe", "canva", "notion"];
+const FEATURED = ["chatgpt", "claude", "cursor", "adobe", "tgpremium", "applegift"];
+const CHIP: Record<string, string> = { adobe: "Adobe", tgpremium: "Telegram", applegift: "Gift Card" };
 /** Inner ring first, then outer ring; also the auto-cycle order. */
-const INNER = ["chatgpt", "claude", "gemini", "perplexity", "grok"];
-const OUTER = ["cursor", "copilot", "adobe", "canva", "capcut", "kling", "notion"];
+const INNER = ["chatgpt", "claude", "gemini", "cursor", "adobe", "canva"];
+const OUTER = ["tgpremium", "perplexity", "applegift", "grok", "linkedin", "copilot", "duolingo", "capcut", "appleid", "kling", "notion", "vnumber"];
 const ORBIT = [...INNER, ...OUTER];
 
 const fromPrice = (p: Product) => (CURRENT_DROP.productId === p.id ? Math.min(CURRENT_DROP.price, minPrice(p)) : minPrice(p));
@@ -105,7 +106,7 @@ function Orbit({ active, onPick, onHover }: { active: string; onPick: (id: strin
         <b className="en">{tool}{tier && <i> {tier}</i>}</b>
         <small>از <span className="num">{money(fromPrice(p))}</span> تومان</small>
       </Link>
-      <span className="orb-count"><b>{fa(PRODUCTS.length)}</b> ابزار، یک فروشگاه</span>
+      <span className="orb-count"><b>{fa(PRODUCTS.length)}</b> سرویس، یک فروشگاه</span>
     </div>
   );
 }
@@ -124,16 +125,16 @@ export function Hero() {
     <section className="hero2">
       <div className="wrap hero2-g">
         <div>
-          <Eyebrow>هوش مصنوعی و ابزارهای حرفه‌ای</Eyebrow>
-          <h1><span>اشتراک ابزارهای حرفه‌ای،</span> <b>به ساده‌ترین شکل.</b></h1>
-          <p className="lead">ChatGPT، Claude، Canva، Adobe و ابزارهای دیگر را با کارت بانکی بخر. حدود ۱۰ دقیقه بعد روی ایمیل خودت فعال است؛ اگر فعال نشد، پولت برمی‌گردد.</p>
+          <Eyebrow>هوش مصنوعی، اپل، تلگرام و بیشتر</Eyebrow>
+          <h1><span>اشتراک و سرویس‌های دیجیتال،</span> <b>به ساده‌ترین شکل.</b></h1>
+          <p className="lead">ChatGPT، Claude، Adobe، تلگرام پرمیوم، گیفت‌کارت اپل و سرویس‌های دیگر را با کارت بانکی بخر. روی ایمیل یا آیدی خودت تحویل می‌گیری، خیلی‌ها فوری؛ اگر نشد، پولت برمی‌گردد.</p>
           <div className="pick" role="group" aria-label="انتخاب ابزار" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
             {FEATURED.map((id) => (
               <button key={id} className={`en ${id === active ? "on" : ""}`} onClick={() => { setActive(id); setPaused(true); }}>
-                <BrandLogo id={id} size={16} />{id === "adobe" ? "Adobe" : splitName(productById(id).name)[0]}
+                <BrandLogo id={id} size={16} />{CHIP[id] ?? splitName(productById(id).name)[0]}
               </button>
             ))}
-            <a href="/#collection" className="more">همه ابزارها</a>
+            <a href="/#collection" className="more">همه سرویس‌ها</a>
           </div>
           <div className="hero2-cta">
             <Link className="btn btn-paper" href={productHref(p)}>
@@ -146,8 +147,8 @@ export function Hero() {
       </div>
       <div className="wrap">
         <ul className="assure-row">
-          <li><Dots size={3} />تحویل حدود ۱۰ دقیقه</li>
-          <li><Dots size={3} />فقط ایمیل، هرگز رمز عبور</li>
+          <li><Dots size={3} />تحویل فوری تا حداکثر ۳۰ دقیقه</li>
+          <li><Dots size={3} />فقط ایمیل یا آیدی، هرگز رمز عبور</li>
           <li><Dots size={3} /><Link href="/guarantee">ضمانت بازگشت وجه</Link></li>
           <li><Dots size={3} />پشتیبانی فارسی، هر روز ۹ تا ۲۴</li>
         </ul>
@@ -183,10 +184,10 @@ export function Collection() {
       <div className="wrap">
         <div className="head reveal">
           <div>
-            <Eyebrow dotColor="var(--ink)">همه ابزارها</Eyebrow>
+            <Eyebrow dotColor="var(--ink)">همه سرویس‌ها</Eyebrow>
             <h2>به چه چیزی<br /><b>نیاز داری؟</b></h2>
           </div>
-          <p className="muted">کاتالوگ کوچک، فقط ابزارهایی که حرفه‌ای‌ها هر روز استفاده می‌کنند.</p>
+          <p className="muted">کاتالوگ دست‌چین؛ فقط سرویس‌هایی که واقعاً هر روز به کار می‌آیند.</p>
         </div>
         <div className="filters" role="tablist">
           {(Object.keys(CATEGORIES) as ("all" | Category)[]).map((k) => (
@@ -234,7 +235,7 @@ export function DropSection() {
           <div className="drop-card reveal">
             <span className="tag">ظرفیت محدود</span>
             <h3>{p.name}</h3>
-            <div className="sub">{duration(d.plan)} · {DELIVERY[d.type].title}</div>
+            <div className="sub">{optionLabel(p, d.plan)} · {DELIVERY[d.type].title}</div>
             <div className="price">
               <b className="num">{money(d.price)}</b><small>تومان</small><s className="num">{money(d.was)}</s>
               <span className="num">{fa(Math.round((1 - d.price / d.was) * 100))}٪ تخفیف</span>
@@ -369,13 +370,13 @@ export function Footer() {
     <footer>
       <div className="wrap">
         <div className="fg">
-          <div><h5 className="fa">ابزارها</h5><ul className="f-products">{PRODUCTS.map((p) => <li key={p.id}><Link href={productHref(p)} className="en">{p.name}</Link></li>)}</ul></div>
+          <div><h5 className="fa">سرویس‌ها</h5><ul className="f-products">{PRODUCTS.map((p) => <li key={p.id}><Link href={productHref(p)} className="en">{p.name}</Link></li>)}</ul></div>
           <div><h5 className="fa">اک‌دراپ</h5><ul><li><Link href="/#drop">دراپ هفته</Link></li><li><Link href="/#club">باشگاه مشتریان</Link></li><li><Link href="/reseller">نمایندگی فروش</Link></li></ul></div>
           <div><h5 className="fa">راهنما</h5><ul><li><Link href="/account/orders">پیگیری سفارش</Link></li><li><Link href="/guarantee">شرایط ضمانت و بازگشت وجه</Link></li><li><Link href="/terms">قوانین و مقررات</Link></li><li><Link href="/#concierge">سؤالات پرتکرار</Link></li></ul></div>
           <div><h5 className="fa">تماس</h5><ul><li><Link href="/contact">پشتیبانی، هر روز ۹ تا ۲۴</Link></li><li><a href="#">تلگرام</a></li><li><a href="#">اینستاگرام</a></li><li><a href="mailto:hello@accdrop.ir" className="en">hello@accdrop.ir</a></li></ul></div>
         </div>
         <Wordmark className="f-wm" />
-        <div className="legal"><span>© ۱۴۰۵ اک‌دراپ · دسترسی ممتاز به ابزارهای هوشمند</span><span className="en">accdrop.ir</span></div>
+        <div className="legal"><span>© ۱۴۰۵ اک‌دراپ · اشتراک و سرویس‌های دیجیتال</span><span className="en">accdrop.ir</span></div>
       </div>
     </footer>
   );
