@@ -24,3 +24,9 @@ export async function sendOrderSms(mobile: string, orderCode: string) {
   const t = process.env.KAVENEGAR_ORDER_TEMPLATE;
   if (t || !smsConfigured()) await lookup(mobile, t || "accdrop-order", [orderCode]);
 }
+
+/** Optional: SMS when support answers a ticket (template with %token = ticket number). */
+export async function sendTicketSms(mobile: string, ticketId: number) {
+  const t = process.env.KAVENEGAR_TICKET_TEMPLATE;
+  if (t || !smsConfigured()) await lookup(mobile, t || "accdrop-ticket", [String(ticketId)]);
+}

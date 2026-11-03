@@ -106,7 +106,7 @@ function CartView() {
           </>
         ) : (
           <div className="empty"><Dots size={8} /><br />سبد خرید خالی است.<br /><br />
-            <a className="link" href="/#tools" onClick={close}>مشاهده مجموعه</a></div>
+            <a className="link" href="/services" onClick={close}>مشاهده مجموعه</a></div>
         )}
       </div>
       {cart.length > 0 && (

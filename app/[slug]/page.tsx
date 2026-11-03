@@ -134,7 +134,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       <section className="p2-top">
         <div className="wrap">
           <nav className="crumbs" aria-label="مسیر">
-            <Link href="/">اک‌دراپ</Link><span>/</span><Link href="/#collection">{CATEGORIES[p.category]}</Link><span>/</span><span className="en">{p.name}</span>
+            <Link href="/">اک‌دراپ</Link><span>/</span><Link href={`/services?c=${p.category}`}>{CATEGORIES[p.category]}</Link><span>/</span><span className="en">{p.name}</span>
           </nav>
           <div className="p2-g">
             <div className="p2-info p2-head">
