@@ -2,8 +2,8 @@
 
 import type React from "react";
 
-import { Suspense, useEffect, useState } from "react";
-import { CATEGORIES, CURRENT_DROP, DELIVERY, PRODUCTS, minPrice, optionLabel, productById, type Category, type Product } from "@/lib/catalog";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { CATEGORIES, CURRENT_DROP, DELIVERY, DROPS, PRODUCTS, dropOf, listed, tiersLabel, variantsOf, minPrice, optionLabel, productById, type Category, type Product } from "@/lib/catalog";
 import { duration, fa, money, pad2 } from "@/lib/format";
 import { BrandLogo, Dots, Eyebrow, Glyph, Icon, Wordmark } from "./brand";
 import Link from "next/link";
@@ -14,9 +14,10 @@ import { splitName } from "./pass";
 import { useStore } from "./store";
 import { useAccount } from "./account";
 import { ServiceBrowser } from "./browser";
-import { MegaMenu } from "./mega";
+import { MegaMenu, MobileMenu } from "./mega";
 import { openChat } from "./chat";
 import { searchProducts } from "@/lib/search";
+import { themeOf } from "@/lib/theme";
 
 /** Fades sections in on scroll. */
 export function useReveal() {
@@ -34,6 +35,8 @@ export function Header() {
   const { cart, openSearch, setView } = useStore();
   const { user } = useAccount();
   const [scrolled, setScrolled] = useState(false);
+  const [menu, setMenu] = useState(false);
+  const closeMenu = useCallback(() => setMenu(false), []);
   useEffect(() => {
     const on = () => setScrolled(scrollY > 20);
     on();
@@ -45,33 +48,38 @@ export function Header() {
       <div className="wrap">
         <a href="/" aria-label="اک‌دراپ، صفحه اصلی"><Wordmark /></a>
         <nav aria-label="منوی اصلی">
-          <MegaMenu /><Link href="/#drop">دراپ هفته</Link><Link href="/guarantee">ضمانت</Link><Link href="/reseller">نمایندگی فروش</Link><Link href="/contact">پشتیبانی</Link>
+          <MegaMenu /><Link href="/group">خرید گروهی</Link><Link href="/#drop">دراپ‌ها</Link><Link href="/blog">بلاگ</Link><Link href="/guarantee">ضمانت</Link><Link href="/contact">پشتیبانی</Link>
         </nav>
         <div className="sp" />
         <div className="tools">
           <button onClick={openSearch} aria-label="جست‌وجو"><Icon id="search" /><span className="tx">جست‌وجو</span></button>
           <Link href={user ? "/account" : "/login"} aria-label={user ? "داشبورد" : "ورود"}><Icon id="user" /><span className="tx">{user ? (user.name.split(" ")[0] || "حساب من") : "ورود / ثبت‌نام"}</span></Link>
           <button onClick={() => setView("cart")} aria-label="سبد خرید"><Icon id="bag" /><span className="num">({fa(cart.length)})</span></button>
+          <button className="hd-burger" onClick={() => setMenu(true)} aria-label="منو" aria-expanded={menu}><span /><span /><span /></button>
         </div>
       </div>
+      <MobileMenu open={menu} onClose={closeMenu} onSearch={openSearch} onChat={openChat} />
     </header>
   );
 }
 
 /** One product card: brand mark, name, what it is for, starting price. */
 export function ToolCard({ p }: { p: Product }) {
-  const isDrop = CURRENT_DROP.productId === p.id;
+  const d = dropOf(p.id);
+  const tiers = tiersLabel(p);
   const [tool, tier] = splitName(p.name);
   return (
     <Link className="tile" href={productHref(p)}>
       <span className="tile-top">
         <span className="tile-logo"><BrandLogo id={p.id} size={26} /></span>
-        {isDrop && <span className="tile-drop">{fa(Math.round((1 - CURRENT_DROP.price / CURRENT_DROP.was) * 100))}٪ تخفیف</span>}
+        {d ? <span className="tile-drop">{fa(Math.round((1 - d.price / d.was) * 100))}٪ تخفیف</span>
+          : p.badge ? <span className="tile-drop tile-badge">{p.badge}</span> : null}
       </span>
-      <b className="en tile-tool">{tool}{tier && <small> {tier}</small>}</b>
-      <span className="tile-use">{p.use}</span>
+      <b className="en tile-tool">{tiers ? tool : <>{tool}{tier && <small> {tier}</small>}</>}</b>
+      <span className="tile-use">{tiers ? <span className="en tile-tiers">{tiers}</span> : p.use}</span>
+      {p.group?.length ? <span className="tile-grp">خرید گروهی</span> : null}
       <span className="tile-foot">
-        <span>از <b className="num">{money(isDrop ? CURRENT_DROP.price : minPrice(p))}</b> تومان</span>
+        <span>از <b className="num">{money(Math.min(d?.price ?? Infinity, ...variantsOf(p).map(minPrice)))}</b> تومان</span>
         <Icon id="arrow" className="arrow" style={{ width: 16, height: 16 }} />
       </span>
     </Link>
@@ -85,7 +93,7 @@ const INNER = ["chatgpt", "claude", "gemini", "cursor", "adobe", "canva"];
 const OUTER = ["tgpremium", "perplexity", "applegift", "grok", "linkedin", "copilot", "duolingo", "capcut", "appleid", "kling", "notion", "vnumber"];
 const ORBIT = [...INNER, ...OUTER];
 
-const fromPrice = (p: Product) => (CURRENT_DROP.productId === p.id ? Math.min(CURRENT_DROP.price, minPrice(p)) : minPrice(p));
+const fromPrice = (p: Product) => Math.min(dropOf(p.id)?.price ?? Infinity, minPrice(p));
 
 /** Every tool on two slow, counter-rotating rings; the selected one sits in the centre. */
 function Orbit({ active, onPick, onHover }: { active: string; onPick: (id: string) => void; onHover: (v: boolean) => void }) {
@@ -248,36 +256,60 @@ function useCountdownToMidnight() {
 
 export function DropSection() {
   const { notify } = useStore();
-  const d = CURRENT_DROP, p = productById(d.productId);
   const left = useCountdownToMidnight();
+  const track = useRef<HTMLDivElement>(null);
+  const [at, setAt] = useState(0);
+  const go = (i: number) => {
+    const el = track.current, n = DROPS.length;
+    if (!el) return;
+    const k = (i + n) % n;
+    const card = el.children[k] as HTMLElement | undefined;
+    card?.scrollIntoView({ inline: "center", block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  };
+  useEffect(() => {
+    const el = track.current;
+    if (!el) return;
+    const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) setAt(Number((e.target as HTMLElement).dataset.i)); }), { root: el, threshold: 0.6 });
+    Array.from(el.children).forEach((c) => io.observe(c));
+    return () => io.disconnect();
+  }, []);
   return (
     <section className="drop" id="drop">
       <div className="wrap">
-        <div className="drop-g">
-          <div className="reveal">
-            <Eyebrow>دراپ هفته</Eyebrow>
-            <div className="drop-no" style={{ marginTop: 28 }}>№{String(d.number).padStart(2, "0")}<sup>DROP</sup></div>
-            <p className="muted" style={{ marginTop: 28, maxWidth: 420, fontWeight: 300, fontSize: 18 }}>پاس‌های محدود، با قیمت ویژه.<br />وقتی تمام شود، تمام شده.</p>
+        <div className="drops-h reveal">
+          <div>
+            <Eyebrow>دراپ‌های این هفته</Eyebrow>
+            <h2>قیمت ویژه، <b>ظرفیت محدود.</b></h2>
           </div>
-          <div className="drop-card reveal">
-            <span className="tag">ظرفیت محدود</span>
-            <h3>{p.name}</h3>
-            <div className="sub">{optionLabel(p, d.plan)} · {DELIVERY[d.type].title}</div>
-            <div className="price">
-              <b className="num">{money(d.price)}</b><small>تومان</small><s className="num">{money(d.was)}</s>
-              <span className="num">{fa(Math.round((1 - d.price / d.was) * 100))}٪ تخفیف</span>
-            </div>
-            <div className="clock">
-              {(["ساعت", "دقیقه", "ثانیه"] as const).map((u, i) => <div key={u}><b className="num">{left ? pad2(left[i]) : "--"}</b><span>{u}</span></div>)}
-            </div>
-            <div className="stock"><span>فقط <b>{fa(d.left)}</b> پاس از {fa(d.of)} باقی مانده</span><span>تا پایان امشب</span></div>
-            <div className="meter"><i style={{ width: `${(d.left / d.of) * 100}%` }} /></div>
-            <Link className="btn btn-paper btn-block" href={productHref(p)}>بگیرش <Icon id="arrow" className="arrow" /></Link>
+          <div className="drops-clock" aria-label="زمان باقی‌مانده">
+            <small>تا پایان امشب</small>
+            <div>{(["ساعت", "دقیقه", "ثانیه"] as const).map((u, i) => <span key={u}><b className="num">{left ? pad2(left[i]) : "--"}</b><i>{u}</i></span>)}</div>
           </div>
+        </div>
+        <div className="drops" ref={track} aria-roledescription="اسلایدر" aria-label="دراپ‌ها">
+          {DROPS.map((d, i) => {
+            const p = productById(d.productId);
+            return (
+              <article key={d.number} className={`dropc ${i === at ? "on" : ""}`} data-i={i} style={{ "--b": themeOf(p.id).c } as React.CSSProperties} aria-label={`دراپ ${fa(d.number)}: ${p.name}`}>
+                <div className="dropc-top"><span className="mono"><BrandLogo id={p.id} size={26} /></span><span className="tag">№{fa(String(d.number).padStart(2, "0"))}</span></div>
+                <h3 className="en">{p.name}</h3>
+                <div className="sub">{optionLabel(p, d.plan)} · {DELIVERY[d.type].title}</div>
+                <div className="price"><b className="num">{money(d.price)}</b><small>تومان</small><s className="num">{money(d.was)}</s><em className="num">{fa(Math.round((1 - d.price / d.was) * 100))}٪</em></div>
+                <div className="stock"><span>فقط <b>{fa(d.left)}</b> از {fa(d.of)} باقی مانده</span></div>
+                <div className="meter"><i style={{ width: `${(d.left / d.of) * 100}%` }} /></div>
+                <Link className="btn btn-paper btn-block" href={`${productHref(p)}?plan=${d.plan}&type=${d.type}`}>بگیرش <Icon id="arrow" className="arrow" /></Link>
+              </article>
+            );
+          })}
+        </div>
+        <div className="drops-nav">
+          <button type="button" onClick={() => go(at - 1)} aria-label="قبلی">‹</button>
+          <div className="drops-dots">{DROPS.map((d, i) => <button key={d.number} className={i === at ? "on" : ""} onClick={() => go(i)} aria-label={`دراپ ${fa(i + 1)}`} />)}</div>
+          <button type="button" onClick={() => go(at + 1)} aria-label="بعدی">›</button>
         </div>
         <div className="next reveal">
           <div>
-            <b style={{ fontWeight: 500 }}>دراپ №{fa(String(d.number + 1).padStart(2, "0"))} · پنجشنبه، ساعت ۲۰:۰۰</b>
+            <b style={{ fontWeight: 500 }}>دراپ‌های بعدی · پنجشنبه، ساعت ۲۰:۰۰</b>
             <div className="muted" style={{ fontSize: 13, fontWeight: 300 }}>زودتر از همه خبردار شو.</div>
           </div>
           <form onSubmit={(e) => { e.preventDefault(); e.currentTarget.reset(); notify("ثبت شد. خبرت می‌کنیم."); }}>
@@ -359,17 +391,44 @@ export function Concierge() {
 }
 
 export function Footer() {
+  const { notify } = useStore();
+  const popular = listed().slice(0, 8);
   return (
-    <footer>
+    <footer className="ft">
       <div className="wrap">
-        <div className="fg">
-          <div><h5 className="fa">سرویس‌ها</h5><ul className="f-products">{PRODUCTS.map((p) => <li key={p.id}><Link href={productHref(p)} className="en">{p.name}</Link></li>)}</ul></div>
-          <div><h5 className="fa">اک‌دراپ</h5><ul><li><Link href="/#drop">دراپ هفته</Link></li><li><Link href="/reseller">نمایندگی فروش</Link></li></ul></div>
-          <div><h5 className="fa">راهنما</h5><ul><li><Link href="/account/orders">پیگیری سفارش</Link></li><li><Link href="/guarantee">شرایط ضمانت و بازگشت وجه</Link></li><li><Link href="/terms">قوانین و مقررات</Link></li><li><Link href="/#concierge">سؤالات پرتکرار</Link></li><li><Link href="/account/tickets">تیکت پشتیبانی</Link></li></ul></div>
-          <div><h5 className="fa">تماس</h5><ul><li><Link href="/contact">پشتیبانی، هر روز ۹ تا ۲۴</Link></li><li><a href="#">تلگرام</a></li><li><a href="#">اینستاگرام</a></li><li><a href="mailto:hello@accdrop.ir" className="en">hello@accdrop.ir</a></li></ul></div>
+        <div className="ft-cta">
+          <div>
+            <b>سؤالی داری؟ یک آدم جواب می‌دهد.</b>
+            <small>هر روز ۹ صبح تا ۱۲ شب، در چت آنلاین یا تیکت.</small>
+          </div>
+          <div className="ft-cta-a">
+            <button className="btn btn-paper" onClick={openChat}><Icon id="chat" />چت با پشتیبانی</button>
+            <form className="ft-news" onSubmit={(e) => { e.preventDefault(); e.currentTarget.reset(); notify("ثبت شد؛ دراپ‌های بعدی را پیامک می‌کنیم."); }}>
+              <input type="tel" inputMode="numeric" placeholder="موبایل برای خبر دراپ‌ها" aria-label="شماره موبایل" required pattern="0?9[0-9]{9}" />
+              <button>عضویت</button>
+            </form>
+          </div>
         </div>
-        <Wordmark className="f-wm" />
-        <div className="legal"><span>© ۱۴۰۵ اک‌دراپ · اشتراک و سرویس‌های دیجیتال</span><span className="en">accdrop.ir</span></div>
+
+        <div className="ft-g">
+          <div className="ft-brand">
+            <Wordmark className="ft-wm" />
+            <p>اشتراک و سرویس‌های دیجیتال خارجی، با تومان و روی اکانت خودت. با ضمانت بازگشت وجه و پشتیبانی فارسی.</p>
+            <div className="ft-social">
+              <a href="#" aria-label="تلگرام">تلگرام</a><a href="#" aria-label="اینستاگرام">اینستاگرام</a><a href="mailto:hello@accdrop.ir" className="en">hello@accdrop.ir</a>
+            </div>
+            <div className="ft-badges" aria-label="نمادها"><span>نماد اعتماد<br />الکترونیکی</span><span>ساماندهی<br />کسب‌وکار</span></div>
+          </div>
+          <nav aria-label="دسته‌ها"><h5>دسته‌ها</h5><ul>{(Object.keys(CATEGORIES) as (keyof typeof CATEGORIES)[]).filter((c) => c !== "all").map((c) => <li key={c}><Link href={`/services?c=${c}`}>{CATEGORIES[c]}</Link></li>)}</ul></nav>
+          <nav aria-label="پرفروش‌ها"><h5>پرفروش‌ها</h5><ul>{popular.map((p) => <li key={p.id}><Link href={productHref(p)} className="en">{p.name}</Link></li>)}</ul></nav>
+          <nav aria-label="راهنما"><h5>راهنما</h5><ul><li><Link href="/account/orders">پیگیری سفارش</Link></li><li><Link href="/guarantee">ضمانت و بازگشت وجه</Link></li><li><Link href="/group">خرید گروهی</Link></li><li><Link href="/#concierge">سؤالات پرتکرار</Link></li><li><Link href="/account/tickets">تیکت پشتیبانی</Link></li><li><Link href="/terms">قوانین و مقررات</Link></li></ul></nav>
+          <nav aria-label="اک‌دراپ"><h5>اک‌دراپ</h5><ul><li><Link href="/blog">بلاگ</Link></li><li><Link href="/#drop">دراپ‌ها</Link></li><li><Link href="/reseller">نمایندگی فروش</Link></li><li><Link href="/contact">تماس با ما</Link></li></ul></nav>
+        </div>
+
+        <div className="ft-pay">
+          <span>روش‌های پرداخت:</span><i>کارت‌های عضو شتاب</i><i>درگاه زرین‌پال</i><i className="en">USDT · BTC · TRX</i>
+        </div>
+        <div className="legal"><span>© ۱۴۰۵ اک‌دراپ · همه حقوق محفوظ است.</span><span className="en">accdrop.ir</span></div>
       </div>
     </footer>
   );

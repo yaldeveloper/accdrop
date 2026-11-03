@@ -5,7 +5,7 @@ import { Scene } from "@/components/scene";
 import { themeOf } from "@/lib/theme";
 import { notFound } from "next/navigation";
 import { loadCatalog } from "@/lib/server/catalog";
-import { CATEGORIES, DELIVERY, PRICES_UPDATED, PRODUCTS, STATIC_IP, axisOf, deliveryExplain, deliveryTypes, etaText, guaranteeOf, isSub, kindOf, minPrice, nounOf, optionLabel, planKeys, priceOf, type DeliveryType, type Product } from "@/lib/catalog";
+import { CATEGORIES, DELIVERY, PRICES_UPDATED, PRODUCTS, axisOf, deliveryExplain, deliveryTypes, etaText, guaranteeOf, isSub, kindOf, minPrice, nounOf, optionLabel, planKeys, priceOf, type DeliveryType, type Product } from "@/lib/catalog";
 import { seoOf } from "@/lib/seo";
 import { Toc } from "@/components/toc";
 import { CONTENT, contentOf } from "@/lib/content";
@@ -13,6 +13,7 @@ import { fa, money } from "@/lib/format";
 import { BrandLogo, Icon } from "@/components/brand";
 import { ToolCard } from "@/components/sections";
 import { BuyPanel } from "@/components/buy-panel";
+import { Reviews } from "@/components/reviews";
 import { splitName } from "@/components/pass";
 
 export const dynamicParams = true;
@@ -145,24 +146,20 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           </nav>
           <div className="p2-g">
             <div className="p2-info p2-head">
-              <div className="p2-brand"><span className="p2-logo"><BrandLogo id={p.id} size={30} /></span><div><small>{isSub(p) ? "اشتراک رسمی" : "رسمی و قانونی"}</small><b className="en">{p.maker}</b></div></div>
-              <h1><small>{c.prefix ?? "خرید اکانت"}</small><span className="en">{tool}{tier && <i> {tier}</i>}</span></h1>
+              <div className="p2-brand"><span className="p2-logo"><BrandLogo id={p.id} size={30} /></span><div><small>{c.prefix ?? "خرید اکانت"} • {isSub(p) ? "اشتراک رسمی" : "رسمی و قانونی"}</small><b className="en">{p.maker}</b></div></div>
+              <h1 className="p2-h1"><span className="en">{tool}{tier && <i> {tier}</i>}</span></h1>
+              <p className="p2-use">{p.use}</p>
               <p className="p2-lead">{c.intro}</p>
+              <ul className="p2-hl">{p.includes.slice(0, 3).map((x) => <li key={x}><Icon id="check" />{x}</li>)}</ul>
+              <div className="p2-chips">
+                <span><Icon id="shield" />{guaranteeOf(p)}</span>
+                <span><Icon id="clock" />{isSub(p) ? "روی اکانت خودت" : "در حساب کاربری"}</span>
+                {p.group?.length ? <a href="#buy"><Icon id="user" />خرید گروهی تا {fa(p.group[p.group.length - 1][1])}٪ ارزان‌تر</a> : null}
+              </div>
             </div>
             <BuyPanel product={p} />
             <div className="p2-info p2-more">
               <Scene id={p.id} />
-              <div className="p2-incl">
-                <h2>{isSub(p) ? "با این اشتراک" : "با این خرید"}</h2>
-                <ul>{p.includes.map((x) => <li key={x}><Icon id="check" />{x}</li>)}</ul>
-              </div>
-              <ul className="p2-facts">
-                <li><Icon id="clock" /><div><b>{isSub(p) ? "روی اکانت خودت" : "در حساب کاربری"}</b><small>تحویل بعد از پرداخت</small></div></li>
-                <li><Icon id="shield" /><div><b>ضمانت</b><small>{guaranteeOf(p)}</small></div></li>
-                <li><Icon id="chat" /><div><b>پشتیبانی فارسی</b><small>هر روز ۹ تا ۲۴</small></div></li>
-                {p.group?.length ? <li><Icon id="user" /><div><b>خرید گروهی</b><small>تا {fa(p.group[p.group.length - 1][1])}٪ ارزان‌تر برای هر نفر</small></div></li> : null}
-                {p.ip && isSub(p) ? <li><Icon id="lock" /><div><b>آی‌پی ثابت اختصاصی</b><small>افزودنی اختیاری، {Object.keys(STATIC_IP.countries).length > 3 ? "چند کشور" : "خارج"}</small></div></li> : null}
-              </ul>
             </div>
           </div>
         </div>
@@ -172,7 +169,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         ...(seo ? [["about", "معرفی"], ["features", "امکانات"]] as [string, string][] : []),
         ["prices", "قیمت‌ها"], ["delivery", "نحوه تحویل"],
         ...(seo?.freeVsPaid.length ? [["free-vs-paid", "رایگان یا پولی"]] as [string, string][] : []),
-        ["guarantee", "ضمانت"], ["compare", "چرا اک‌دراپ"], ["faq", "سؤالات"],
+        ["guarantee", "ضمانت"], ["reviews", "نظرات"], ["faq", "سؤالات"],
       ]} />
 
       <div className="light p2-body">
@@ -318,6 +315,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             </div>
           </div>
         </section>
+
+        <Reviews productId={p.id} name={p.name} />
 
         <section className="p2-sec" id="faq">
           <div className="wrap p2-two">

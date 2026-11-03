@@ -121,6 +121,7 @@ create table if not exists ticket_messages (
   created_at timestamptz not null default now()
 );
 create index if not exists ticket_messages_ticket on ticket_messages(ticket_id);
+alter table orders add column if not exists pay_method text not null default 'card';
 alter table order_lines add column if not exists seats int not null default 1;
 alter table order_lines add column if not exists ip text;
 alter table order_lines add column if not exists members text;
@@ -150,6 +151,32 @@ create table if not exists chat_messages (
   created_at timestamptz not null default now()
 );
 create index if not exists chat_messages_chat on chat_messages(chat_id, id);
+create table if not exists reviews (
+  id serial primary key,
+  product_id text not null,
+  mobile text not null references users(mobile),
+  name text not null default '',
+  rating int not null,
+  body text not null,
+  status text not null default 'pending',
+  verified boolean not null default false,
+  reply text not null default '',
+  created_at timestamptz not null default now(),
+  unique (product_id, mobile)
+);
+create index if not exists reviews_product on reviews(product_id, status);
+create table if not exists posts (
+  slug text primary key,
+  title text not null,
+  excerpt text not null default '',
+  body text not null default '',
+  tags text not null default '',
+  products text not null default '',
+  cover text not null default '',
+  published boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
 insert into discounts (code, rate) values ('WELCOME', 0.1) on conflict do nothing;
 `;
 

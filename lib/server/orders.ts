@@ -3,7 +3,8 @@ import { DELIVERY, MAX_SEATS, STATIC_IP, linePrice, productById, PRODUCTS, type 
 import { loadCatalog } from "./catalog";
 import { normalizeUsername, validEmail, validUsername, type Order, type OrderLine, type OrderStatus } from "@/lib/account";
 import { db } from "./db";
-import { startPayment, verifyPayment } from "./pay";
+import { gatewayConfigured, startPayment, verifyPayment } from "./pay";
+import { cryptoConfigured, startCrypto } from "./crypto";
 import { sendOrderSms } from "./sms";
 
 type Sql = Awaited<ReturnType<typeof db>>;
@@ -81,14 +82,17 @@ export async function createOrder(mobile: string, input: LineInput[], discountCo
 }
 
 /** Sends the customer to the gateway (or marks a free order paid). */
-export async function payOrder(code: string, mobile: string): Promise<{ url: string } | { error: string }> {
+export type PayMethod = "card" | "crypto";
+
+export async function payOrder(code: string, mobile: string, method: PayMethod = "card"): Promise<{ url: string } | { error: string }> {
   const sql = await db();
   const [o] = await sql`select status, total from orders where code = ${code} and mobile = ${mobile}`;
   if (!o) return { error: "not_found" };
   if (o.status !== "pending" && o.status !== "canceled") return { url: `/orders/${code}` };
   if (Number(o.total) === 0) { await markPaid(code, "FREE"); return { url: `/orders/${code}` }; }
-  const p = await startPayment(code, Number(o.total), mobile);
-  await sql`update orders set authority = ${p.authority}, status = 'pending' where code = ${code}`;
+  if (method === "crypto" && !cryptoConfigured() && gatewayConfigured()) return { error: "crypto_unavailable" };
+  const p = method === "crypto" ? await startCrypto(code, Number(o.total)) : await startPayment(code, Number(o.total), mobile);
+  await sql`update orders set authority = ${p.authority}, status = 'pending', pay_method = ${method} where code = ${code}`;
   return { url: p.url };
 }
 
@@ -99,7 +103,8 @@ export async function completePayment(authority: string, okStatus: boolean): Pro
   if (!o) return null;
   if (o.status !== "pending") return o.code;
   if (!okStatus) { await sql`update orders set status = 'canceled' where code = ${o.code} and status = 'pending'`; return o.code; }
-  const v = await verifyPayment(authority, Number(o.total));
+  // The test gateway stands in for both card and crypto while neither is configured.
+  const v = authority.startsWith("TEST-") && !gatewayConfigured() ? { ok: true, refId: "TEST", cardPan: undefined } : await verifyPayment(authority, Number(o.total));
   if (!v.ok) { await sql`update orders set status = 'canceled' where code = ${o.code} and status = 'pending'`; return o.code; }
   await markPaid(o.code, v.refId ?? "", v.cardPan);
   return o.code;
@@ -221,4 +226,13 @@ export async function addStock(productId: string, plan: string, codes: string[])
   const r = await sql`insert into gift_codes ${sql(clean.map((code) => ({ product_id: productId, plan, code })))} on conflict (code) do nothing returning id`;
   await fulfilInstant(sql);
   return { added: r.length, duplicates: clean.length - r.length };
+}
+
+/** NOWPayments callback (signature already checked): marks the order paid or canceled. */
+export async function completeCrypto(orderCode: string, status: string, paymentId: string) {
+  const sql = await db();
+  const [o] = await sql`select code, status, authority from orders where code = ${orderCode}`;
+  if (!o || !String(o.authority ?? "").startsWith("NP-")) return;
+  if (status === "finished" || status === "confirmed") await markPaid(o.code, `NP-${paymentId}`, "crypto");
+  else if ((status === "failed" || status === "expired") && o.status === "pending") await sql`update orders set status = 'canceled' where code = ${o.code}`;
 }

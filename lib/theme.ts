@@ -28,7 +28,7 @@ export const THEME: Record<string, Theme> = {
 export function themeOf(id: string): Theme {
   const p = ALL_PRODUCTS.find((x) => x.id === id);
   const byCat: Record<string, Motif> = { ai: "chat", code: "code", create: "canvas", work: "work", telegram: "tg", apple: "gift", number: "sim" };
-  const t = THEME[id] ?? { c: "#B9FF63", c2: "#63E6BE", motif: byCat[p?.category ?? "ai"] ?? "chat",
+  const t = THEME[id] ?? (p?.family ? THEME[p.family] : undefined) ?? { c: "#B9FF63", c2: "#63E6BE", motif: byCat[p?.category ?? "ai"] ?? "chat",
     ask: "از کجا شروع کنم؟", reply: `با ${p?.name ?? "این سرویس"} چند دقیقه‌ای راه می‌افتی؛ قدم اول را با هم برداریم…` };
   const color = p?.color;
   return color ? { ...t, c: color } : t;

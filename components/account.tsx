@@ -14,13 +14,13 @@ type Account = {
   orders: Order[];
   now: number;
   /** While no SMS panel or gateway is connected the site says so (fixed login code, test gateway). */
-  demo: { login: boolean; gateway: boolean };
+  demo: { login: boolean; gateway: boolean; usd?: number };
   requestOtp: (mobile: string) => Promise<{ ok: boolean; error?: string; wait?: number }>;
   verifyOtp: (mobile: string, code: string) => Promise<{ ok: boolean; isNew: boolean; error?: string }>;
   updateProfile: (patch: Partial<Pick<User, "name" | "email">>) => Promise<boolean>;
   logout: () => Promise<void>;
   /** Creates the order on the server and returns where to send the customer to pay. */
-  placeOrder: (lines: PlaceLine[], discountCode: string) => Promise<{ code: string; payUrl: string } | ApiError>;
+  placeOrder: (lines: PlaceLine[], discountCode: string, method?: "card" | "crypto") => Promise<{ code: string; payUrl: string } | ApiError>;
   refreshOrders: () => Promise<void>;
   reseller: ResellerApp | null;
   applyReseller: (a: Omit<ResellerApp, "mobile" | "createdAt" | "status">) => Promise<boolean>;
@@ -47,7 +47,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Me | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [reseller, setReseller] = useState<ResellerApp | null>(null);
-  const [demo, setDemo] = useState({ login: false, gateway: false });
+  const [demo, setDemo] = useState<{ login: boolean; gateway: boolean; usd?: number }>({ login: false, gateway: false });
   const [now, setNow] = useState(() => Date.now());
 
   const loadMine = useCallback(async () => {
@@ -87,8 +87,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       return !!r.user;
     },
     logout: async () => { await api("/api/auth/logout", { method: "POST", body: {} }); setUser(null); setOrders([]); setReseller(null); },
-    placeOrder: async (lines, discount) => {
-      const r = await api<{ code: string; payUrl: string }>("/api/orders", { body: { lines, discount } });
+    placeOrder: async (lines, discount, method = "card") => {
+      const r = await api<{ code: string; payUrl: string }>("/api/orders", { body: { lines, discount, method } });
       return r.error || !r.code ? { error: r.error ?? "server_error", index: r.index } : { code: r.code, payUrl: r.payUrl };
     },
     refreshOrders: loadMine,

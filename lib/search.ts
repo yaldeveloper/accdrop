@@ -1,5 +1,5 @@
 // Finding a service: Persian and English names, common misspellings and what people need it for.
-import { CATEGORIES, PRODUCTS, minPrice, type Category, type Product } from "./catalog";
+import { CATEGORIES, PRODUCTS, listed, minPrice, type Category, type Product } from "./catalog";
 
 /** Lower-case, unify Arabic/Persian letters and digits, drop spaces, ZWNJ and punctuation. */
 export function norm(s: string) {
@@ -44,18 +44,28 @@ export const NEEDS: { label: string; ids: string[] }[] = [
   { label: "کار و رزومه", ids: ["linkedin", "notion"] },
 ];
 
-const index = new Map(PRODUCTS.map((p) => {
-  const name = norm(`${p.name} ${p.maker} ${p.id}`);
-  const alias = (ALIASES[p.id] ?? []).map(norm);
-  const text = norm(`${p.description} ${p.use} ${p.includes.join(" ")} ${CATEGORIES[p.category]}`);
-  return [p.id, { name, alias, text }];
-}));
+type Ix = { key: string; name: string; alias: string[]; text: string };
+const cache = new Map<string, Ix>();
+/** Search text of a product, cached (and rebuilt when the admin edits it). */
+function ixOf(p: Product): Ix {
+  const key = `${p.name}|${p.description}|${p.use}|${p.includes.length}`;
+  const hit = cache.get(p.id);
+  if (hit && hit.key === key) return hit;
+  const ix = {
+    key,
+    name: norm(`${p.name} ${p.maker} ${p.id} ${p.tier ?? ""}`),
+    alias: (ALIASES[p.id] ?? ALIASES[p.family ?? ""] ?? []).map(norm),
+    text: norm(`${p.description} ${p.use} ${p.includes.join(" ")} ${CATEGORIES[p.category]}`),
+  };
+  cache.set(p.id, ix);
+  return ix;
+}
 
 /** Scores a product for a query: name or alias beats a word in its description. 0 = no match. */
 export function score(p: Product, query: string) {
   const q = norm(query);
   if (!q) return 1;
-  const ix = index.get(p.id)!;
+  const ix = ixOf(p);
   if (ix.name.startsWith(q) || ix.alias.some((a) => a.startsWith(q))) return 100;
   if (ix.name.includes(q) || ix.alias.some((a) => a.includes(q))) return 60;
   if (ix.text.includes(q)) return 20;
@@ -74,7 +84,7 @@ export const SORTS: Partial<Record<SortKey, string>> = { featured: "پیشنها
 
 export function browse(opts: { cat: "all" | Category; query: string; sort: SortKey; instant: boolean; need?: string }) {
   const need = NEEDS.find((n) => n.label === opts.need);
-  let list = opts.query.trim() ? searchProducts(opts.query) : [...PRODUCTS];
+  let list = opts.query.trim() ? searchProducts(opts.query) : listed();
   if (opts.cat !== "all") list = list.filter((p) => p.category === opts.cat);
   if (opts.instant) list = list.filter((p) => p.etaMinutes === 0);
   if (need) list = need.ids.map((id) => list.find((p) => p.id === id)).filter((p): p is Product => !!p);
@@ -83,4 +93,4 @@ export function browse(opts: { cat: "all" | Category; query: string; sort: SortK
   return list;
 }
 
-export const countIn = (cat: "all" | Category) => (cat === "all" ? PRODUCTS.length : PRODUCTS.filter((p) => p.category === cat).length);
+export const countIn = (cat: "all" | Category) => (cat === "all" ? listed().length : listed().filter((p) => p.category === cat).length);

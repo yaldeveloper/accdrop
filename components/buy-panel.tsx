@@ -2,13 +2,16 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
-import { CURRENT_DROP, DELIVERY, MAX_SEATS, STATIC_IP, axisOf, deliveryTypes, groupOff, ipPrice, isSub, linePrice, nounOf, optionLabel, planKeys, priceOf, type DeliveryType, type Months, type Product, type Selection } from "@/lib/catalog";
+import Link from "next/link";
+import { DELIVERY, MAX_SEATS, axisOf, deliveryTypes, dropOf, groupOff, isSub, linePrice, minPrice, nounOf, optionLabel, planKeys, priceOf, variantsOf, type DeliveryType, type Months, type Product, type Selection } from "@/lib/catalog";
+import { productHref } from "@/lib/content";
 import { fa, money } from "@/lib/format";
 import { Icon } from "./brand";
 import { useStore } from "./store";
 
 function initial(p: Product): Selection {
-  if (CURRENT_DROP.productId === p.id) return { id: p.id, plan: CURRENT_DROP.plan, type: CURRENT_DROP.type };
+  const d = dropOf(p.id);
+  if (d) return { id: p.id, plan: d.plan, type: d.type };
   const plan = planKeys(p)[0];
   return { id: p.id, plan, type: Object.keys(p.plans[plan] ?? {})[0] as DeliveryType };
 }
@@ -27,10 +30,12 @@ export function BuyPanel({ product: p }: { product: Product }) {
   const unit = priceOf(sel);
   const seats = sel.seats ?? 1;
   const price = linePrice(sel);
-  const full = (unit.was ?? unit.price) * seats + (sel.ip ? ipPrice(p, sel.plan) : 0);
+  const full = (unit.was ?? unit.price) * seats;
   const was = full > price ? full : undefined;
   const off = groupOff(p, seats);
-  const ipCost = ipPrice(p, sel.plan);
+  const variants = variantsOf(p);
+  const group = seats > 1;
+  const maxOff = p.group?.length ? p.group[p.group.length - 1][1] : 0;
 
   // Renewal links from the dashboard carry ?plan=&type=.
   useEffect(() => {
@@ -63,6 +68,19 @@ export function BuyPanel({ product: p }: { product: Product }) {
   return (
     <div className="bx" id="buy">
       <h2 className="bx-t">انتخاب {nounOf(p)}</h2>
+
+      {variants.length > 1 && (
+        <fieldset className="bx-g">
+          <legend>نسخه</legend>
+          <div className="bx-var" style={{ "--n": variants.length } as CSSProperties}>
+            {variants.map((v) => (
+              <Link key={v.id} href={productHref(v)} className={v.id === p.id ? "on" : ""} aria-current={v.id === p.id ? "page" : undefined} scroll={false}>
+                <b className="en">{v.tier ?? v.name}</b><small className="num">از {money(minPrice(v))}</small>
+              </Link>
+            ))}
+          </div>
+        </fieldset>
+      )}
 
       <fieldset className="bx-g">
         <legend>{axisOf(p)}</legend>
@@ -102,43 +120,34 @@ export function BuyPanel({ product: p }: { product: Product }) {
 
       {p.group?.length ? (
         <fieldset className="bx-g">
-          <legend>برای چند نفر؟ <span className="bx-help bx-help-t">خرید گروهی = تخفیف بیشتر</span></legend>
-          <div className="bx-seats" role="radiogroup" aria-label="تعداد نفرات">
-            {Array.from({ length: MAX_SEATS }, (_, i) => i + 1).map((n) => {
-              const o = groupOff(p, n);
-              return (
-                <button key={n} type="button" role="radio" aria-checked={n === seats} className={n === seats ? "on" : ""} onClick={() => setSel((s) => ({ ...s, seats: n }))}>
-                  <b className="num">{fa(n)}</b><small>{n === 1 ? "فقط من" : o ? `${fa(o)}٪ تخفیف` : "نفر"}</small>
-                </button>
-              );
-            })}
+          <legend>برای چه کسی؟</legend>
+          <div className="bx-who" role="radiogroup" aria-label="خرید تکی یا گروهی">
+            <button type="button" role="radio" aria-checked={!group} className={!group ? "on" : ""} onClick={() => setSel((s) => ({ ...s, seats: 1 }))}>
+              <b>فقط خودم</b><small>یک اشتراک</small>
+            </button>
+            <button type="button" role="radio" aria-checked={group} className={group ? "on" : ""} onClick={() => setSel((s) => ({ ...s, seats: Math.max(2, s.seats ?? 1) }))}>
+              <b>خرید گروهی</b><small>تا {fa(maxOff)}٪ ارزان‌تر برای هر نفر</small>
+            </button>
           </div>
-          {seats > 1 && (
-            <p className="bx-note">
-              {DELIVERY[sel.type].input === "email" ? `هر نفر روی ایمیل خودش فعال می‌شود و ایمیل‌ها را در مرحله بعد می‌گیریم.` : `${fa(seats)} اکانت جدا تحویل می‌گیری.`}
-              {" "}نفری <b className="num">{money(Math.round((price - (sel.ip ? ipCost : 0)) / seats / 1000) * 1000)}</b> تومان{off ? `، ${fa(off)}٪ ارزان‌تر از خرید تکی` : ""}.
-            </p>
+          {group && (
+            <div className="bx-grp">
+              <div className="bx-step">
+                <span>تعداد نفرات</span>
+                <div>
+                  <button type="button" aria-label="یک نفر کمتر" disabled={seats <= 2} onClick={() => setSel((s) => ({ ...s, seats: Math.max(2, (s.seats ?? 2) - 1) }))}>−</button>
+                  <b className="num" aria-live="polite">{fa(seats)} نفر</b>
+                  <button type="button" aria-label="یک نفر بیشتر" disabled={seats >= MAX_SEATS} onClick={() => setSel((s) => ({ ...s, seats: Math.min(MAX_SEATS, (s.seats ?? 1) + 1) }))}>+</button>
+                </div>
+              </div>
+              <ol className="bx-tiers">{p.group.map(([n, o]) => <li key={n} className={seats >= n ? "on" : ""}><b className="num">{fa(n)}+ نفر</b><small>{fa(o)}٪ تخفیف</small></li>)}</ol>
+              <p className="bx-note">
+                {DELIVERY[sel.type].input === "email" ? "هر نفر یک اشتراک جدا روی ایمیل خودش می‌گیرد؛ ایمیل‌ها را در مرحله پرداخت می‌گیریم." : `${fa(seats)} اکانت جدا تحویل می‌گیری.`}
+                {" "}نفری <b className="num">{money(Math.round(price / seats / 1000) * 1000)}</b> تومان{off ? `، ${fa(off)}٪ کمتر از خرید تکی` : ""}.
+              </p>
+            </div>
           )}
         </fieldset>
       ) : null}
-
-      {ipCost > 0 && (
-        <div className={`bx-addon ${sel.ip ? "on" : ""}`}>
-          <label className="bx-ad-h">
-            <input type="checkbox" checked={!!sel.ip} onChange={(e) => setSel((s) => ({ ...s, ip: e.target.checked ? "de" : undefined }))} />
-            <span className="bx-ck" aria-hidden="true"><Icon id="check" /></span>
-            <span className="bx-ad-t"><b>{STATIC_IP.title} خارج از کشور</b><small>یک آی‌پی ثابت فقط برای تو؛ ورود پایدار و بدون ریسک بسته شدن اکانت</small></span>
-            <span className="bx-ad-p num">+{money(ipCost)}</span>
-          </label>
-          {sel.ip && (
-            <div className="bx-ip" role="radiogroup" aria-label="کشور آی‌پی">
-              {Object.entries(STATIC_IP.countries).map(([k, v]) => (
-                <button key={k} type="button" role="radio" aria-checked={sel.ip === k} className={sel.ip === k ? "on" : ""} onClick={() => setSel((s) => ({ ...s, ip: k }))}>{v}</button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
 
       <div className="bx-sum">
         <div className="bx-row"><span>مبلغ قابل پرداخت</span><span>{was ? <s className="num">{money(was)}</s> : null}<b className="num">{money(price)}</b> <small>تومان</small></span></div>
@@ -154,7 +163,7 @@ export function BuyPanel({ product: p }: { product: Product }) {
       </ul>
 
       <div className={`buybar ${ctaVisible ? "" : "on"}`} role="region" aria-label="خرید سریع">
-        <div><small>{optionLabel(p, sel.plan)}{seats > 1 ? ` • ${fa(seats)} نفر` : ""}{sel.ip ? " • آی‌پی ثابت" : ""}</small><b className="num">{money(price)} <small>تومان</small></b></div>
+        <div><small>{optionLabel(p, sel.plan)}{seats > 1 ? ` • ${fa(seats)} نفر` : ""}</small><b className="num">{money(price)} <small>تومان</small></b></div>
         <button className="btn btn-paper" onClick={buy}>ادامه خرید</button>
       </div>
     </div>

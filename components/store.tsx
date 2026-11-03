@@ -21,6 +21,8 @@ type Store = {
   /** Returns false when the same line is already in the cart. */
   addLine: (sel: Selection) => boolean;
   removeLine: (i: number) => void;
+  /** Changes one cart line (e.g. adds an add-on at checkout) and re-prices it. */
+  updateLine: (i: number, patch: Partial<Selection>) => void;
   clearCart: () => void;
   setView: (v: SheetView) => void;
   completeOrder: () => void;
@@ -103,6 +105,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return true;
     },
     removeLine: (i) => persist(cart.filter((_, j) => j !== i)),
+    updateLine: (i, patch) => persist(cart.map((l, j) => (j === i ? { ...l, ...patch, price: linePrice({ ...l, ...patch }) } : l))),
     clearCart: () => persist([]),
     setView: (v) => setViewState(v),
     completeOrder: () => {
