@@ -5,6 +5,9 @@ import { normalizeUsername, validEmail, validUsername, type Order, type OrderLin
 import { db } from "./db";
 import { gatewayConfigured, startPayment, verifyPayment } from "./pay";
 import { cryptoConfigured, startCrypto } from "./crypto";
+import { bnplConfigured, cancelBnpl, confirmBnpl, startBnpl } from "./bnpl";
+import { onSplitPaid } from "./splits";
+import { canInstall, type LegalInfo, type PayMethod } from "@/lib/billing";
 import { sendOrderSms } from "./sms";
 
 type Sql = Awaited<ReturnType<typeof db>>;
@@ -49,12 +52,15 @@ export async function discountRate(code: string): Promise<number> {
   return d ? Number(d.rate) : 0;
 }
 
-export async function createOrder(mobile: string, input: LineInput[], discountCode: string) {
+export async function createOrder(mobile: string, input: LineInput[], discountCode: string,
+  opts: { split?: { code: string; unit: number }; invoice?: LegalInfo | null } = {}) {
   await loadCatalog();
   const priced = priceLines(input);
   if ("error" in priced) return priced;
+  // A «دنگ» share is one seat at the group's locked per-person price.
+  if (opts.split) priced.lines[0].price = opts.split.unit;
   const sql = await db();
-  const code = discountCode.trim().toUpperCase();
+  const code = opts.split ? "" : discountCode.trim().toUpperCase();
   const rate = await discountRate(code);
   const subtotal = priced.lines.reduce((s, l) => s + l.price, 0);
   const discount = Math.round((subtotal * rate) / 1000) * 1000;
@@ -64,8 +70,9 @@ export async function createOrder(mobile: string, input: LineInput[], discountCo
     for (let tries = 0; ; tries++) {
       orderCode = `AD-${randomInt(100000, 1000000)}`;
       const r = await tx`
-        insert into orders (code, mobile, status, subtotal, discount, total, discount_code)
-        values (${orderCode}, ${mobile}, 'pending', ${subtotal}, ${discount}, ${total}, ${rate ? code : null})
+        insert into orders (code, mobile, status, subtotal, discount, total, discount_code, split, invoice)
+        values (${orderCode}, ${mobile}, 'pending', ${subtotal}, ${discount}, ${total}, ${rate ? code : null},
+          ${opts.split?.code ?? null}, ${opts.invoice ? sql.json(opts.invoice) : null})
         on conflict do nothing returning code`;
       if (r.length) break;
       if (tries > 5) throw new Error("could not allocate order code");
@@ -81,19 +88,48 @@ export async function createOrder(mobile: string, input: LineInput[], discountCo
   return { code: orderCode, total };
 }
 
-/** Sends the customer to the gateway (or marks a free order paid). */
-export type PayMethod = "card" | "crypto";
+export type { PayMethod };
+export const asMethod = (m: unknown): PayMethod => (m === "crypto" || m === "bnpl" ? m : "card");
 
+/** Sends the customer to the gateway (or marks a free order paid). */
 export async function payOrder(code: string, mobile: string, method: PayMethod = "card"): Promise<{ url: string } | { error: string }> {
   const sql = await db();
-  const [o] = await sql`select status, total from orders where code = ${code} and mobile = ${mobile}`;
+  const [o] = await sql`select status, total, subtotal, discount from orders where code = ${code} and mobile = ${mobile}`;
   if (!o) return { error: "not_found" };
   if (o.status !== "pending" && o.status !== "canceled") return { url: `/orders/${code}` };
   if (Number(o.total) === 0) { await markPaid(code, "FREE"); return { url: `/orders/${code}` }; }
   if (method === "crypto" && !cryptoConfigured() && gatewayConfigured()) return { error: "crypto_unavailable" };
+  if (method === "bnpl") {
+    if (!canInstall(Number(o.total))) return { error: "bnpl_min" };
+    if (!bnplConfigured() && gatewayConfigured()) return { error: "bnpl_unavailable" };
+    await loadCatalog();
+    const lines = await sql`select product_id, plan, price from order_lines where order_code = ${code} order by idx`;
+    try {
+      const p = await startBnpl(code, Number(o.subtotal), Number(o.discount), mobile,
+        lines.map((l) => ({ id: `${l.product_id}-${l.plan}`, name: productById(l.product_id)?.name ?? l.product_id, amount: Number(l.price) })));
+      await sql`update orders set authority = ${p.authority}, pay_token = ${p.token ?? null}, status = 'pending', pay_method = 'bnpl' where code = ${code}`;
+      return { url: p.url };
+    } catch (e) {
+      console.error(e);
+      return { error: String((e as Error).message) === "bnpl_not_eligible" ? "bnpl_not_eligible" : "bnpl_failed" };
+    }
+  }
   const p = method === "crypto" ? await startCrypto(code, Number(o.total)) : await startPayment(code, Number(o.total), mobile);
   await sql`update orders set authority = ${p.authority}, status = 'pending', pay_method = ${method} where code = ${code}`;
   return { url: p.url };
+}
+
+/** SnappPay callback: state=OK → verify + settle → paid. Returns the order code to show. */
+export async function completeBnpl(transactionId: string, state: string): Promise<string | null> {
+  const sql = await db();
+  const [o] = await sql`select code, status, pay_token from orders where authority = ${"SP-" + transactionId}`;
+  if (!o) return null;
+  if (o.status !== "pending") return o.code;
+  const cancel = () => sql`update orders set status = 'canceled' where code = ${o.code} and status = 'pending'`;
+  if (state.toUpperCase() !== "OK" || !o.pay_token) { await cancel(); return o.code; }
+  if (!(await confirmBnpl(o.pay_token))) { await cancel(); return o.code; }
+  await markPaid(o.code, transactionId, "snapppay");
+  return o.code;
 }
 
 /** Gateway callback: verify, then mark paid and fulfil. Returns the order code to show. */
@@ -113,9 +149,10 @@ export async function completePayment(authority: string, okStatus: boolean): Pro
 async function markPaid(code: string, refId: string, cardPan?: string) {
   const sql = await db();
   const r = await sql`update orders set status = 'paid', paid_at = now(), ref_id = ${refId}, card_pan = ${cardPan ?? null}
-    where code = ${code} and status in ('pending', 'canceled') returning discount_code, mobile`;
+    where code = ${code} and status in ('pending', 'canceled') returning discount_code, mobile, split`;
   if (!r.length) return;
   if (r[0].discount_code) await sql`update discounts set uses = uses + 1 where code = ${r[0].discount_code}`;
+  if (r[0].split) await onSplitPaid(r[0].split);
   await fulfilInstant(sql, code);
 }
 
@@ -124,6 +161,7 @@ export async function fulfilInstant(sql: Sql, onlyOrder?: string) {
   const waiting = await sql`
     select l.id, l.product_id, l.plan, l.order_code from order_lines l join orders o on o.code = l.order_code
     where o.status in ('paid', 'activating') and l.delivery = 'code' and l.secret is null
+      and (o.split is null or exists (select 1 from splits s where s.code = o.split and s.status in ('full', 'closed')))
       ${onlyOrder ? sql`and o.code = ${onlyOrder}` : sql``}
     order by o.paid_at, l.idx`;
   const touched = new Set<string>(onlyOrder ? [onlyOrder] : []);
@@ -161,11 +199,17 @@ export async function loadOrders(where: { mobile?: string; code?: string; status
     order by created_at desc limit ${where.limit ?? 200}`;
   if (!rows.length) return [];
   const lines = await sql`select * from order_lines where order_code in ${sql(rows.map((r) => r.code))} order by idx`;
+  const splitCodes = [...new Set(rows.map((r) => r.split).filter(Boolean))] as string[];
+  const splits = splitCodes.length ? await sql`
+    select s.code, s.seats, s.status, (select count(*)::int from orders x where x.split = s.code and x.status in ('paid', 'activating', 'active')) as paid
+    from splits s where s.code in ${sql(splitCodes)}` : [];
   return rows.map((o) => ({
     code: o.code, mobile: o.mobile, status: o.status as OrderStatus,
     createdAt: ms(o.created_at)!, paidAt: ms(o.paid_at), activatedAt: ms(o.activated_at),
     subtotal: Number(o.subtotal), discount: Number(o.discount), total: Number(o.total),
-    refId: o.ref_id ?? undefined, adminNote: o.admin_note,
+    refId: o.ref_id ?? undefined, adminNote: o.admin_note, payMethod: o.pay_method,
+    split: o.split ? (({ code, seats, status, paid }) => ({ code, seats: Number(seats), status, paid: Number(paid) }))(splits.find((x) => x.code === o.split) ?? { code: o.split, seats: 0, status: "open", paid: 0 }) : null,
+    invoice: o.invoice ?? null, taxId: o.tax_id || undefined,
     lines: lines.filter((l) => l.order_code === o.code).map((l) => ({
       lineId: l.id, id: l.product_id, plan: l.plan, type: l.delivery as DeliveryType, price: Number(l.price),
       email: l.email ?? undefined, username: l.username ?? undefined,
@@ -181,9 +225,9 @@ export const forCustomer = (o: Order): Order => ({
 });
 
 // ----- Admin actions -----
-export async function adminUpdateOrder(code: string, patch: { status?: OrderStatus; note?: string; secrets?: Record<string, string> }) {
+export async function adminUpdateOrder(code: string, patch: { status?: OrderStatus; note?: string; secrets?: Record<string, string>; taxId?: string }) {
   const sql = await db();
-  const [o] = await sql`select status, mobile from orders where code = ${code}`;
+  const [o] = await sql`select status, mobile, pay_method, pay_token from orders where code = ${code}`;
   if (!o) return false;
   for (const [lineId, secret] of Object.entries(patch.secrets ?? {})) {
     const s = secret.trim();
@@ -191,6 +235,9 @@ export async function adminUpdateOrder(code: string, patch: { status?: OrderStat
       where id = ${Number(lineId)} and order_code = ${code}`;
   }
   if (patch.note !== undefined) await sql`update orders set admin_note = ${patch.note} where code = ${code}`;
+  if (patch.taxId !== undefined) await sql`update orders set tax_id = ${String(patch.taxId).trim().slice(0, 40)} where code = ${code}`;
+  // Refunding an installment purchase also cancels it at SnappPay, so the customer's remaining parts are dropped.
+  if (patch.status === "refunded" && o.status !== "refunded" && o.pay_method === "bnpl") await cancelBnpl(o.pay_token ?? "");
   if (patch.status && patch.status !== o.status) {
     if (patch.status === "active") {
       await sql`update orders set status = 'active', activated_at = coalesce(activated_at, now()) where code = ${code}`;

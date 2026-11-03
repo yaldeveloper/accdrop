@@ -3,10 +3,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { normalizeMobile, type Order, type ResellerApp, type User } from "@/lib/account";
 import type { DeliveryType } from "@/lib/catalog";
+import type { LegalInfo, PayMethod } from "@/lib/billing";
 
 export type Me = User & { isAdmin: boolean };
 export type PlaceLine = { id: string; plan: string; type: DeliveryType; email?: string; username?: string; seats?: number; ip?: string; members?: string[] };
-export type ApiError = { error: string; index?: number; wait?: number };
+export type ApiError = { error: string; index?: number; wait?: number; field?: string };
 
 type Account = {
   ready: boolean;
@@ -20,7 +21,7 @@ type Account = {
   updateProfile: (patch: Partial<Pick<User, "name" | "email">>) => Promise<boolean>;
   logout: () => Promise<void>;
   /** Creates the order on the server and returns where to send the customer to pay. */
-  placeOrder: (lines: PlaceLine[], discountCode: string, method?: "card" | "crypto") => Promise<{ code: string; payUrl: string } | ApiError>;
+  placeOrder: (lines: PlaceLine[], discountCode: string, method?: PayMethod, invoice?: LegalInfo | null) => Promise<{ code: string; payUrl: string } | ApiError>;
   refreshOrders: () => Promise<void>;
   reseller: ResellerApp | null;
   applyReseller: (a: Omit<ResellerApp, "mobile" | "createdAt" | "status">) => Promise<boolean>;
@@ -87,9 +88,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       return !!r.user;
     },
     logout: async () => { await api("/api/auth/logout", { method: "POST", body: {} }); setUser(null); setOrders([]); setReseller(null); },
-    placeOrder: async (lines, discount, method = "card") => {
-      const r = await api<{ code: string; payUrl: string }>("/api/orders", { body: { lines, discount, method } });
-      return r.error || !r.code ? { error: r.error ?? "server_error", index: r.index } : { code: r.code, payUrl: r.payUrl };
+    placeOrder: async (lines, discount, method = "card", invoice = null) => {
+      const r = await api<{ code: string; payUrl: string }>("/api/orders", { body: { lines, discount, method, invoice } });
+      return r.error || !r.code ? { error: r.error ?? "server_error", index: r.index, field: r.field } : { code: r.code, payUrl: r.payUrl };
     },
     refreshOrders: loadMine,
     applyReseller: async (a) => {

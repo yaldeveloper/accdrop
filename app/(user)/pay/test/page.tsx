@@ -9,7 +9,8 @@ import { Dots } from "@/components/brand";
 function TestGateway() {
   const q = useSearchParams();
   const order = q.get("order") ?? "";
-  const crypto = q.get("m") === "crypto";
+  const m = q.get("m");
+  const crypto = m === "crypto", bnpl = m === "bnpl";
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const go = async (ok: boolean) => {
@@ -20,8 +21,8 @@ function TestGateway() {
   return (
     <div className="wrap co-empty">
       <Dots size={8} />
-      <h1>{crypto ? "پرداخت آزمایشی ارز دیجیتال" : "درگاه آزمایشی"}</h1>
-      <p className="muted">{crypto ? "درگاه NOWPayments هنوز وصل نشده." : "درگاه زرین‌پال هنوز وصل نشده."} اینجا پرداخت سفارش <b className="en">{order}</b> شبیه‌سازی می‌شود و پولی کم نمی‌شود.</p>
+      <h1>{crypto ? "پرداخت آزمایشی ارز دیجیتال" : bnpl ? "اسنپ‌پی آزمایشی" : "درگاه آزمایشی"}</h1>
+      <p className="muted">{crypto ? "درگاه NOWPayments هنوز وصل نشده." : bnpl ? "قرارداد اسنپ‌پی هنوز وصل نشده." : "درگاه زرین‌پال هنوز وصل نشده."} اینجا پرداخت سفارش <b className="en">{order}</b> شبیه‌سازی می‌شود و پولی کم نمی‌شود.</p>
       <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
         <button className="btn btn-paper" disabled={busy} onClick={() => go(true)}>پرداخت موفق</button>
         <button className="btn btn-ghost" disabled={busy} onClick={() => go(false)}>انصراف از پرداخت</button>

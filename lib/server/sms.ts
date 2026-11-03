@@ -30,3 +30,9 @@ export async function sendTicketSms(mobile: string, ticketId: number) {
   const t = process.env.KAVENEGAR_TICKET_TEMPLATE;
   if (t || !smsConfigured()) await lookup(mobile, t || "accdrop-ticket", [String(ticketId)]);
 }
+
+/** Optional: SMS to a «دنگ» organizer when the group is complete (template with %token = group code). */
+export async function sendSplitSms(mobile: string, splitCode: string) {
+  const t = process.env.KAVENEGAR_SPLIT_TEMPLATE;
+  if (t || !smsConfigured()) await lookup(mobile, t || "accdrop-split", [splitCode]);
+}

@@ -12,7 +12,7 @@ export const GET = route(async (_req: Request, ctx: Ctx) => withAdmin(async () =
 
 export const PATCH = route(async (req: Request, ctx: Ctx) => withAdmin(async () => {
   const code = decodeURIComponent((await ctx.params).code);
-  const b = await body<{ status: OrderStatus; note: string; secrets: Record<string, string> }>(req);
+  const b = await body<{ status: OrderStatus; note: string; secrets: Record<string, string>; taxId: string }>(req);
   if (b.status && !STATUSES.includes(b.status)) return fail("bad_status");
   if (!(await adminUpdateOrder(code, b))) return fail("not_found", 404);
   const [o] = await loadOrders({ code });

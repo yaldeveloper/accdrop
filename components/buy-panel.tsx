@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { DELIVERY, MAX_SEATS, axisOf, deliveryTypes, dropOf, groupOff, isSub, linePrice, minPrice, nounOf, optionLabel, planKeys, priceOf, variantsOf, type DeliveryType, type Months, type Product, type Selection } from "@/lib/catalog";
 import { productHref } from "@/lib/content";
+import { INSTALLMENTS, canInstall, installment } from "@/lib/billing";
+import { api } from "./account";
 import { fa, money } from "@/lib/format";
 import { Icon } from "./brand";
 import { useStore } from "./store";
@@ -36,6 +38,10 @@ export function BuyPanel({ product: p }: { product: Product }) {
   const variants = variantsOf(p);
   const group = seats > 1;
   const maxOff = p.group?.length ? p.group[p.group.length - 1][1] : 0;
+  /** Group buy where every member pays their own share («دنگ») instead of one person paying for all. */
+  const [dong, setDong] = useState(true);
+  const [making, setMaking] = useState(false);
+  const share = Math.round(price / seats / 1000) * 1000;
 
   // Renewal links from the dashboard carry ?plan=&type=.
   useEffect(() => {
@@ -44,6 +50,7 @@ export function BuyPanel({ product: p }: { product: Product }) {
     if (plan && type && p.plans[plan]?.[type]) setSel((s) => ({ ...s, plan, type }));
     const seats = Number(q.get("seats"));
     if (p.group?.length && seats > 1 && seats <= MAX_SEATS) setSel((s) => ({ ...s, seats }));
+    if (p.group?.length && q.get("dong") === "1") { setDong(true); setSel((s) => ({ ...s, seats: Math.max(2, s.seats ?? 1) })); }
   }, [p]);
 
   const cta = useRef<HTMLButtonElement>(null);
@@ -62,7 +69,15 @@ export function BuyPanel({ product: p }: { product: Product }) {
     if (!o[next.type]) next.type = Object.keys(o)[0] as DeliveryType;
     return next;
   });
-  const buy = () => { addLine(sel); router.push("/checkout"); };
+  const startDong = async () => {
+    setMaking(true);
+    const r = await api<{ code: string }>("/api/splits", { body: { id: p.id, plan: sel.plan, type: sel.type, seats } });
+    if (r.code) { router.push(`/dong/${r.code}?new=1`); return; }
+    setMaking(false);
+    if (r.error === "unauthorized") { router.push(`/login?next=${encodeURIComponent(`${location.pathname}?plan=${sel.plan}&type=${sel.type}&seats=${seats}&dong=1#buy`)}`); return; }
+    notify("ساخت گروه انجام نشد. دوباره امتحان کن.");
+  };
+  const buy = () => { if (group && dong) { startDong(); return; } addLine(sel); router.push("/checkout"); };
   const add = () => notify(addLine(sel) ? `${p.name} به سبد اضافه شد` : "این مورد از قبل در سبد هست");
 
   return (
@@ -140,9 +155,18 @@ export function BuyPanel({ product: p }: { product: Product }) {
                 </div>
               </div>
               <ol className="bx-tiers">{p.group.map(([n, o]) => <li key={n} className={seats >= n ? "on" : ""}><b className="num">{fa(n)}+ نفر</b><small>{fa(o)}٪ تخفیف</small></li>)}</ol>
+              <div className="bx-pay" role="radiogroup" aria-label="پرداخت گروه">
+                <button type="button" role="radio" aria-checked={dong} className={dong ? "on" : ""} onClick={() => setDong(true)}>
+                  <b>دنگی</b><small>هر نفر سهم خودش را می‌دهد</small>
+                </button>
+                <button type="button" role="radio" aria-checked={!dong} className={!dong ? "on" : ""} onClick={() => setDong(false)}>
+                  <b>من حساب می‌کنم</b><small>یک‌جا برای همه</small>
+                </button>
+              </div>
               <p className="bx-note">
-                {DELIVERY[sel.type].input === "email" ? "هر نفر یک اشتراک جدا روی ایمیل خودش می‌گیرد؛ ایمیل‌ها را در مرحله پرداخت می‌گیریم." : `${fa(seats)} اکانت جدا تحویل می‌گیری.`}
-                {" "}نفری <b className="num">{money(Math.round(price / seats / 1000) * 1000)}</b> تومان{off ? `، ${fa(off)}٪ کمتر از خرید تکی` : ""}.
+                {dong ? <>یک لینک می‌گیری که در گروه تلگرام یا واتساپ می‌فرستی. هر نفر با حساب خودش وارد می‌شود و فقط سهم خودش را می‌دهد. قیمت تا {fa(72)} ساعت قفل است و وقتی همه پرداخت کردند، اشتراک‌ها با هم فعال می‌شوند.</>
+                  : DELIVERY[sel.type].input === "email" ? "هر نفر یک اشتراک جدا روی ایمیل خودش می‌گیرد؛ ایمیل‌ها را در مرحله پرداخت می‌گیریم." : `${fa(seats)} اکانت جدا تحویل می‌گیری.`}
+                {" "}نفری <b className="num">{money(share)}</b> تومان{off ? `، ${fa(off)}٪ کمتر از خرید تکی` : ""}.
               </p>
             </div>
           )}
@@ -150,12 +174,15 @@ export function BuyPanel({ product: p }: { product: Product }) {
       ) : null}
 
       <div className="bx-sum">
-        <div className="bx-row"><span>مبلغ قابل پرداخت</span><span>{was ? <s className="num">{money(was)}</s> : null}<b className="num">{money(price)}</b> <small>تومان</small></span></div>
+        {group && dong
+          ? <div className="bx-row"><span>سهم هر نفر</span><span>{unit.price > share ? <s className="num">{money(unit.price)}</s> : null}<b className="num">{money(share)}</b> <small>تومان</small></span></div>
+          : <div className="bx-row"><span>مبلغ قابل پرداخت</span><span>{was ? <s className="num">{money(was)}</s> : null}<b className="num">{money(price)}</b> <small>تومان</small></span></div>}
+        {!(group && dong) && canInstall(price) && <div className="bx-row sub bx-inst"><span>یا اقساطی</span><span><b className="num">{fa(INSTALLMENTS.parts)}</b> قسط <b className="num">{money(installment(price))}</b> تومانی با {INSTALLMENTS.provider}، بدون کارمزد</span></div>}
         <div className="bx-row sub"><span>تحویل</span><span>{isSub(p) ? "روی اکانت خودت، بعد از پرداخت" : "در حساب کاربری و پیامک، بعد از پرداخت"}</span></div>
       </div>
 
-      <button ref={cta} className="btn btn-paper btn-block bx-cta" onClick={buy}>ادامه خرید <Icon id="arrow" className="arrow" /></button>
-      <button className="add-link" onClick={add}>افزودن به سبد خرید</button>
+      <button ref={cta} className="btn btn-paper btn-block bx-cta" onClick={buy} disabled={making}>{group && dong ? (making ? "در حال ساخت گروه…" : "ساخت گروه و گرفتن لینک") : "ادامه خرید"} <Icon id="arrow" className="arrow" /></button>
+      {!(group && dong) && <button className="add-link" onClick={add}>افزودن به سبد خرید</button>}
 
       <ul className="bx-trust">
         <li><Icon id="lock" />پرداخت از درگاه بانکی رسمی؛ بدون کارت ارزی</li>
@@ -163,8 +190,8 @@ export function BuyPanel({ product: p }: { product: Product }) {
       </ul>
 
       <div className={`buybar ${ctaVisible ? "" : "on"}`} role="region" aria-label="خرید سریع">
-        <div><small>{optionLabel(p, sel.plan)}{seats > 1 ? ` • ${fa(seats)} نفر` : ""}</small><b className="num">{money(price)} <small>تومان</small></b></div>
-        <button className="btn btn-paper" onClick={buy}>ادامه خرید</button>
+        <div><small>{optionLabel(p, sel.plan)}{seats > 1 ? ` • ${fa(seats)} نفر${dong ? " • دنگی" : ""}` : ""}</small><b className="num">{money(group && dong ? share : price)} <small>تومان{group && dong ? " / نفر" : ""}</small></b></div>
+        <button className="btn btn-paper" onClick={buy} disabled={making}>{group && dong ? "ساخت گروه" : "ادامه خرید"}</button>
       </div>
     </div>
   );

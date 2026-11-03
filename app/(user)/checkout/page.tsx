@@ -10,6 +10,8 @@ import { BrandLogo, Dots, Icon } from "@/components/brand";
 import { LoginFlow } from "@/components/login";
 import { api, useAccount } from "@/components/account";
 import { useStore } from "@/components/store";
+import { EMPTY_LEGAL, LegalForm, useLegal } from "@/components/legal";
+import { INSTALLMENTS, canInstall, installment, type LegalInfo, type PayMethod } from "@/lib/billing";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -23,7 +25,13 @@ export default function CheckoutPage() {
   const [rate, setRate] = useState(0);
   const [agree, setAgree] = useState(true);
   const [paying, setPaying] = useState(false);
-  const [method, setMethod] = useState<"card" | "crypto">("card");
+  const [method, setMethod] = useState<PayMethod>("card");
+  /** Official invoice («فاکتور رسمی»): buyer's legal details, prefilled from the profile. */
+  const [wantInvoice, setWantInvoice] = useState(false);
+  const saved = useLegal(!!user);
+  const [legal, setLegal] = useState<LegalInfo>(EMPTY_LEGAL);
+  const [badLegal, setBadLegal] = useState<keyof LegalInfo | "">("");
+  useEffect(() => { if (saved) setLegal(saved); }, [saved]);
   const [usdt, setUsdt] = useState(0);
   useEffect(() => { if (method === "crypto" && !usdt) api<{ rate: number }>("/api/rate").then((r) => r.rate && setUsdt(r.rate)); }, [method, usdt]);
   const [bad, setBad] = useState<number[]>([]);
@@ -40,6 +48,8 @@ export default function CheckoutPage() {
   const subtotal = cart.reduce((s, l) => s + linePrice(l), 0);
   const discount = Math.round((subtotal * rate) / 1000) * 1000;
   const total = subtotal - discount;
+  const bnplOk = canInstall(total);
+  useEffect(() => { if (method === "bnpl" && !bnplOk) setMethod("card"); }, [method, bnplOk]);
 
   const apply = async () => {
     const c = code.trim().toUpperCase();
@@ -71,12 +81,21 @@ export default function CheckoutPage() {
       email: l.type === "own" ? emails[i]?.trim() : undefined,
       username: l.type === "username" ? normalizeUsername(emails[i] ?? "") : undefined,
       seats: l.seats, ip: l.ip,
-      members: l.type === "own" && (l.seats ?? 1) > 1 ? Array.from({ length: l.seats! - 1 }, (_, k) => members[i]?.[k]?.trim() ?? "") : undefined })), applied, method);
+      members: l.type === "own" && (l.seats ?? 1) > 1 ? Array.from({ length: l.seats! - 1 }, (_, k) => members[i]?.[k]?.trim() ?? "") : undefined })), applied, method, wantInvoice ? legal : null);
     if ("error" in r) {
       setPaying(false);
+      if (r.error === "bad_legal") {
+        setBadLegal((r.field as keyof LegalInfo) ?? "name");
+        notify("اطلاعات فاکتور رسمی را کامل کن");
+        document.getElementById(`leg-${r.field ?? "name"}`)?.focus();
+        return;
+      }
       if (r.index !== undefined && (r.error === "bad_email" || r.error === "bad_username")) { setBad([r.index]); document.getElementById(`co-em-${r.index}`)?.focus(); }
       if (r.index !== undefined && r.error === "bad_members") setBad([100 + r.index]);
-      notify(r.error === "crypto_unavailable" ? "پرداخت با ارز دیجیتال فعلاً فعال نیست؛ از درگاه بانکی استفاده کن." : r.error === "bad_item" ? "یکی از اقلام سبد دیگر موجود نیست. حذفش کن و دوباره امتحان کن." : r.error === "unauthorized" ? "اول وارد حسابت شو" : "ثبت سفارش انجام نشد. دوباره امتحان کن.");
+      notify(r.error === "crypto_unavailable" ? "پرداخت با ارز دیجیتال فعلاً فعال نیست؛ از درگاه بانکی استفاده کن."
+        : r.error === "bnpl_unavailable" || r.error === "bnpl_failed" ? "پرداخت اقساطی فعلاً در دسترس نیست؛ از درگاه بانکی استفاده کن."
+        : r.error === "bnpl_not_eligible" ? `${INSTALLMENTS.provider} این خرید را قسطی تأیید نکرد؛ از درگاه بانکی استفاده کن.`
+        : r.error === "bnpl_min" ? `خرید اقساطی از ${money(INSTALLMENTS.min)} تومان به بالاست.` : r.error === "bad_item" ? "یکی از اقلام سبد دیگر موجود نیست. حذفش کن و دوباره امتحان کن." : r.error === "unauthorized" ? "اول وارد حسابت شو" : "ثبت سفارش انجام نشد. دوباره امتحان کن.");
       return;
     }
     clearCart();
@@ -188,10 +207,22 @@ export default function CheckoutPage() {
             <header><span className="co-n">{cart.some((l) => ipPrice(productById(l.id), l.plan) > 0) ? "۴" : "۳"}</span><h2>روش پرداخت</h2></header>
             <div className="opts v co-pay">
               <button className={`opt ${method === "card" ? "on" : ""}`} type="button" aria-pressed={method === "card"} onClick={() => setMethod("card")}><b>درگاه بانکی</b><small>همه کارت‌های عضو شتاب، پرداخت امن</small></button>
+              <button className={`opt ${method === "bnpl" ? "on" : ""} ${bnplOk ? "" : "dis"}`} type="button" aria-pressed={method === "bnpl"} disabled={!bnplOk} onClick={() => setMethod("bnpl")}>
+                <b>اقساطی با {INSTALLMENTS.provider}</b>
+                <small>{bnplOk ? <><span className="num">{fa(INSTALLMENTS.parts)}</span> قسط <span className="num">{money(installment(total))}</span> تومانی، بدون کارمزد و ضامن. قسط اول همین حالا</> : <>برای خریدهای بالای <span className="num">{money(INSTALLMENTS.min)}</span> تومان</>}</small>
+              </button>
               <button className={`opt ${method === "crypto" ? "on" : ""}`} type="button" aria-pressed={method === "crypto"} onClick={() => setMethod("crypto")}>
                 <b>ارز دیجیتال</b><small>USDT (ترون، اتریوم، BSC)، بیت‌کوین و بیشتر{method === "crypto" && usdt ? <> • <span className="num">{fa(Math.ceil((total / usdt) * 100) / 100)}</span> تتر (هر تتر <span className="num">{money(usdt)}</span> تومان)</> : null}</small>
               </button>
             </div>
+          </section>
+          <section className={`co-step co-inv ${step1Done ? "on" : "off"} ${wantInvoice ? "open" : ""}`}>
+            <label className="co-inv-h">
+              <input type="checkbox" checked={wantInvoice} onChange={(e) => setWantInvoice(e.target.checked)} disabled={!step1Done} />
+              <span className="co-ck" aria-hidden="true"><Icon id="check" /></span>
+              <span><b>فاکتور رسمی می‌خواهم</b><small>به نام شرکت یا شخص، با کد اقتصادی، برای حسابداری</small></span>
+            </label>
+            {wantInvoice && <LegalForm value={legal} onChange={(v) => { setLegal(v); setBadLegal(""); }} bad={badLegal} />}
           </section>
         </div>
 
@@ -220,7 +251,7 @@ export default function CheckoutPage() {
           </dl>
           <label className="co-agree"><input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} /><span>قوانین و <a className="link" href="#">شرایط گارانتی</a> را می‌پذیرم.</span></label>
           <button className="btn btn-paper btn-block co-btn" onClick={pay} disabled={paying}>
-            {paying ? "در حال اتصال به درگاه…" : method === "crypto" ? <>پرداخت با ارز دیجیتال</> : <>پرداخت <span className="num">{money(total)}</span> تومان</>}
+            {paying ? "در حال اتصال به درگاه…" : method === "crypto" ? <>پرداخت با ارز دیجیتال</> : method === "bnpl" ? <>ادامه با {INSTALLMENTS.provider} • قسط اول <span className="num">{money(installment(total))}</span></> : <>پرداخت <span className="num">{money(total)}</span> تومان</>}
           </button>
           <ul className="co-trust">
             <li><Dots size={3} />پرداخت امن شاپرک</li>

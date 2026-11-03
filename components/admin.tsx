@@ -106,7 +106,8 @@ function AdminOrderList({ orders }: { orders: Order[] }) {
       {orders.map((o) => (
         <Link key={o.code} href={`/admin/orders/${o.code}`} className="ord-row">
           <span className="ord-logos">{o.lines.slice(0, 3).map((l, i) => <span className="mono" key={i}><BrandLogo id={l.id} size={18} /></span>)}</span>
-          <span className="ord-t"><b className="en">{o.code}</b><small>{o.lines.map((l) => productById(l.id).name).join("، ")} • <span className="num">{fa(o.mobile)}</span></small></span>
+          <span className="ord-t"><b className="en">{o.code}</b><small>{o.lines.map((l) => productById(l.id).name).join("، ")} • <span className="num">{fa(o.mobile)}</span>
+            {o.split && <i className="ord-tag">دنگ {fa(o.split.paid)}/{fa(o.split.seats)}</i>}{o.invoice && <i className="ord-tag">فاکتور رسمی</i>}{o.payMethod === "bnpl" && <i className="ord-tag">اقساطی</i>}</small></span>
           <span className="ord-d muted">{faDate(o.createdAt)}</span>
           <StatusChip order={o} />
           <span className="ord-p num">{money(o.total)}</span>
@@ -146,17 +147,20 @@ export function AdminOrder({ code }: { code: string }) {
   const { data, setData } = useApi<{ order: Order }>(`/api/admin/orders/${encodeURIComponent(code)}`);
   const [secrets, setSecrets] = useState<Record<string, string>>({});
   const [note, setNote] = useState<string | null>(null);
+  const [taxId, setTaxId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const o = data?.order;
   if (!o) return <p className="muted">…</p>;
 
   const save = async (patch: { status?: OrderStatus }, msg: string) => {
     setBusy(true);
-    const r = await api<{ order: Order }>(`/api/admin/orders/${encodeURIComponent(code)}`, { method: "PATCH", body: { ...patch, secrets, note: note ?? undefined } });
+    const r = await api<{ order: Order }>(`/api/admin/orders/${encodeURIComponent(code)}`, { method: "PATCH", body: { ...patch, secrets, note: note ?? undefined, taxId: taxId ?? undefined } });
     setBusy(false);
-    if (r.order) { setData({ order: r.order }); setSecrets({}); notify(msg); } else notify("ذخیره نشد");
+    if (r.order) { setData({ order: r.order }); setSecrets({}); setTaxId(null); notify(msg); } else notify("ذخیره نشد");
   };
-  const dirty = Object.keys(secrets).length > 0 || note !== null;
+  const dirty = Object.keys(secrets).length > 0 || note !== null || taxId !== null;
+  const sp = o.split;
+  const held = sp && sp.status === "open" && (o.status === "paid" || o.status === "activating");
 
   return (
     <>
@@ -164,6 +168,12 @@ export function AdminOrder({ code }: { code: string }) {
         <div><h1 className="en">{o.code}</h1><p className="muted">ثبت {faDate(o.createdAt)}{o.paidAt ? ` • پرداخت ${faDate(o.paidAt)}` : ""}{o.refId ? ` • کد پیگیری ${o.refId}` : ""}</p></div>
         <StatusChip order={o} />
       </header>
+      {sp && (
+        <div className={`adm-split ${held ? "warn" : ""}`}>
+          <b>دنگ <a className="en link" href={`/dong/${sp.code}`} target="_blank" rel="noreferrer">{sp.code}</a>: {fa(sp.paid)} از {fa(sp.seats)} نفر پرداخت کرده‌اند</b>
+          <small>{held ? "گروه هنوز کامل نشده؛ تا کامل شدن یا بسته شدن گروه توسط سازنده، فعال نکن." : sp.status === "canceled" ? "گروه لغو شده؛ اگر پرداخت شده، بازپرداخت کن." : "گروه کامل یا بسته شده؛ می‌توانی فعال کنی."}</small>
+        </div>
+      )}
       <div className="adm-grid">
         <div className="dash-sec">
           <h2>اقلام</h2>
@@ -194,6 +204,17 @@ export function AdminOrder({ code }: { code: string }) {
             {o.discount > 0 && <div className="disc"><dt>تخفیف</dt><dd className="num">−{money(o.discount)}</dd></div>}
             <div className="tot"><dt>مبلغ</dt><dd><b className="num">{money(o.total)}</b> <small>تومان</small></dd></div>
           </dl>
+          {o.payMethod && o.payMethod !== "card" && <p className="muted">روش پرداخت: {o.payMethod === "bnpl" ? "اقساطی (اسنپ‌پی)" : "ارز دیجیتال"}</p>}
+          {o.invoice && (
+            <div className="adm-inv">
+              <b>فاکتور رسمی</b>
+              <small>{o.invoice.kind === "company" ? "حقوقی" : "حقیقی"}: {o.invoice.name} • {o.invoice.kind === "company" ? "شناسه ملی" : "کد ملی"} <span className="num sel">{o.invoice.nationalId}</span>{o.invoice.economicCode ? <> • کد اقتصادی <span className="num sel">{o.invoice.economicCode}</span></> : null} • کد پستی <span className="num">{o.invoice.postal}</span></small>
+              <small>{o.invoice.address}</small>
+              <div className="fld"><label htmlFor="adm-tax">شماره منحصربه‌فرد مالیاتی (بعد از ثبت در سامانه مؤدیان)</label>
+                <input id="adm-tax" className="ltr" value={taxId ?? o.taxId ?? ""} onChange={(e) => setTaxId(e.target.value)} /></div>
+              <a className="link" href={`/orders/${o.code}/invoice`} target="_blank" rel="noreferrer">دیدن و چاپ فاکتور</a>
+            </div>
+          )}
           <div className="fld"><label htmlFor="adm-note">یادداشت داخلی</label>
             <textarea id="adm-note" rows={3} value={note ?? o.adminNote ?? ""} onChange={(e) => setNote(e.target.value)} /></div>
           <div className="adm-actions">
