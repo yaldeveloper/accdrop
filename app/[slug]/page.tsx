@@ -100,6 +100,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const c = contentOf(p);
   const [tool, tier] = splitName(p.name);
   const instant = p.etaMinutes === 0 && deliveryTypes(p).every((t) => t === "code");
+  const auto = !instant && p.etaMinutes <= 10 && deliveryTypes(p).every((t) => t === "code");
   const months = planKeys(p);
   const seo = seoOf(p.id);
   const faq = [...(seo?.faq ?? []), ...faqFor(p)];
@@ -171,7 +172,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               <ul className="p2-hl">{p.includes.slice(0, 3).map((x) => <li key={x}><Icon id="check" />{x}</li>)}</ul>
               <ul className="p2-perks" aria-label="مزایای خرید از اک‌دراپ">
                 <li><span className="p2-pi"><Icon id="shield" /></span><span><b>{isSub(p) && !p.warranty ? "ضمانت تا روز آخر" : guaranteeOf(p)}</b><small>{isSub(p) && !p.warranty ? "اگر قطع شد، روزهای باقی‌مانده برمی‌گردد" : "جایگزینی یا بازگشت کامل وجه"}</small></span></li>
-                <li><span className="p2-pi"><Icon id="user" /></span><span><b>{instant ? "تحویل فوری و خودکار" : isSub(p) ? "روی اکانت خودت" : "تحویل در حساب کاربری"}</b><small>{instant ? "همان لحظه، در حساب کاربری و پیامک" : isSub(p) ? "فقط ایمیل؛ رمز نمی‌خواهیم" : "همراه با پیامک"}</small></span></li>
+                <li><span className="p2-pi"><Icon id="user" /></span><span><b>{instant ? "تحویل فوری و خودکار" : auto ? "تحویل خودکار" : isSub(p) && deliveryTypes(p).includes("own") ? "روی اکانت خودت" : deliveryTypes(p).includes("ready") ? "اکانت آماده، فقط برای تو" : "تحویل در حساب کاربری"}</b><small>{instant ? "همان لحظه، در حساب کاربری و پیامک" : auto ? "معمولاً چند دقیقه بعد از پرداخت، با پیامک" : isSub(p) && deliveryTypes(p).includes("own") ? "فقط ایمیل؛ رمز نمی‌خواهیم" : `تحویل ${etaText(p)}، در حساب کاربری و پیامک`}</small></span></li>
                 {canInstall(Math.max(...planKeys(p).map((m) => priceOf({ id: p.id, plan: m, type: Object.keys(p.plans[m] ?? {})[0] as DeliveryType }).price))) && (
                   <li><span className="p2-pi sp"><img src="/pay/snapppay.svg" alt="" width={36} height={36} /></span><span><b>{fa(INSTALLMENTS.parts)} قسط بدون کارمزد</b><small>با اسنپ‌پی، بدون ضامن</small></span></li>
                 )}

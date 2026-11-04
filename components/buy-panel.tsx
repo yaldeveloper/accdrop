@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { DELIVERY, MAX_SEATS, axisOf, deliveryTypes, dropOf, groupOff, isSub, linePrice, minPrice, nounOf, optionLabel, planKeys, priceOf, variantsOf, type DeliveryType, type Months, type Product, type Selection } from "@/lib/catalog";
+import { DELIVERY, MAX_SEATS, axisOf, deliveryTypes, dropOf, etaText, groupOff, isSub, linePrice, minPrice, nounOf, optionLabel, planKeys, priceOf, variantsOf, type DeliveryType, type Months, type Product, type Selection } from "@/lib/catalog";
 import { productHref } from "@/lib/content";
 import { INSTALLMENTS, canInstall, installment } from "@/lib/billing";
 import { api } from "./account";
@@ -87,10 +87,12 @@ export function BuyPanel({ product: p }: { product: Product }) {
       {variants.length > 1 && (
         <fieldset className="bx-g">
           <legend>نسخه</legend>
-          <div className="bx-var" style={{ "--n": variants.length } as CSSProperties}>
+          <div className="bx-var bx-vlist">
             {variants.map((v) => (
               <Link key={v.id} href={productHref(v)} className={v.id === p.id ? "on" : ""} aria-current={v.id === p.id ? "page" : undefined} scroll={false}>
-                <b className="en">{v.tier ?? v.name}</b><small className="num">از {money(minPrice(v))}</small>
+                <span className="bx-r" aria-hidden="true" />
+                <span className="bx-vl"><b className="en">{v.tier ?? v.name}</b><small>{v.use}</small></span>
+                <span className="bx-vp"><small className="num">از {money(minPrice(v))}</small><small className={v.etaMinutes <= 10 ? "fast" : ""}>{v.etaMinutes <= 10 ? "تحویل فوری" : `تحویل ${etaText(v)}`}</small></span>
               </Link>
             ))}
           </div>

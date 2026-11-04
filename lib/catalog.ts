@@ -55,7 +55,7 @@ export type Product = {
   cr?: Record<string, { brand: string; denom?: string; value?: number; cost: number }>;
   /** QuickDigi product per option: its P_ id and our cost in USDT. Paid lines are bought and delivered automatically. */
   qd?: Record<string, { id: string; cost: number }>;
-  /** Selling price in USDT per code option. When set, the Toman price follows the live Tether rate. */
+  /** Selling price in USDT per option (every delivery type of that option). When set, the Toman price follows the live Tether rate. */
   usdt?: Record<string, number>;
 };
 
@@ -155,14 +155,27 @@ const SAMPLES: Product[] = [
     plans: { from: { number: 40000 } },
     includes: ["شماره اختصاصی از بیش از ۱۰۰ کشور", "کد تأیید در همان صفحه سفارش", "کد نیامد؟ شماره جدید یا بازگشت وجه"] },
   // ----- Variants (one page each, grouped on the product page by `family`) -----
-  { id: "chatgpt-go", hidden: true, family: "chatgpt", tier: "Go", name: "ChatGPT Go", maker: "OpenAI", category: "ai", monogram: "GO", etaMinutes: 10,
-    description: "نسخه اقتصادی ChatGPT با سقف بالاتر از رایگان", use: "برای استفاده روزمره، ارزان",
-    plans: { "1": { own: 690000 }, "3": { own: 1950000 } },
-    includes: ["سقف پیام و تصویر بالاتر از نسخه رایگان", "حافظه طولانی‌تر", "آپلود فایل بیشتر"] },
-  { id: "chatgpt-pro", hidden: true, family: "chatgpt", tier: "Pro", name: "ChatGPT Pro", maker: "OpenAI", category: "ai", monogram: "PRO", etaMinutes: 30, ip: true,
-    description: "قوی‌ترین نسخه ChatGPT برای کار سنگین", use: "برای کار حرفه‌ای بدون سقف",
-    plans: { "1": { own: 19900000 } },
-    includes: ["استفاده تقریباً نامحدود از مدل‌ها", "حالت Pro برای سخت‌ترین سؤال‌ها", "Deep Research و Agent با سقف بالا"] },
+  // ChatGPT Go, Business and Pro come from QuickDigi. Go is bought automatically. Options at or above 15 USDT can't be
+  // bought through the API, so the admin buys them in the QuickDigi Telegram bot (same Wallet) and enters the delivery:
+  // ChatGPT Pro P_11164, ChatGPT Business P_10216 (customer email), Cursor Ultra P_11143,
+  // Google AI Ultra P_11105 (1M) / P_11106 (3M) (customer email), Notion Business P_10209 (customer email).
+  { id: "chatgpt-go", family: "chatgpt", tier: "Go", name: "ChatGPT Go", maker: "OpenAI", category: "ai", monogram: "GO", etaMinutes: 5, warranty: "۳ روز گارانتی",
+    description: "نسخه اقتصادی ChatGPT، سه ماه، اکانت آماده", use: "برای استفاده روزمره، ارزان",
+    plans: { "3": { code: 0 } }, usdt: { "3": 5.9 }, qd: { "3": { id: "P_11190", cost: 3.97 } },
+    deliver: "ایمیل، رمز و کلید 2FA یک اکانت آماده بعد از پرداخت، معمولاً ظرف چند دقیقه خودکار در حساب کاربری‌ات نمایش داده و پیامک می‌شود.",
+    howTo: "وارد شو، یک Passkey اضافه کن و بعد رمز و 2FA را عوض کن.",
+    includes: ["سقف پیام و تصویر بالاتر از نسخه رایگان", "حافظه طولانی‌تر و آپلود فایل بیشتر", "سه ماه، با قیمت کمتر از Plus"] },
+  { id: "chatgpt-pro", family: "chatgpt", tier: "Pro", name: "ChatGPT Pro", maker: "OpenAI", category: "ai", monogram: "PRO", etaMinutes: 720, warranty: "۷ روز گارانتی پلن",
+    description: "قوی‌ترین نسخه ChatGPT برای کار سنگین، اکانت آماده یک‌ماهه", use: "برای کار حرفه‌ای بدون سقف",
+    plans: { "1": { ready: 0 } }, usdt: { "1": 79 },
+    deliver: "اکانت Pro مخصوص تو ساخته و فعال می‌شود؛ بین ۱ تا ۲۴ ساعت. اطلاعات ورود در حساب کاربری‌ات نمایش داده و پیامک می‌شود.",
+    includes: ["استفاده تقریباً نامحدود از مدل‌ها", "حالت Pro برای سخت‌ترین سؤال‌ها", "Deep Research، Codex و Agent با سقف بالا"] },
+  { id: "chatgpt-business", family: "chatgpt", tier: "Business", name: "ChatGPT Business", maker: "OpenAI", category: "ai", monogram: "BIZ", etaMinutes: 720, warranty: "گارانتی تا پایان اشتراک",
+    description: "ChatGPT Business (Team) روی ایمیل خودت، یک ماه", use: "برای کار تیمی و داده‌های امن",
+    plans: { "1": { own: 0 } }, usdt: { "1": 23.9 },
+    deliver: "ایمیل ChatGPT تو به یک فضای کاری Business اضافه می‌شود؛ معمولاً ظرف چند ساعت. دعوت‌نامه به همان ایمیل می‌آید.",
+    howTo: "دعوت‌نامه را از ایمیلت قبول کن و در ChatGPT فضای کاری Business را انتخاب کن. برای تمدید، ۳ تا ۵ روز قبل از پایان خبر بده.",
+    includes: ["سقف بالاتر از Plus", "داده‌هایت برای آموزش مدل استفاده نمی‌شود", "روی اکانت و ایمیل خودت"] },
   { id: "claude-max", hidden: true, family: "claude", tier: "Max", name: "Claude Max", maker: "Anthropic", category: "ai", monogram: "MAX", etaMinutes: 30, ip: true,
     description: "Claude با ۵ برابر سقف Pro", use: "برای کدنویسی و کار سنگین",
     plans: { "1": { own: 9900000 } },
@@ -253,6 +266,9 @@ const REAL: Product[] = [
 export const BASE_RATE = 270_000;
 /** Toman price of a USDT amount at `rate`, rounded up to 10,000 Toman. */
 export const tomanAt = (usdt: number, rate: number) => Math.ceil((usdt * rate) / 10_000) * 10_000;
+/** A plan with every delivery type priced from `usdt` at `rate`. */
+export const planAt = (plan: Partial<Record<DeliveryType, number>> | undefined, usdt: number, rate: number) =>
+  Object.fromEntries(Object.keys(plan ?? { code: 0 }).map((t) => [t, tomanAt(usdt, rate)])) as Partial<Record<DeliveryType, number>>;
 
 // ----- Gift cards (Cryptorefills, US region). Bought on-chain per order and delivered automatically. -----
 type G = { id: string; name: string; maker: string; category: Category; monogram: string; brand: string; axis?: string;
@@ -357,12 +373,24 @@ const QD_PRODUCTS: Product[] = [
     deliver: "کد فعال‌سازی شش‌ماهه " + QD_INSTANT,
     howTo: "قبل از فعال‌سازی، همه کارت‌ها و پروفایل‌های پرداخت اکانت گوگل را حذف کن و اگر عضو Family هستی خارج شو. بعد در renewgpt.online با اکانت خودت وارد شو و کد را وارد کن (ویدئوی راهنما در همان سایت هست).",
     includes: ["Gemini Pro و Deep Research", "۲ ترابایت Google One", "روی اکانت گوگل خودت، بدون کارت بانکی"] },
-  { id: "grok-cursor", name: "SuperGrok + Cursor Pro", maker: "xAI", category: "ai", monogram: "GK", etaMinutes: 5, warranty: "۲۸ روز گارانتی",
-    description: "اکانت آماده Grok پریمیوم به‌همراه Cursor پریمیوم، یک ماه", use: "هوش مصنوعی و کدنویسی در یک اکانت",
+  { id: "google-ai-ultra", family: "google-ai-pro", tier: "Ultra", name: "Google AI Ultra", maker: "Google", category: "ai", monogram: "UL", etaMinutes: 1440, warranty: "گارانتی تا پایان اشتراک",
+    description: "بالاترین سطح Gemini و ساخت ویدئو با Veo، روی ایمیل خودت (عضو Family)", use: "همه هوش گوگل، بدون سقف",
+    plans: { "1": { own: 0 }, "3": { own: 0 } }, usdt: { "1": 34.9, "3": 64.9 },
+    deliver: "ایمیل گوگل تو به یک Family اشتراک Ultra اضافه می‌شود (۲۵ هزار اعتبار)؛ بین ۱ تا ۴۸ ساعت. ایمیل را با دقت وارد کن؛ فقط یک بار قابل تغییر است.",
+    howTo: "دعوت‌نامه Family را از Gmail قبول کن و Gemini و Flow را باز کن.",
+    includes: ["Gemini با بالاترین سقف و Deep Think", "ساخت ویدئو با Veo و ۲۵ هزار اعتبار", "روی اکانت گوگل خودت"] },
+  { id: "grok-cursor", tier: "Pro", name: "Cursor Pro + SuperGrok", maker: "Anysphere", category: "code", monogram: "CU", badge: "پیشنهاد ویژه", etaMinutes: 5, warranty: "۲۸ روز گارانتی",
+    description: "اکانت آماده Cursor پریمیوم به‌همراه Grok پریمیوم، یک ماه", use: "کدنویسی با هوش مصنوعی، به‌همراه Grok",
     plans: { "1": { code: 0 } }, usdt: { "1": 18.9 }, qd: { "1": { id: "P_11149", cost: 14.3 } },
     deliver: "ایمیل، رمز اکانت و رمز ایمیل " + QD_INSTANT,
     howTo: "با ایمیل و رمز وارد grok.com شو؛ Cursor هم با همین ایمیل فعال است. بعد از ورود، رمز را عوض کن و 2FA بگذار.",
-    includes: ["مدل‌های پیشرفته Grok", "Cursor پریمیوم برای کدنویسی", "۲۸ روز گارانتی"] },
+    includes: ["Cursor پریمیوم: Agent و تکمیل کد", "مدل‌های پیشرفته Grok", "۲۸ روز گارانتی"] },
+  { id: "cursor-ultra", family: "grok-cursor", tier: "Ultra", name: "Cursor Ultra", maker: "Anysphere", category: "code", monogram: "CU", etaMinutes: 720, warranty: "گارانتی پلن",
+    description: "Cursor با ۲۰ برابر سقف Pro، اکانت آماده یک‌ماهه", use: "برای کدنویسی سنگین و روزانه",
+    plans: { "1": { ready: 0 } }, usdt: { "1": 105 },
+    deliver: "اکانت Ultra مخصوص تو فعال می‌شود؛ بین ۱ تا ۲۴ ساعت. اطلاعات ورود در حساب کاربری‌ات نمایش داده و پیامک می‌شود.",
+    howTo: "با اطلاعات تحویلی وارد Cursor شو و از همان روز استفاده کن.",
+    includes: ["۲۰ برابر سقف استفاده Pro", "دسترسی اولویت‌دار به مدل‌های تازه", "اکانت آماده، فقط برای تو"] },
   { id: "gamma", tier: "Plus", name: "Gamma Plus", maker: "Gamma", category: "work", monogram: "GA", etaMinutes: 5, warranty: "۲۵ روز گارانتی",
     description: "ساخت ارائه، سند و سایت با هوش مصنوعی", use: "اسلاید حرفه‌ای در چند دقیقه",
     plans: { "1": { code: 0 } }, usdt: { "1": 8.9 }, qd: { "1": { id: "P_10156", cost: 6.47 } },
@@ -424,10 +452,24 @@ const QD_PRODUCTS: Product[] = [
     deliver: "اطلاعات ورود یک اکانت آماده Coursera Business " + QD_INSTANT,
     howTo: "با اطلاعات تحویلی وارد coursera.org شو و دوره‌ها را شروع کن.",
     includes: ["هزاران دوره با گواهی", "دوره‌های گوگل، IBM و دانشگاه‌ها", "گارانتی تا پایان اشتراک"] },
+  { id: "claude-api", name: "Claude API", maker: "Anthropic", category: "code", monogram: "CL", etaMinutes: 5, warranty: "کد سالم یا بازگشت وجه",
+    axis: "اعتبار مصرف (۳۰ روز)", labels: { "100": "۱۰۰ دلار اعتبار", "500": "۵۰۰ دلار اعتبار" },
+    description: "اعتبار مصرف مدل‌های Claude از طریق درگاه API واسط، برای Claude Code و ابزارهای برنامه‌نویسی", use: "Claude در کد و ابزارهای خودت",
+    plans: { "100": { code: 0 }, "500": { code: 0 } }, usdt: { "100": 3.9, "500": 9.9 },
+    qd: { "100": { id: "P_10311", cost: 2 }, "500": { id: "P_10312", cost: 6.7 } },
+    deliver: "کد شارژ " + QD_INSTANT,
+    howTo: "در api.mwapi.dev ثبت‌نام کن، کد را در بخش شارژ وارد کن و کلید API بساز. آدرس API همان سایت را در Claude Code یا ابزارت بگذار. این اشتراک رسمی Claude Pro نیست؛ اعتبار یک درگاه واسط است و ۳۰ روز اعتبار دارد.",
+    includes: ["مدل‌های Claude از طریق API", "مناسب Claude Code، Cursor و Cline", "این اشتراک رسمی Claude Pro نیست"] },
+  { id: "notion-business", name: "Notion Business", maker: "Notion", category: "work", monogram: "NO", etaMinutes: 720, warranty: "گارانتی تا پایان اشتراک",
+    description: "Notion با Notion AI و امکانات Business، شش ماه روی ایمیل خودت", use: "نوشتن، برنامه‌ریزی، یادداشت",
+    plans: { "6": { own: 0 } }, usdt: { "6": 21.9 },
+    deliver: "ایمیل Notion تو به یک فضای کاری Business اضافه می‌شود؛ معمولاً ظرف چند ساعت.",
+    howTo: "دعوت‌نامه را از ایمیلت قبول کن. قبل از پایان اشتراک از صفحه‌هایت نسخه پشتیبان بگیر.",
+    includes: ["Notion AI", "فضای کاری تیمی و امنیت Business", "روی اکانت و ایمیل خودت"] },
 ];
 REAL.push(...QD_PRODUCTS);
 
-for (const p of REAL) for (const [k, v] of Object.entries(p.usdt ?? {})) p.plans[k] = { ...p.plans[k], code: tomanAt(v, BASE_RATE) };
+for (const p of [...REAL, ...SAMPLES]) for (const [k, v] of Object.entries(p.usdt ?? {})) p.plans[k] = planAt(p.plans[k], v, BASE_RATE);
 
 /** Limited-price weekly drops, shown as a slider on the home page. Empty until real offers are set. */
 const DROP_LIST: Drop[] = [];
@@ -442,7 +484,7 @@ export const isSub = (p: Product) => kindOf(p) === "sub";
 export const optionLabel = (p: Product, key: string) => (livePlan(key) ? livePlanLabel(key) : p.labels?.[key] ?? duration(key));
 export const axisOf = (p: Product) => p.axis ?? "مدت اشتراک";
 /** «فوری» or «حدود ۱۰ دقیقه». */
-export const etaText = (p: Product) => (p.etaMinutes === 0 ? "خودکار" : `حدود ${fa(p.etaMinutes)} دقیقه`);
+export const etaText = (p: Product) => (p.etaMinutes === 0 ? "خودکار" : p.etaMinutes >= 120 ? `حدود ${fa(Math.round(p.etaMinutes / 60))} ساعت` : `حدود ${fa(p.etaMinutes)} دقیقه`);
 /** Short noun for what is bought: «اشتراک», «گیفت‌کارت»… */
 export const nounOf = (p: Product) => ({ sub: "اشتراک", gift: "گیفت‌کارت", account: "اکانت", qty: "استارز", number: "شماره" })[kindOf(p)];
 
