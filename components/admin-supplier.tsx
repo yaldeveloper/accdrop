@@ -8,7 +8,8 @@ import { useStore } from "./store";
 type SP = { id: number; name: string; description: string; howToUse: string; cost: number; stock: number; available: boolean; unlimited: boolean };
 type Ours = { productId: string; plan: string; name: string; label: string; price: number };
 type Data = { configured: boolean; rate: { rate: number; source: string }; ours: Ours[]; map: { productId: string; plan: string; supplierId: number }[]; products: SP[]; balance: number | null; test?: boolean; error?: string;
-  cr?: { configured: boolean; wallet: { address: string; usdt: number; bnb: number } | { error: string } | null } };
+  cr?: { configured: boolean; wallet: { address: string; usdt: number; bnb: number } | { error: string } | null };
+  qd?: { configured: boolean; balance: { available: number; reserved: number } | { error: string } | null } };
 
 const round = (n: number) => Math.round(n / 1000) * 1000;
 
@@ -44,6 +45,14 @@ export function AdminSupplier() {
         ) : d.cr.wallet && "address" in d.cr.wallet ? (
           <p className="muted">کیف پول: <span className="en sel">{d.cr.wallet.address}</span> • <b className="num">{fa(d.cr.wallet.usdt.toFixed(2))}</b> تتر ≈ {money(round(d.cr.wallet.usdt * rate))} تومان • <span className="num">{fa(d.cr.wallet.bnb.toFixed(4))}</span> BNB برای کارمزد{d.cr.wallet.bnb < 0.002 && <b className="bad"> (کم است)</b>}</p>
         ) : <p className="adm-split warn">خطا در خواندن کیف پول: <span className="en">{d.cr.wallet && "error" in d.cr.wallet ? d.cr.wallet.error : ""}</span></p>}
+      </div>
+      <div className="dash-sec">
+        <b>QuickDigi (اکانت‌ها و کدهای تکمیلی)</b>
+        {!d.qd?.configured ? (
+          <p className="muted">وصل نیست. در Vercel کلید API را با نام <span className="en sel">QUICKDIGI_API_KEY</span> بگذار و دوباره دیپلوی کن. کیف پول را از ربات تلگرام QuickDigi با USDT (BEP20) یا Binance Pay شارژ کن.</p>
+        ) : d.qd.balance && "available" in d.qd.balance ? (
+          <p className="muted">موجودی کیف پول: <b className="num">{fa(d.qd.balance.available.toFixed(2))}</b> تتر ≈ {money(round(d.qd.balance.available * rate))} تومان{d.qd.balance.reserved > 0 && <> • رزرو برای سفارش‌های در جریان: <span className="num">{fa(d.qd.balance.reserved.toFixed(2))}</span></>}{d.qd.balance.available < 20 && <b className="bad"> (کم است)</b>}. محصولات وصل‌شده در کد مشخص‌اند (فیلد <span className="en">qd</span>) و فقط سفارش‌های زیر ۱۵ تتر خودکار خریده می‌شوند.</p>
+        ) : <p className="adm-split warn">خطا در خواندن کیف پول: <span className="en">{d.qd.balance && "error" in d.qd.balance ? d.qd.balance.error : ""}</span></p>}
       </div>
       {!d.configured ? (
         <div className="dash-sec"><b>هنوز وصل نیست</b><p className="muted">کلید API را در Vercel با نام <span className="en sel">INSIGHT_API_KEY</span> بگذار و دوباره دیپلوی کن. برای امتحان بدون خرج، <span className="en sel">INSIGHT_TEST_MODE=1</span> را هم بگذار.</p></div>
