@@ -178,6 +178,21 @@ export const CONTENT: Record<string, ProductContent> = {
   coursera: { slug: "coursera", faName: "کورسرا",
     intro: "اکانت آماده Coursera Business شش‌ماهه: دوره‌های دانشگاه‌ها و شرکت‌هایی مثل گوگل و IBM، با گواهی پایان دوره.",
     forWho: ["دانشجوها و جویندگان کار", "تغییر مسیر شغلی", "یادگیری مهارت‌های فنی"] },
+  "figma-pro": { slug: "figma-pro", faName: "فیگما پرو",
+    intro: "اکانت آماده Figma Professional دو ساله با ۳۰۰۰ اعتبار هوش مصنوعی در ماه و Figma Make؛ ارزان‌تر از نسخه آموزشی، با یک ماه گارانتی.",
+    forWho: ["طراح‌های UI و UX", "فریلنسرها", "تیم‌های کوچک محصول"] },
+  "grammarly-pro": { slug: "grammarly-pro", faName: "گرامرلی پرو",
+    intro: "Grammarly Pro یک‌ماهه با همه امکانات هوش مصنوعی: بازنویسی با یک کلیک، تنظیم لحن، تشخیص سرقت ادبی و متن هوش مصنوعی. اکانت آماده با گارانتی کامل.",
+    forWho: ["دانشجوها و مقاله‌نویس‌ها", "اپلای و مهاجرت", "ایمیل و مکاتبه کاری"] },
+  edx: { slug: "edx-premium", faName: "ای‌دی‌ایکس",
+    intro: "اکانت آماده edX Premium یک‌ساله: دوره‌های هاروارد، MIT و دانشگاه‌های برتر جهان با امکان گرفتن گواهی، با گارانتی کامل.",
+    forWho: ["دانشجوها و اپلای", "یادگیری مهارت‌های فنی", "رزومه و تغییر شغل"] },
+  ilovepdf: { slug: "ilovepdf-premium", faName: "آی لاو پی دی اف",
+    intro: "iLovePDF Premium یک‌ساله: تبدیل PDF به Word و Excel، ادغام، تقسیم، فشرده‌سازی و ویرایش PDF بدون محدودیت.",
+    forWho: ["دانشجوها", "کارمندها و حسابدارها", "هر کسی که زیاد با PDF کار می‌کند"] },
+  "apple-tv": { slug: "apple-tv-plus", faName: "اپل تی وی پلاس", prefix: "خرید", keyword: "خرید اشتراک Apple TV+ یک ساله",
+    intro: "اشتراک یک‌ساله Apple TV+ با لینک فعال‌سازی روی Apple ID خودت؛ سریال‌ها و فیلم‌های Apple Original مثل Severance و Ted Lasso.",
+    forWho: ["سریال‌بین‌ها", "کاربرهای آیفون و اپل‌تی‌وی", "خانواده‌ها"] },
 };
 
 export const contentOf = (p: Product) => CONTENT[p.id];
