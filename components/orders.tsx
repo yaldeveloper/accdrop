@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { DELIVERY, extrasLabel, isSub, optionLabel, productById } from "@/lib/catalog";
+import { DELIVERY, extrasLabel, isSub, optionLabel, productById, deliveryOf } from "@/lib/catalog";
 import { STAGES, STATUS_TITLE, isPaid, passWindow, stageOf, type Order } from "@/lib/account";
 import { fa, faDate, money } from "@/lib/format";
 import { INSTALLMENTS } from "@/lib/billing";
@@ -96,7 +96,7 @@ export function OrderDetail({ order, now, onPay, paying }: { order: Order; now: 
                   <span className="mono"><BrandLogo id={p.id} size={22} /></span>
                   <div className="od-l">
                     <b className="en">{p.name}</b>
-                    <small>{optionLabel(p, l.plan)} • {DELIVERY[l.type].title}</small>
+                    <small>{optionLabel(p, l.plan)} • {deliveryOf(p, l.type).title}</small>
                     {extrasLabel(l) && <small className="od-x">{extrasLabel(l)}</small>}
                     {l.members?.length ? <small className="ltr-i">بقیه اعضا: <span className="en">{l.members.join("، ")}</span></small> : null}
                     {l.type === "own" && l.email && <small className="ltr-i">فعال‌سازی روی <span className="en">{l.email}</span></small>}

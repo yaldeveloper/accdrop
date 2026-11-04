@@ -2265,3 +2265,10 @@ footer.ft .legal{margin-top:18px}
 .buybar{color:var(--paper)}
 .buybar b small{display:inline;color:var(--gray-d);font-size:12px}
 @media (max-width:900px){body:has(.buybar.on) .chat-fab{bottom:calc(136px + env(safe-area-inset-bottom))}}
+/* Wholesale quantity picker */
+.bx-step .bx-qty{width:56px;text-align:center;font-size:14px;font-weight:600;border:0;background:transparent;color:inherit;outline:none}
+.bx-tiers-q{grid-template-columns:repeat(4,1fr)}
+.bx-tiers-q li{padding:0}
+.bx-tiers-q li button{display:grid;width:100%;padding:6px;background:transparent;color:inherit;cursor:pointer;border-radius:10px}
+.bx-stock{font-size:12px;color:#3c7a00;margin-top:6px}
+.bx-stock.bad{color:#c0392b}
