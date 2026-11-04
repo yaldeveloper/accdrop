@@ -1,7 +1,8 @@
 // Insight Store reseller API: buys redeem codes from a supplier wallet (USDT) and delivers them automatically.
 // Set INSIGHT_API_KEY in the environment (never in code). INSIGHT_TEST_MODE=1 sends test orders (TEST- codes, nothing charged).
 // Docs: https://api.insightxpro.store/docs
-import { db } from "./db";
+import { ALL_PRODUCTS } from "@/lib/catalog";
+import { db, dbUrl } from "./db";
 
 const BASE = (process.env.INSIGHT_API_BASE || "https://api.insightxpro.store").replace(/\/$/, "");
 export const supplierConfigured = () => !!process.env.INSIGHT_API_KEY;
@@ -33,10 +34,21 @@ type RawProduct = { id: number; name: string; description?: string; description_
 
 export async function supplierProducts(): Promise<SupplierProduct[]> {
   const j = await call<{ products: RawProduct[] }>("/api/v1/products?include_unavailable=1");
-  return (j.products ?? []).map((p) => ({
+  const list = (j.products ?? []).map((p) => ({
     id: Number(p.id), name: String(p.name ?? ""), description: String(p.description_text ?? p.description ?? ""), howToUse: String(p.how_to_use ?? ""),
-    cost: Number(p.base_price_usdt), stock: Number(p.stock ?? 0), available: p.available !== false && Number(p.stock ?? 0) > 0, unlimited: !!p.unlimited,
+    cost: Number(p.base_price_usdt), stock: Number(p.stock ?? 0), available: p.available !== false && (!!p.unlimited || Number(p.stock ?? 0) > 0), unlimited: !!p.unlimited,
   }));
+  g.__ix_stock = { at: Date.now(), list };
+  return list;
+}
+
+const g = globalThis as unknown as { __ix_stock?: { at: number; list: SupplierProduct[] } };
+
+/** Supplier stock, cached for a minute. null when the API can't be reached (callers then don't block a sale). */
+async function cachedStock(): Promise<SupplierProduct[] | null> {
+  const c = g.__ix_stock;
+  if (c && Date.now() - c.at < 60_000) return c.list;
+  try { return await supplierProducts(); } catch (e) { console.error(e); return null; }
 }
 
 export async function supplierBalance(): Promise<number> {
@@ -56,27 +68,67 @@ export async function supplierBuy(productId: number, quantity: number, idempoten
 }
 
 // ----- Mapping: our product + plan → supplier product -----
-export async function supplierMap(): Promise<{ productId: string; plan: string; supplierId: number }[]> {
+// Defaults come from `ix` on the products in lib/catalog.ts; rows in supplier_map override them (supplier_id 0 = disconnected).
+const codeMap = () => ALL_PRODUCTS.flatMap((p) => Object.entries(p.ix ?? {}).filter(([plan]) => p.plans[plan]?.code).map(([plan, supplierId]) => ({ productId: p.id, plan, supplierId })));
+
+async function dbMap(): Promise<{ productId: string; plan: string; supplierId: number }[]> {
+  if (!dbUrl()) return [];
   const sql = await db();
   const rows = await sql`select product_id, plan, supplier_id from supplier_map`;
   return rows.map((r) => ({ productId: r.product_id, plan: r.plan, supplierId: Number(r.supplier_id) }));
 }
 
+export async function supplierMap(): Promise<{ productId: string; plan: string; supplierId: number }[]> {
+  const rows = await dbMap();
+  const key = (m: { productId: string; plan: string }) => `${m.productId}|${m.plan}`;
+  const byKey = new Map(codeMap().map((m) => [key(m), m]));
+  for (const r of rows) byKey.set(key(r), r);
+  return [...byKey.values()].filter((m) => m.supplierId > 0);
+}
+
+async function supplierIdOf(productId: string, plan: string): Promise<number | null> {
+  const m = (await supplierMap()).find((x) => x.productId === productId && x.plan === plan);
+  return m ? m.supplierId : null;
+}
+
 export async function setSupplierMap(productId: string, plan: string, supplierId: number | null) {
   const sql = await db();
-  if (!supplierId) await sql`delete from supplier_map where product_id = ${productId} and plan = ${plan}`;
-  else await sql`insert into supplier_map (product_id, plan, supplier_id) values (${productId}, ${plan}, ${supplierId})
+  const fromCode = codeMap().some((m) => m.productId === productId && m.plan === plan);
+  if (!supplierId && !fromCode) await sql`delete from supplier_map where product_id = ${productId} and plan = ${plan}`;
+  else await sql`insert into supplier_map (product_id, plan, supplier_id) values (${productId}, ${plan}, ${supplierId ?? 0})
     on conflict (product_id, plan) do update set supplier_id = excluded.supplier_id`;
+}
+
+/** Index of the first code line that can't be delivered right now (our own stock is empty and the supplier is out), or -1. */
+export async function firstOutOfStock(lines: { id: string; plan: string; type: string; seats?: number }[]): Promise<number> {
+  if (!supplierConfigured()) return -1;
+  const sql = dbUrl() ? await db() : null;
+  let stock: SupplierProduct[] | null | undefined;
+  for (const [i, l] of lines.entries()) {
+    if (l.type !== "code") continue;
+    const sid = await supplierIdOf(l.id, l.plan);
+    if (!sid) continue;
+    const need = Math.max(1, l.seats ?? 1);
+    if (sql) {
+      const [r] = await sql`select count(*)::int as n from gift_codes where product_id = ${l.id} and plan = ${l.plan} and line_id is null`;
+      if (Number(r?.n ?? 0) >= need) continue;
+    }
+    if (stock === undefined) stock = await cachedStock();
+    if (!stock) return -1;
+    const sp = stock.find((x) => x.id === sid);
+    if (!sp || !sp.available || (!sp.unlimited && sp.stock < need)) return i;
+  }
+  return -1;
 }
 
 /** Fetches codes for one paid order line from the supplier, if that product/plan is mapped. Returns null when not mapped. */
 export async function supplyLine(lineId: number, productId: string, plan: string, quantity: number): Promise<string[] | null> {
   if (!supplierConfigured()) return null;
+  const sid = await supplierIdOf(productId, plan);
+  if (!sid) return null;
   const sql = await db();
-  const [m] = await sql`select supplier_id from supplier_map where product_id = ${productId} and plan = ${plan}`;
-  if (!m) return null;
   try {
-    const r = await supplierBuy(Number(m.supplier_id), quantity, `accdrop-line-${lineId}`);
+    const r = await supplierBuy(sid, quantity, `accdrop-line-${lineId}`);
     await sql`update order_lines set supply_ref = ${`IX-${r.orderId}`}, supply_cost = ${r.cost} where id = ${lineId}`;
     return r.codes;
   } catch (e) {

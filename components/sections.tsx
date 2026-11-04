@@ -3,7 +3,7 @@
 import type React from "react";
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { CATEGORIES, CURRENT_DROP, DELIVERY, DROPS, PRODUCTS, dropOf, listed, tiersLabel, variantsOf, minPrice, optionLabel, productById, type Category, type Product } from "@/lib/catalog";
+import { CATEGORIES, DELIVERY, PRODUCTS, liveDrops, dropOf, listed, tiersLabel, variantsOf, minPrice, optionLabel, productById, type Category, type Product } from "@/lib/catalog";
 import { duration, fa, money, pad2 } from "@/lib/format";
 import { BrandLogo, Dots, Eyebrow, Glyph, Icon, Wordmark } from "./brand";
 import Link from "next/link";
@@ -48,7 +48,7 @@ export function Header() {
       <div className="wrap">
         <a href="/" aria-label="اک‌دراپ، صفحه اصلی"><Wordmark /></a>
         <nav aria-label="منوی اصلی">
-          <MegaMenu /><Link href="/group">خرید گروهی</Link><Link href="/#drop">دراپ‌ها</Link><Link href="/blog">بلاگ</Link><Link href="/guarantee">ضمانت</Link><Link href="/contact">پشتیبانی</Link>
+          <MegaMenu /><Link href="/group">خرید گروهی</Link>{liveDrops().length > 0 && <Link href="/#drop">دراپ‌ها</Link>}<Link href="/blog">بلاگ</Link><Link href="/guarantee">ضمانت</Link><Link href="/contact">پشتیبانی</Link>
         </nav>
         <div className="sp" />
         <div className="tools">
@@ -86,17 +86,21 @@ export function ToolCard({ p }: { p: Product }) {
   );
 }
 
-const FEATURED = ["chatgpt", "claude", "cursor", "adobe", "tgpremium", "applegift"];
-const CHIP: Record<string, string> = { adobe: "Adobe", tgpremium: "Telegram", applegift: "Gift Card" };
-/** Inner ring first, then outer ring; also the auto-cycle order. */
-const INNER = ["chatgpt", "claude", "gemini", "cursor", "adobe", "canva"];
-const OUTER = ["tgpremium", "perplexity", "applegift", "grok", "linkedin", "copilot", "duolingo", "capcut", "appleid", "kling", "notion", "vnumber"];
-const ORBIT = [...INNER, ...OUTER];
+/** Preferred order of the hero chips and the orbit; anything hidden is skipped and the rest of the catalog fills in. */
+const PREFERRED = ["chatgpt", "manus", "lovable", "capcut", "elevenlabs", "linkedin", "framer", "nordvpn", "duolingo", "warp", "adobe-express", "airtable"];
+const CHIP: Record<string, string> = { "adobe-express": "Adobe Express", linkedin: "LinkedIn", elevenlabs: "ElevenLabs" };
+function orbitIds() {
+  const shown = listed().map((p) => p.id);
+  const ids = [...PREFERRED.filter((id) => shown.includes(id)), ...shown.filter((id) => !PREFERRED.includes(id))].slice(0, 18);
+  const inner = ids.slice(0, Math.min(6, Math.ceil(ids.length / 2)));
+  return { featured: ids.slice(0, 6), inner, outer: ids.slice(inner.length) };
+}
 
 const fromPrice = (p: Product) => Math.min(dropOf(p.id)?.price ?? Infinity, minPrice(p));
 
 /** Every tool on two slow, counter-rotating rings; the selected one sits in the centre. */
 function Orbit({ active, onPick, onHover }: { active: string; onPick: (id: string) => void; onHover: (v: boolean) => void }) {
+  const { inner: INNER, outer: OUTER } = orbitIds();
   const p = productById(active);
   const [tool, tier] = splitName(p.name);
   const ring = (ids: string[], cls: string) => (
@@ -125,13 +129,15 @@ function Orbit({ active, onPick, onHover }: { active: string; onPick: (id: strin
 }
 
 export function Hero() {
+  const { featured: FEATURED, inner, outer } = orbitIds();
+  const ORBIT = [...inner, ...outer];
   const [active, setActive] = useState(ORBIT[0]);
   const [paused, setPaused] = useState(false);
   useEffect(() => {
     if (paused) return;
     const t = setInterval(() => setActive((a) => ORBIT[(ORBIT.indexOf(a) + 1) % ORBIT.length]), 3000);
     return () => clearInterval(t);
-  }, [paused]);
+  }, [paused, ORBIT.join()]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <section className="hero2">
@@ -139,7 +145,7 @@ export function Hero() {
         <div className="hero2-copy">
           <Eyebrow>{`${fa(PRODUCTS.length)} سرویس، یک فروشگاه`}</Eyebrow>
           <h1>هر اشتراکی که لازم داری،<br /><b>با تومان.</b></h1>
-          <p className="lead">هوش مصنوعی، طراحی، تلگرام، اپل و بیشتر؛ روی ایمیل یا آیدی خودت، با ضمانت بازگشت وجه.</p>
+          <p className="lead">هوش مصنوعی، کدنویسی، طراحی و بیشتر؛ کد رسمی یا اکانت آماده، تحویل فوری و خودکار، با ضمانت بازگشت وجه.</p>
           <HeroSearch />
           <div className="pick" aria-label="پرطرفدارها">
             <span className="muted">پرطرفدار:</span>
@@ -255,6 +261,7 @@ function useCountdownToMidnight() {
 }
 
 export function DropSection() {
+  const DROPS = liveDrops();
   const { notify } = useStore();
   const left = useCountdownToMidnight();
   const track = useRef<HTMLDivElement>(null);
@@ -273,6 +280,7 @@ export function DropSection() {
     Array.from(el.children).forEach((c) => io.observe(c));
     return () => io.disconnect();
   }, []);
+  if (!DROPS.length) return null;
   return (
     <section className="drop" id="drop">
       <div className="wrap">
@@ -419,10 +427,10 @@ export function Footer() {
             </div>
             <div className="ft-badges" aria-label="نمادها"><span>نماد اعتماد<br />الکترونیکی</span><span>ساماندهی<br />کسب‌وکار</span></div>
           </div>
-          <nav aria-label="دسته‌ها"><h5>دسته‌ها</h5><ul>{(Object.keys(CATEGORIES) as (keyof typeof CATEGORIES)[]).filter((c) => c !== "all").map((c) => <li key={c}><Link href={`/services?c=${c}`}>{CATEGORIES[c]}</Link></li>)}</ul></nav>
+          <nav aria-label="دسته‌ها"><h5>دسته‌ها</h5><ul>{(Object.keys(CATEGORIES) as (keyof typeof CATEGORIES)[]).filter((c) => c !== "all" && listed().some((p) => p.category === c)).map((c) => <li key={c}><Link href={`/services?c=${c}`}>{CATEGORIES[c]}</Link></li>)}</ul></nav>
           <nav aria-label="پرفروش‌ها"><h5>پرفروش‌ها</h5><ul>{popular.map((p) => <li key={p.id}><Link href={productHref(p)} className="en">{p.name}</Link></li>)}</ul></nav>
           <nav aria-label="راهنما"><h5>راهنما</h5><ul><li><Link href="/account/orders">پیگیری سفارش</Link></li><li><Link href="/guarantee">ضمانت و بازگشت وجه</Link></li><li><Link href="/group">خرید گروهی</Link></li><li><Link href="/#concierge">سؤالات پرتکرار</Link></li><li><Link href="/account/tickets">تیکت پشتیبانی</Link></li><li><Link href="/terms">قوانین و مقررات</Link></li></ul></nav>
-          <nav aria-label="اک‌دراپ"><h5>اک‌دراپ</h5><ul><li><Link href="/blog">بلاگ</Link></li><li><Link href="/#drop">دراپ‌ها</Link></li><li><Link href="/reseller">نمایندگی فروش</Link></li><li><Link href="/contact">تماس با ما</Link></li></ul></nav>
+          <nav aria-label="اک‌دراپ"><h5>اک‌دراپ</h5><ul><li><Link href="/blog">بلاگ</Link></li>{liveDrops().length > 0 && <li><Link href="/#drop">دراپ‌ها</Link></li>}<li><Link href="/reseller">نمایندگی فروش</Link></li><li><Link href="/contact">تماس با ما</Link></li></ul></nav>
         </div>
 
         <div className="ft-pay">

@@ -12,7 +12,7 @@ export type CatalogPatch = {
   content?: Partial<ProductContent>;
 };
 
-const BASE: Product[] = structuredClone(PRODUCTS);
+const BASE: Product[] = structuredClone(ALL_PRODUCTS);
 const BASE_CONTENT: Record<string, ProductContent> = structuredClone(CONTENT);
 let applied = "";
 

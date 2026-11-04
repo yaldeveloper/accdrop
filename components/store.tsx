@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ALL_PRODUCTS, CURRENT_DROP, linePrice, planKeys, priceOf, productById, type Selection } from "@/lib/catalog";
+import { ALL_PRODUCTS, currentDrop, linePrice, planKeys, priceOf, productById, type Selection } from "@/lib/catalog";
 
 export type CartLine = Selection & { price: number };
 export type SheetView = "product" | "cart" | "checkout" | "done" | null;
@@ -83,9 +83,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     selection, view, searchOpen, toast, orderCode,
     openProduct: (id) => {
       const p = productById(id);
-      const isDrop = CURRENT_DROP.productId === id;
-      const plan = isDrop ? CURRENT_DROP.plan : planKeys(p)[0];
-      const type = isDrop ? CURRENT_DROP.type : (Object.keys(p.plans[plan] ?? {})[0] as Selection["type"]);
+      const drop = currentDrop();
+      const isDrop = drop?.productId === id;
+      const plan = isDrop ? drop!.plan : planKeys(p)[0];
+      const type = isDrop ? drop!.type : (Object.keys(p.plans[plan] ?? {})[0] as Selection["type"]);
       setSelection({ id, plan, type });
       setSearchOpen(false);
       setViewState("product");

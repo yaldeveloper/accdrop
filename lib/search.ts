@@ -29,19 +29,27 @@ const ALIASES: Record<string, string[]> = {
   applegift: ["گیفت کارت", "گیفت اپل", "آیتونز", "ایتونز", "itunes", "اپل گیفت", "giftcard"],
   linkedin: ["لینکدین", "لینکداین", "کاریابی"],
   duolingo: ["دولینگو", "دوولینگو", "زبان انگلیسی", "یادگیری زبان"],
+  manus: ["مانوس", "منوس", "ایجنت", "agent"],
+  elevenlabs: ["الون لبز", "ایلون لبز", "11labs", "تبدیل متن به صدا", "صداگذاری", "دوبله", "tts"],
+  lovable: ["لاوبل", "لاوابل", "ساخت اپ", "ساخت سایت بدون کد", "vibe coding"],
+  warp: ["وارپ", "ترمینال", "terminal"],
+  framer: ["فریمر", "فرامر", "سایت ساز", "طراحی سایت"],
+  "adobe-express": ["ادوبی اکسپرس", "ادوبی", "adobe", "firefly", "فایرفلای", "پوستر"],
+  airtable: ["ایرتیبل", "ایرتیبل", "دیتابیس", "اکسل آنلاین"],
+  nordvpn: ["نورد", "نورد وی پی ان", "وی پی ان", "فیلترشکن", "vpn"],
   vnumber: ["شماره مجازی", "شماره خارجی", "virtual number", "sms", "کد تایید", "شماره آمریکا"],
 };
 
 /** Plain needs mapped to services, for the «what is it for» chips. */
 export const NEEDS: { label: string; ids: string[] }[] = [
-  { label: "نوشتن و ترجمه", ids: ["chatgpt", "claude", "gemini"] },
-  { label: "برنامه‌نویسی", ids: ["cursor", "copilot", "claude", "chatgpt"] },
-  { label: "طراحی و عکس", ids: ["adobe", "canva", "chatgpt"] },
-  { label: "ساخت ویدیو", ids: ["capcut", "kling", "adobe"] },
-  { label: "تحقیق و مقاله", ids: ["perplexity", "gemini", "chatgpt"] },
-  { label: "اپ‌استور و اپل", ids: ["applegift", "appleid"] },
+  { label: "نوشتن و ترجمه", ids: ["chatgpt", "manus"] },
+  { label: "برنامه‌نویسی", ids: ["lovable", "warp", "chatgpt"] },
+  { label: "طراحی و سایت", ids: ["framer", "adobe-express", "lovable"] },
+  { label: "ساخت ویدیو و صدا", ids: ["capcut", "elevenlabs", "adobe-express"] },
+  { label: "تحقیق و گزارش", ids: ["manus", "chatgpt"] },
   { label: "یادگیری زبان", ids: ["duolingo"] },
-  { label: "کار و رزومه", ids: ["linkedin", "notion"] },
+  { label: "کار و رزومه", ids: ["linkedin", "airtable"] },
+  { label: "اینترنت امن", ids: ["nordvpn"] },
 ];
 
 type Ix = { key: string; name: string; alias: string[]; text: string };

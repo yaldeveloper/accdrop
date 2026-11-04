@@ -188,7 +188,7 @@ export function AdminOrder({ code }: { code: string }) {
                 {l.ip && <p>آی‌پی ثابت: <b>{extrasLabel({ ...l, seats: 1 })}</b> (مشخصات اتصال را در «اطلاعات تحویل» بنویس)</p>}
                 {(l.type === "code" || l.type === "number" || l.type === "ready" || l.secret) && (
                   <div className="fld">
-                    <label>{{ code: "کد گیفت‌کارت", number: "شماره تحویلی", ready: "اطلاعات ورود اکانت" }[l.type as "code"] ?? "اطلاعات تحویل"} (به مشتری نمایش داده می‌شود)</label>
+                    <label>{{ code: "کد / اطلاعات تحویل", number: "شماره تحویلی", ready: "اطلاعات ورود اکانت" }[l.type as "code"] ?? "اطلاعات تحویل"} (به مشتری نمایش داده می‌شود)</label>
                     <input className="ltr" value={secrets[l.lineId!] ?? l.secret ?? ""} placeholder={l.type === "code" ? "از انبار خودکار پر می‌شود" : ""}
                       onChange={(e) => setSecrets({ ...secrets, [l.lineId!]: e.target.value })} />
                   </div>

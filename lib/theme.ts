@@ -23,6 +23,14 @@ export const THEME: Record<string, Theme> = {
   appleid: { c: "#C9CDD2", c2: "#6E7378", motif: "appleid" },
   applegift: { c: "#FF5A8A", c2: "#7A6BFF", motif: "gift" },
   vnumber: { c: "#B9FF63", c2: "#63E6BE", motif: "sim" },
+  manus: { c: "#E8E6E1", c2: "#9A968E", motif: "chat", ask: "یک گزارش بازار از ۱۰ رقیب ما آماده کن", reply: "در حال جست‌وجو… گزارش با جدول مقایسه و منابع تا چند دقیقه دیگر آماده است." },
+  elevenlabs: { c: "#E9E9E9", c2: "#A7A7A7", motif: "video" },
+  lovable: { c: "#FF5A8A", c2: "#FF9A62", motif: "code" },
+  warp: { c: "#01A4FF", c2: "#9BDCFF", motif: "code" },
+  framer: { c: "#3D7BFF", c2: "#B2C8FF", motif: "canvas" },
+  "adobe-express": { c: "#FF3B30", c2: "#B57BFF", motif: "canvas" },
+  airtable: { c: "#18BFFF", c2: "#FFB400", motif: "doc" },
+  nordvpn: { c: "#4687FF", c2: "#A9C6FF", motif: "work" },
 };
 
 export function themeOf(id: string): Theme {

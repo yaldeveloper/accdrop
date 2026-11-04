@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CATEGORIES, DROPS, listed, minPrice, productById, tiersLabel, type Category } from "@/lib/catalog";
+import { CATEGORIES, currentDrop, listed, minPrice, productById, tiersLabel, type Category } from "@/lib/catalog";
 import { productHref } from "@/lib/content";
 import { NEEDS } from "@/lib/search";
 import { fa, money } from "@/lib/format";
@@ -16,7 +16,7 @@ export const CAT_TONE: Record<Category, string> = {
   ai: "#10A37F", code: "#7C8CFF", create: "#FF6B8B", work: "#F2B860", apple: "#B8C2CC", telegram: "#2AABEE", number: "#B9FF63",
 };
 export const CAT_LINE: Record<Category, string> = {
-  ai: "ChatGPT، Claude، Gemini و بیشتر", code: "Cursor و Copilot", create: "Adobe، Canva، CapCut", work: "Notion، LinkedIn، Duolingo",
+  ai: "ChatGPT، Manus، ElevenLabs", code: "Lovable و Warp", create: "CapCut، Framer، Adobe Express", work: "LinkedIn، NordVPN، Duolingo",
   apple: "اپل آیدی و گیفت‌کارت", telegram: "پرمیوم و استارز", number: "شماره برای ثبت‌نام",
 };
 export const inCat = (c: Category) => listed().filter((p) => p.category === c);
@@ -43,13 +43,13 @@ export function MegaMenu() {
   const enter = () => { clearTimeout(timer.current); timer.current = setTimeout(() => setOpen(true), 90); };
   const leave = () => { clearTimeout(timer.current); timer.current = setTimeout(() => setOpen(false), 180); };
   const items = inCat(cat);
-  const drop = DROPS[0], dp = productById(drop.productId);
+  const drop = currentDrop(), dp = drop ? productById(drop.productId) : undefined;
 
   const panel = (
     <div id="mm-panel" className={`mm-p ${open ? "on" : ""}`} style={{ top }} onMouseEnter={enter} onMouseLeave={leave} aria-hidden={!open} inert={!open}>
       <div className="wrap mm-g">
         <ul className="mm-cats" role="tablist" aria-label="دسته‌ها">
-          {CATS.map((c) => (
+          {CATS.filter((c) => inCat(c).length).map((c) => (
             <li key={c}>
               <button role="tab" aria-selected={c === cat} className={c === cat ? "on" : ""} style={{ "--t": CAT_TONE[c] } as React.CSSProperties}
                 onMouseEnter={() => setCat(c)} onFocus={() => setCat(c)} onClick={() => setCat(c)}>
@@ -73,11 +73,13 @@ export function MegaMenu() {
           </div>
         </div>
         <aside className="mm-side">
-          <Link href={productHref(dp)} className="mm-drop" onClick={() => setOpen(false)}>
-            <small>دراپ این هفته</small>
-            <b className="en">{dp.name}</b>
-            <span><b className="num">{money(drop.price)}</b> تومان <s className="num">{money(drop.was)}</s></span>
-          </Link>
+          {drop && dp && (
+            <Link href={productHref(dp)} className="mm-drop" onClick={() => setOpen(false)}>
+              <small>دراپ این هفته</small>
+              <b className="en">{dp.name}</b>
+              <span><b className="num">{money(drop.price)}</b> تومان <s className="num">{money(drop.was)}</s></span>
+            </Link>
+          )}
           <Link href="/group" className="mm-group" onClick={() => setOpen(false)}><Icon id="user" /><span><b>خرید گروهی</b><small>با دوستانت بخر، تا ۱۲٪ ارزان‌تر</small></span></Link>
           <div className="mm-needs">
             <small>برای چه کاری؟</small>
@@ -122,7 +124,7 @@ export function MobileMenu({ open, onClose, onSearch, onChat }: { open: boolean;
         <button className="dr-search" onClick={() => { onClose(); onSearch(); }}><Icon id="search" />جست‌وجوی سرویس…</button>
         <small className="dr-k">دسته‌ها</small>
         <ul className="dr-cats">
-          {CATS.map((c) => (
+          {CATS.filter((c) => inCat(c).length).map((c) => (
             <li key={c} className={cat === c ? "on" : ""}>
               <button onClick={() => setCat(cat === c ? null : c)} aria-expanded={cat === c} style={{ "--t": CAT_TONE[c] } as React.CSSProperties}>
                 <i /><span>{CATEGORIES[c]}</span><em className="num">{fa(inCat(c).length)}</em>
@@ -142,7 +144,7 @@ export function MobileMenu({ open, onClose, onSearch, onChat }: { open: boolean;
         <small className="dr-k">اک‌دراپ</small>
         <div className="dr-links">
           <Link href="/group">خرید گروهی</Link>
-          <Link href="/#drop">دراپ‌ها</Link>
+          {currentDrop() && <Link href="/#drop">دراپ‌ها</Link>}
           <Link href="/blog">بلاگ</Link>
           <Link href="/guarantee">ضمانت و بازگشت وجه</Link>
           <Link href="/reseller">نمایندگی فروش</Link>
