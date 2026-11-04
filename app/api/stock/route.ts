@@ -9,7 +9,7 @@ export async function GET(req: Request) {
   const id = new URL(req.url).searchParams.get("id") ?? "";
   const p = PRODUCTS.find((x) => x.id === id && x.bulk?.length);
   if (!p || !dbUrl()) return NextResponse.json({ stock: null });
-  const supplied = Object.keys(p.qd ?? {}).length > 0 || Object.keys(p.cr ?? {}).length > 0
+  const supplied = Object.keys(p.qd ?? {}).length > 0 || Object.keys(p.cr ?? {}).length > 0 || Object.keys(p.cb ?? {}).length > 0
     || (supplierConfigured() && (await supplierMap()).some((m) => m.productId === p.id));
   if (supplied) return NextResponse.json({ stock: null });
   const sql = await db();

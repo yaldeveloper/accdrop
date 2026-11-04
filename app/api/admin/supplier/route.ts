@@ -5,6 +5,7 @@ import { crConfigured, crWallet } from "@/lib/server/cryptorefills";
 import { body, fail, json, route, withAdmin } from "@/lib/server/http";
 import { fivesimBalance, fivesimConfigured, fivesimSettings, liveOffers } from "@/lib/server/fivesim";
 import { qdBalance, qdConfigured } from "@/lib/server/quickdigi";
+import { cbBalance, cbConfigured } from "@/lib/server/canboso";
 import { setSupplierMap, supplierBalance, supplierConfigured, supplierMap, supplierProducts } from "@/lib/server/supplier";
 
 /** Supplier catalog with our cost in Toman, next to our own code products and their mapping. */
@@ -14,13 +15,14 @@ export const GET = route(async () => withAdmin(async () => {
   const [rate, map, cr, fivesim] = await Promise.all([usdtRate(), supplierMap(), crWallet().catch((e) => ({ error: String((e as Error).message).slice(0, 160) })), fivesimInfo()]);
   const crInfo = { configured: crConfigured(), wallet: cr };
   const qd = { configured: qdConfigured(), balance: qdConfigured() ? await qdBalance().catch((e) => ({ error: String((e as Error).message).slice(0, 160) })) : null };
-  if (!supplierConfigured()) return json({ configured: false, rate, ours, map, products: [], balance: null, cr: crInfo, qd, fivesim });
+  const cb = { configured: cbConfigured(), balance: cbConfigured() ? await cbBalance().catch((e) => ({ error: String((e as Error).message).slice(0, 160) })) : null };
+  if (!supplierConfigured()) return json({ configured: false, rate, ours, map, products: [], balance: null, cr: crInfo, qd, cb, fivesim });
   try {
     const [products, balance] = await Promise.all([supplierProducts(), supplierBalance()]);
-    return json({ configured: true, rate, ours, map, products, balance, test: process.env.INSIGHT_TEST_MODE === "1", cr: crInfo, qd, fivesim });
+    return json({ configured: true, rate, ours, map, products, balance, test: process.env.INSIGHT_TEST_MODE === "1", cr: crInfo, qd, cb, fivesim });
   } catch (e) {
     console.error(e);
-    return json({ configured: true, rate, ours, map, products: [], balance: null, error: String((e as Error).message).slice(0, 200), cr: crInfo, qd, fivesim });
+    return json({ configured: true, rate, ours, map, products: [], balance: null, error: String((e as Error).message).slice(0, 200), cr: crInfo, qd, cb, fivesim });
   }
 }));
 

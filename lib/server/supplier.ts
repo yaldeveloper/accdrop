@@ -4,6 +4,7 @@
 import { ALL_PRODUCTS } from "@/lib/catalog";
 import { crSupplyLine } from "./cryptorefills";
 import { qdCanSupply, qdSupplyLine } from "./quickdigi";
+import { cbCanSupply, cbSupplyLine } from "./canboso";
 import { db, dbUrl } from "./db";
 import { siteUrl } from "./pay";
 
@@ -108,18 +109,20 @@ export async function firstOutOfStock(lines: { id: string; plan: string; type: s
   let stock: SupplierProduct[] | null | undefined;
   for (const [i, l] of lines.entries()) {
     if (l.type !== "code") continue;
-    const p = ALL_PRODUCTS.find((x) => x.id === l.id);
-    const qd = p?.qd?.[l.plan];
-    const sid = qd || !supplierConfigured() ? null : await supplierIdOf(l.id, l.plan);
+    const prod = ALL_PRODUCTS.find((x) => x.id === l.id);
+    const qd = prod?.qd?.[l.plan];
+    const cb = prod?.cb?.[l.plan];
+    const sid = qd || cb || !supplierConfigured() ? null : await supplierIdOf(l.id, l.plan);
     // Wholesale products are promised as instant, so with no supplier behind them we only sell what is in stock.
-    if (!qd && !sid && !p?.bulk?.length) continue;
+    if (!qd && !cb && !sid && !prod?.bulk?.length) continue;
     const need = Math.max(1, l.seats ?? 1);
     if (sql) {
       const [r] = await sql`select count(*)::int as n from gift_codes where product_id = ${l.id} and plan = ${l.plan} and line_id is null`;
       if (Number(r?.n ?? 0) >= need) continue;
     }
-    if (!qd && !sid) { if (sql) return i; continue; }
+    if (!qd && !cb && !sid) { if (sql) return i; continue; }
     if (qd) { if (!(await qdCanSupply(qd, need))) return i; continue; }
+    if (cb) { if (!(await cbCanSupply(cb, need))) return i; continue; }
     if (stock === undefined) stock = await cachedStock();
     if (!stock) return -1;
     const sp = stock.find((x) => x.id === sid);
@@ -133,6 +136,7 @@ export async function supplyLine(lineId: number, productId: string, plan: string
   const p = ALL_PRODUCTS.find((x) => x.id === productId);
   if (p?.cr?.[plan]) return crSupplyLine(lineId, p, plan, quantity, siteUrl());
   if (p?.qd?.[plan]) return qdSupplyLine(lineId, p, plan, quantity);
+  if (p?.cb?.[plan]) return cbSupplyLine(lineId, p, plan, quantity);
   if (!supplierConfigured()) return null;
   const sid = await supplierIdOf(productId, plan);
   if (!sid) return null;

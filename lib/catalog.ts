@@ -60,6 +60,8 @@ export type Product = {
   cr?: Record<string, { brand: string; denom?: string; value?: number; cost: number }>;
   /** QuickDigi product per option: its P_ id and our cost in USDT. Paid lines are bought and delivered automatically. */
   qd?: Record<string, { id: string; cost: number }>;
+  /** Canboso product per option: its product id and our cost in USD. Paid lines are bought and delivered automatically. */
+  cb?: Record<string, { id: string; cost: number }>;
   /** Selling price in USDT per code option. When set, the Toman price follows the live Tether rate. */
   usdt?: Record<string, number>;
 };
@@ -447,6 +449,68 @@ const QD_PRODUCTS: Product[] = [
     includes: ["هزاران دوره با گواهی", "دوره‌های گوگل، IBM و دانشگاه‌ها", "گارانتی تا پایان اشتراک"] },
 ];
 REAL.push(...QD_PRODUCTS);
+
+/** Products bought from Canboso (lib/server/canboso.ts): cheaper ready accounts and links the other suppliers don't have.
+ *  `cb` maps each option to the Canboso product id and its USD cost; `usdt` is our selling price (roughly +50–60% on
+ *  these small amounts). Canboso keeps only a few of each item, so checkout refuses a line when its stock is gone. */
+const CB_INSTANT = "بلافاصله بعد از پرداخت به‌صورت خودکار در حساب کاربری‌ات نمایش داده و پیامک می‌شود.";
+const CB_PRODUCTS: Product[] = [
+  { id: "figma-pro", family: "figma", tier: "Pro", name: "Figma Pro", maker: "Figma", category: "create", monogram: "FG", etaMinutes: 0, warranty: "۱ ماه گارانتی",
+    description: "اکانت آماده Figma Professional دو ساله با ۳۰۰۰ اعتبار هوش مصنوعی در ماه", use: "طراحی UI با Figma Make",
+    plans: { "24": { code: 0 } }, labels: { "24": "دو ساله" }, usdt: { "24": 9.9 }, cb: { "24": { id: "6a9316190c2e5f78d64ab516", cost: 6 } },
+    deliver: "ایمیل و رمز اکانت Figma (رمز Hotmail همان رمز Figma است) " + CB_INSTANT,
+    howTo: "با ایمیل و رمز وارد figma.com شو. ایمیل اکانت را هیچ‌وقت عوض نکن.",
+    includes: ["پلن Professional دو ساله", "۳۰۰۰ اعتبار هوش مصنوعی در ماه و Figma Make", "۱ ماه گارانتی"] },
+  { id: "grammarly-pro", family: "grammarly", tier: "Pro", name: "Grammarly Pro", maker: "Grammarly", category: "work", monogram: "GR", etaMinutes: 0, warranty: "گارانتی کامل یک ماه",
+    description: "Grammarly Pro با هوش مصنوعی، یک ماه", use: "انگلیسی بی‌غلط و روان",
+    plans: { "1": { code: 0 } }, usdt: { "1": 6.5 }, cb: { "1": { id: "6aaedda986b4242014998124", cost: 3.96 } },
+    deliver: "ایمیل و رمز اکانت Grammarly Pro " + CB_INSTANT,
+    howTo: "با ایمیل و رمز وارد grammarly.com شو و افزونه مرورگر یا اپ را نصب کن. چیزی در تنظیمات اکانت (رمز، ایمیل، پرداخت) را تغییر نده تا گارانتی برقرار بماند.",
+    includes: ["بازنویسی جمله با یک کلیک و تنظیم لحن", "تشخیص سرقت ادبی و متن تولیدشده با هوش مصنوعی", "گارانتی کامل یک ماه"] },
+  { id: "edx", name: "edX Premium", maker: "edX", category: "work", monogram: "eX", etaMinutes: 0, warranty: "گارانتی کامل یک سال",
+    description: "دوره‌های هاروارد، MIT و دانشگاه‌های برتر با گواهی، یک سال", use: "از دانشگاه‌های برتر یاد بگیر",
+    plans: { "12": { code: 0 } }, usdt: { "12": 4.5 }, cb: { "12": { id: "6aa7e29d1c2a8212a2fc4eb1", cost: 2.34 } },
+    deliver: "ایمیل Outlook، رمز ایمیل و رمز edX یک اکانت آماده " + CB_INSTANT,
+    howTo: "با ایمیل و رمز edX وارد edx.org شو و رمز را عوض کن. ایمیل اکانت را عوض نکن، وگرنه گارانتی از بین می‌رود.",
+    includes: ["هزاران دوره از هاروارد، MIT و دانشگاه‌های برتر", "قابل دریافت گواهی تأییدشده", "گارانتی کامل یک سال"] },
+  { id: "ilovepdf", name: "iLovePDF Premium", maker: "iLovePDF", category: "work", monogram: "PDF", etaMinutes: 0, warranty: "۱ ماه گارانتی",
+    description: "ویرایش، تبدیل، فشرده‌سازی و ادغام PDF بدون محدودیت، یک سال", use: "همه کارهای PDF، یک‌جا",
+    plans: { "12": { code: 0 } }, usdt: { "12": 2.5 }, cb: { "12": { id: "6a9ecbfa4f6e4dbc7703ca9e", cost: 1 } },
+    deliver: "اطلاعات ورود اکانت iLovePDF Premium " + CB_INSTANT,
+    howTo: "با اطلاعات تحویلی وارد ilovepdf.com شو؛ ابزارها در سایت، اپ دسکتاپ و موبایل در دسترس‌اند.",
+    includes: ["تبدیل PDF به Word، Excel و PowerPoint", "ادغام، تقسیم، فشرده‌سازی و ویرایش", "۱ ماه گارانتی"] },
+  { id: "apple-tv", name: "Apple TV+", maker: "Apple", category: "apple", monogram: "TV", etaMinutes: 0, warranty: "۴۸ ساعت گارانتی لینک",
+    description: "سریال‌ها و فیلم‌های Apple Original، یک سال با لینک فعال‌سازی", use: "سریال و فیلم Apple",
+    plans: { "12": { code: 0 } }, usdt: { "12": 5.5 }, cb: { "12": { id: "6ac0825b06baed899f5ba191", cost: 3.1 } },
+    deliver: "لینک فعال‌سازی یک‌ساله " + CB_INSTANT,
+    howTo: "با VPN آمریکا وارد tv.apple.com شو، با یک Apple ID (بهتر است تازه و ریجن آمریکا) وارد شو و لینک را باز کن تا اشتراک فعال شود. لینک را ظرف ۴۸ ساعت فعال کن؛ بعد از فعال‌سازی برای تماشا VPN لازم نیست.",
+    includes: ["همه سریال‌ها و فیلم‌های Apple TV+", "روی آیفون، اپل‌تی‌وی، تلویزیون هوشمند و وب", "بدون نیاز به کارت بانکی"] },
+  { id: "coursera-gemini", family: "coursera", tier: "Plus + Gemini", name: "Coursera Plus + Gemini", maker: "Coursera", category: "work", monogram: "CO", etaMinutes: 0, warranty: "۲۴ ساعت گارانتی",
+    description: "اکانت آماده Coursera سازمانی با همه دوره‌ها و گواهی، به‌همراه Gemini سه‌ماهه", use: "دوره و گواهی رایگان، به‌علاوه Gemini",
+    plans: { "3": { code: 0 } }, usdt: { "3": 5.5 }, cb: { "3": { id: "6aa67436df59fbc6fe3a61ad", cost: 3 } },
+    deliver: "ایمیل، رمز و کلید 2FA یک اکانت Gmail با دسترسی سازمانی Coursera " + CB_INSTANT,
+    howTo: "با ایمیل و رمز وارد شو و کد ورود را با کلید 2FA در 2fa.live بساز. بلافاصله رمز را عوض کن و 2FA خودت را بگذار؛ ایمیل اصلی را تغییر نده. Gemini سه‌ماهه را از داخل همین اکانت فعال کن. گارانتی فقط ۲۴ ساعت است؛ اکانت را همان روز بررسی کن.",
+    includes: ["همه دوره‌ها و گواهی‌ها به نام خودت", "Gemini سه‌ماهه روی همین اکانت", "۲۴ ساعت گارانتی"] },
+  { id: "notion-business", name: "Notion Business", maker: "Notion", category: "work", monogram: "NO", etaMinutes: 0, warranty: "بدون گارانتی",
+    description: "Notion Business سه‌ماهه با Notion AI، روی اکانت خودت با لینک فعال‌سازی", use: "یادداشت، پروژه و ویکی تیم با هوش مصنوعی",
+    plans: { "3": { code: 0 } }, usdt: { "3": 3.5 }, cb: { "3": { id: "6ab0cf6ff6d40479fdca8cb9", cost: 1.4 } },
+    deliver: "لینک فعال‌سازی سه‌ماهه " + CB_INSTANT,
+    howTo: "در مرورگر وارد اکانت Notion خودت شو و لینک را باز کن تا پلن Business روی ورک‌اسپیس فعال شود. لینک‌ها قبل از فروش تست شده‌اند ولی بعد از فعال‌سازی گارانتی ندارند.",
+    includes: ["پلن Business سه‌ماهه", "Notion AI", "بدون گارانتی"] },
+  { id: "lovable-lite", family: "lovable", tier: "Lite", name: "Lovable Lite", maker: "Lovable", category: "code", monogram: "LO", etaMinutes: 0, warranty: "بدون گارانتی",
+    description: "Lovable یک‌ساله با ۵ اعتبار روزانه و ۳۰۰ اعتبار هدیه", use: "اپ بساز، ارزان",
+    plans: { "12": { code: 0 } }, usdt: { "12": 8.9 }, cb: { "12": { id: "6a9b0f32d7c232c4391406be", cost: 5 } },
+    deliver: "اطلاعات اکانت آماده Lovable Lite " + CB_INSTANT,
+    howTo: "با اطلاعات تحویلی وارد lovable.dev شو و شروع کن.",
+    includes: ["۵ اعتبار روزانه", "۳۰۰ اعتبار یک‌باره", "دامنه اختصاصی، بدون گارانتی"] },
+  { id: "microsoft-365-personal", family: "microsoft-365", tier: "Personal", name: "Microsoft 365 Personal", maker: "Microsoft", category: "work", monogram: "MS", etaMinutes: 0, warranty: "۱ ماه گارانتی",
+    description: "Word، Excel و PowerPoint با ۱۰۰ گیگ OneDrive؛ یک ماه تضمینی و تا ۱۱ ماه هدیه", use: "آفیس کامل، خیلی ارزان",
+    plans: { "1": { code: 0 } }, usdt: { "1": 2.9 }, cb: { "1": { id: "6a91ab5002c1f79827573653", cost: 1 } },
+    deliver: "ایمیل و رمز اکانت Microsoft 365 " + CB_INSTANT,
+    howTo: "با ایمیل و رمز وارد اپ‌های آفیس شو (تا ۵ کامپیوتر). ماه اول گارانتی دارد؛ ۱۱ ماه بعد هدیه است و تضمینی نیست.",
+    includes: ["Word، Excel، PowerPoint و OneNote", "۱۰۰ گیگ OneDrive", "۱ ماه گارانتی + ۱۱ ماه هدیه"] },
+];
+REAL.push(...CB_PRODUCTS);
 
 for (const p of REAL) for (const [k, v] of Object.entries(p.usdt ?? {})) p.plans[k] = { ...p.plans[k], code: tomanAt(v, BASE_RATE) };
 

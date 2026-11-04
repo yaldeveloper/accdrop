@@ -170,7 +170,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               <p className="p2-lead">{c.intro}</p>
               <ul className="p2-hl">{p.includes.slice(0, 3).map((x) => <li key={x}><Icon id="check" />{x}</li>)}</ul>
               <ul className="p2-perks" aria-label="مزایای خرید از اک‌دراپ">
-                <li><span className="p2-pi"><Icon id="shield" /></span><span><b>{isSub(p) && !p.warranty ? "ضمانت تا روز آخر" : guaranteeOf(p)}</b><small>{isSub(p) && !p.warranty ? "اگر قطع شد، روزهای باقی‌مانده برمی‌گردد" : "جایگزینی یا بازگشت کامل وجه"}</small></span></li>
+                <li><span className="p2-pi"><Icon id="shield" /></span><span><b>{isSub(p) && !p.warranty ? "ضمانت تا روز آخر" : guaranteeOf(p)}</b><small>{isSub(p) && !p.warranty ? "اگر قطع شد، روزهای باقی‌مانده برمی‌گردد" : p.warranty?.startsWith("بدون گارانتی") ? "فقط تحویل سالم تضمین می‌شود" : "جایگزینی یا بازگشت کامل وجه"}</small></span></li>
                 <li><span className="p2-pi"><Icon id="user" /></span><span><b>{instant ? "تحویل فوری و خودکار" : isSub(p) ? "روی اکانت خودت" : "تحویل در حساب کاربری"}</b><small>{instant ? "همان لحظه، در حساب کاربری و پیامک" : isSub(p) ? "فقط ایمیل؛ رمز نمی‌خواهیم" : "همراه با پیامک"}</small></span></li>
                 {canInstall(Math.max(...planKeys(p).map((m) => priceOf({ id: p.id, plan: m, type: Object.keys(p.plans[m] ?? {})[0] as DeliveryType }).price))) && (
                   <li><span className="p2-pi sp"><img src="/pay/snapppay.svg" alt="" width={36} height={36} /></span><span><b>{fa(INSTALLMENTS.parts)} قسط بدون کارمزد</b><small>با اسنپ‌پی، بدون ضامن</small></span></li>
