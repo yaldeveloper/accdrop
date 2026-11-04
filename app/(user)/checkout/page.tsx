@@ -12,6 +12,7 @@ import { api, useAccount } from "@/components/account";
 import { useStore } from "@/components/store";
 import { EMPTY_LEGAL, LegalForm, useLegal } from "@/components/legal";
 import { type LegalInfo, type PayMethod } from "@/lib/billing";
+import { receiveOf, warrantyOf, whenOf } from "@/lib/facts";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -126,7 +127,7 @@ export default function CheckoutPage() {
           </section>
 
           <section className={`co-step ${step1Done ? "on" : "off"}`}>
-            <header><span className="co-n">۲</span><h2>اطلاعات فعال‌سازی</h2></header>
+            <header><span className="co-n">۲</span><h2>{cart.some((l) => l.type === "own" || l.type === "username") ? "اطلاعات فعال‌سازی" : "چه چیزی تحویل می‌گیری"}</h2></header>
             <div className="co-lines">
               {cart.map((l, i) => {
                 const p = productById(l.id);
@@ -158,12 +159,9 @@ export default function CheckoutPage() {
                         <small className="muted">می‌توانی آیدی خودت یا دوستت را بزنی. کد ورود و رمز نمی‌خواهیم.</small>
                       </div>
                     ) : (
-                      <p className="muted co-note">{{
-                        ready: "یک اکانت تازه برایت ساخته می‌شود. اطلاعات ورودش را در داشبورد و پیامک می‌بینی.",
-                        code: "بلافاصله بعد از پرداخت، کد یا اطلاعات تحویل در صفحه سفارش و پیامک نمایش داده می‌شود.",
-                        number: "شماره بلافاصله بعد از پرداخت در صفحه سفارش نمایش داده می‌شود و کد تأیید هم همان‌جا می‌آید.",
-                      }[l.type as "ready" | "code" | "number"]}</p>
+                      <p className="muted co-note"><b>{receiveOf(p, l.type).title}</b>، {whenOf(p, l.type)}. {receiveOf(p, l.type).detail}؛ در صفحه سفارش و پیامک. چیزی لازم نیست وارد کنی.</p>
                     )}
+                    {(() => { const w = warrantyOf(p, l.plan); return <p className={`co-war w-${w.level}`}><Icon id="shield" /><span><b>{w.label}</b> {w.level === "none" || w.level === "short" ? w.note : ""}</span></p>; })()}
                   </div>
                 );
               })}
@@ -241,7 +239,7 @@ export default function CheckoutPage() {
             {discount > 0 && <div className="disc"><dt>تخفیف ({applied})</dt><dd className="num">−{money(discount)}</dd></div>}
             <div className="tot"><dt>قابل پرداخت</dt><dd><b className="num">{money(total)}</b> <small>تومان</small></dd></div>
           </dl>
-          <label className="co-agree"><input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} /><span>قوانین و <a className="link" href="#">شرایط گارانتی</a> را می‌پذیرم.</span></label>
+          <label className="co-agree"><input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} /><span><Link className="link" href="/terms">قوانین</Link> و <Link className="link" href="/guarantee">گارانتی هر محصول</Link> را خواندم و می‌پذیرم.</span></label>
           <button className="btn btn-paper btn-block co-btn" onClick={pay} disabled={paying}>
             {paying ? "در حال اتصال به درگاه…" : method === "crypto" ? <>پرداخت با ارز دیجیتال</> : <>پرداخت <span className="num">{money(total)}</span> تومان</>}
           </button>

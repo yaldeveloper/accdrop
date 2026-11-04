@@ -96,7 +96,7 @@ export const DELIVERY: Record<DeliveryType, { title: string; detail: string; inp
   own: { title: "روی ایمیل خودم", detail: "روی اکانت شخصی خودت فعال می‌شود", input: "email" },
   ready: { title: "اکانت آماده", detail: "یک اکانت تازه، فقط برای تو", input: null },
   username: { title: "روی آیدی تلگرام", detail: "فقط یوزرنیم لازم است؛ ورود و رمز نمی‌خواهیم", input: "username" },
-  code: { title: "تحویل فوری و خودکار", detail: "کد یا اطلاعات ورود، فوراً در حساب کاربری و پیامک", input: null },
+  code: { title: "تحویل خودکار", detail: "بعد از پرداخت، در صفحه سفارش و پیامک", input: null },
   number: { title: "شماره آماده", detail: "شماره و کد تأیید در حساب کاربری", input: null },
 };
 

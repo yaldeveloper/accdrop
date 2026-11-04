@@ -31,9 +31,9 @@ export type Order = {
 };
 
 export type Stage = 0 | 1 | 2; // paid, activating, active
-export const STAGES = ["پرداخت شد", "در حال فعال‌سازی", "فعال شد"] as const;
+export const STAGES = ["پرداخت شد", "در حال تحویل", "تحویل شد"] as const;
 export const STATUS_TITLE: Record<OrderStatus, string> = {
-  pending: "در انتظار پرداخت", paid: "پرداخت شد", activating: "در حال فعال‌سازی", active: "فعال شد", canceled: "پرداخت نشد", refunded: "بازپرداخت شد",
+  pending: "در انتظار پرداخت", paid: "پرداخت شد", activating: "در حال تحویل", active: "تحویل شد", canceled: "پرداخت نشد", refunded: "بازپرداخت شد",
 };
 export const isPaid = (o: Order) => o.status === "paid" || o.status === "activating" || o.status === "active";
 

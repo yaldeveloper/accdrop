@@ -18,6 +18,7 @@ import { MegaMenu, MobileMenu } from "./mega";
 import { openChat } from "./chat";
 import { searchProducts } from "@/lib/search";
 import { themeOf } from "@/lib/theme";
+import { cardWarranty, whenShort } from "@/lib/facts";
 
 /** Fades sections in on scroll. */
 export function useReveal() {
@@ -48,7 +49,7 @@ export function Header() {
       <div className="wrap">
         <a href="/" aria-label="اک‌دراپ، صفحه اصلی"><Wordmark /></a>
         <nav aria-label="منوی اصلی">
-          <MegaMenu /><Link href="/group">خرید گروهی</Link>{liveDrops().length > 0 && <Link href="/#drop">دراپ‌ها</Link>}<Link href="/blog">بلاگ</Link><Link href="/guarantee">ضمانت</Link><Link href="/contact">پشتیبانی</Link>
+          <MegaMenu /><Link href="/group">خرید گروهی</Link>{liveDrops().length > 0 && <Link href="/#drop">دراپ‌ها</Link>}<Link href="/guarantee">گارانتی</Link><Link href="/account/orders">پیگیری سفارش</Link><Link href="/contact">پشتیبانی</Link>
         </nav>
         <div className="sp" />
         <div className="tools">
@@ -78,6 +79,10 @@ export function ToolCard({ p }: { p: Product }) {
       <b className="en tile-tool">{tiers ? tool : <>{tool}{tier && <small> {tier}</small>}</>}</b>
       <span className="tile-use">{tiers ? <span className="en tile-tiers">{tiers}</span> : p.use}</span>
       {p.group?.length ? <span className="tile-grp">خرید گروهی</span> : null}
+      <span className="tile-meta">
+        <span>{whenShort(p)}</span>
+        <span className={`w-${cardWarranty(p).level}`}>{cardWarranty(p).text}</span>
+      </span>
       <span className="tile-foot">
         <span>از <b className="num">{money(Math.min(d?.price ?? Infinity, ...variantsOf(p).map(minPrice)))}</b> تومان</span>
         <Icon id="arrow" className="arrow" style={{ width: 16, height: 16 }} />
@@ -123,7 +128,7 @@ function Orbit({ active, onPick, onHover }: { active: string; onPick: (id: strin
         <b className="en">{tool}{tier && <i> {tier}</i>}</b>
         <small>از <span className="num">{money(fromPrice(p))}</span> تومان</small>
       </Link>
-      <span className="orb-count"><b>{fa(PRODUCTS.length)}</b> سرویس، یک فروشگاه</span>
+      <span className="orb-count"><b>{fa(listed().length)}</b> سرویس، یک فروشگاه</span>
     </div>
   );
 }
@@ -143,10 +148,11 @@ export function Hero() {
     <section className="hero2">
       <div className="wrap hero2-g">
         <div className="hero2-copy">
-          <Eyebrow>{`${fa(PRODUCTS.length)} سرویس، یک فروشگاه`}</Eyebrow>
-          <h1>هر اشتراکی که لازم داری،<br /><b>با تومان.</b></h1>
-          <p className="lead">هوش مصنوعی، کدنویسی، طراحی و بیشتر؛ کد رسمی یا اکانت آماده، تحویل فوری و خودکار، با ضمانت بازگشت وجه.</p>
+          <Eyebrow>{`${fa(listed().length)} سرویس، تحویل خودکار`}</Eyebrow>
+          <h1>هر سرویس خارجی،<br /><b>با تومان.</b></h1>
+          <p className="lead">اکانت هوش مصنوعی، گیفت‌کارت، اپل آیدی، شماره مجازی و API. با کارت بانکی بپرداز و همان لحظه در صفحه سفارش تحویل بگیر. گارانتی هر محصول قبل از خرید روی صفحه‌اش نوشته شده.</p>
           <HeroSearch />
+          <HeroCats />
           <div className="pick" aria-label="پرطرفدارها">
             <span className="muted">پرطرفدار:</span>
             {FEATURED.map((id) => (
@@ -160,13 +166,31 @@ export function Hero() {
       </div>
       <div className="wrap">
         <ul className="assure-row">
-          <li><Dots size={3} />فقط ایمیل یا آیدی، هرگز رمز عبور</li>
-          <li><Dots size={3} /><Link href="/guarantee">ضمانت بازگشت وجه</Link></li>
-          <li><Dots size={3} />پرداخت با همه کارت‌های بانکی</li>
-          <li><Dots size={3} />پشتیبانی فارسی و چت آنلاین</li>
+          <li><Dots size={3} />تحویل خودکار، حتی نیمه‌شب</li>
+          <li><Dots size={3} /><Link href="/guarantee">گارانتی هر محصول، قبل از خرید معلوم</Link></li>
+          <li><Dots size={3} />کارت بانکی یا تتر</li>
+          <li><Dots size={3} />پشتیبانی فارسی، ۹ صبح تا ۱۲ شب</li>
         </ul>
       </div>
     </section>
+  );
+}
+
+/** Mobile only: the categories as big buttons, so the store is one tap away instead of below a decorative ring. */
+function HeroCats() {
+  const cats = (Object.keys(CATEGORIES) as (keyof typeof CATEGORIES)[]).filter((c): c is Category => c !== "all" && listed().some((p) => p.category === c));
+  return (
+    <nav className="hcats" aria-label="دسته‌ها">
+      {cats.map((c) => {
+        const items = listed().filter((p) => p.category === c);
+        return (
+          <Link key={c} href={`/services?c=${c}`}>
+            <span className="hcats-l">{items.slice(0, 3).map((p) => <BrandLogo key={p.id} id={p.id} size={14} />)}</span>
+            <b>{CATEGORIES[c]}</b><small className="num">{fa(items.length)}</small>
+          </Link>
+        );
+      })}
+    </nav>
   );
 }
 
@@ -210,9 +234,9 @@ function HeroSearch() {
 
 export function Steps() {
   const steps: [string, string][] = [
-    ["انتخاب کن", "ابزار و مدت اشتراک"],
-    ["با تومان بپرداز", "درگاه بانکی، بدون ارز"],
-    ["استفاده کن", "روی ایمیل خودت، چند دقیقه بعد"],
+    ["انتخاب کن", "نسخه، مدت یا مبلغ؛ گارانتی‌اش را همان‌جا می‌بینی"],
+    ["با تومان بپرداز", "کارت بانکی یا تتر، بدون کارت ارزی"],
+    ["تحویل بگیر", "کد، اکانت یا شماره در صفحه سفارش و پیامک"],
   ];
   return (
     <section className="steps3">
@@ -334,17 +358,17 @@ export function Shield() {
   const [tracked, setTracked] = useState<string | null>(null);
   const router = useRouter();
   const promises: [string, string][] = [
-    ["قطع شد؟ جایگزین می‌کنیم.", "تا روز آخر اشتراک. اگر نشد، پول روزهای باقی‌مانده برمی‌گردد."],
-    ["فقط ایمیل، نه رمز.", "اشتراک روی اکانت خودت فعال می‌شود."],
-    ["همه‌چیز را می‌بینی.", "از پرداخت تا فعال‌سازی، قدم‌به‌قدم."],
+    ["تحویلی کار نکرد؟", "جایگزین می‌کنیم یا کل مبلغ برمی‌گردد."],
+    ["مدت گارانتی شفاف است.", "از «تحویل سالم» تا یک سال؛ روی کارت و صفحه هر محصول، قبل از پرداخت."],
+    ["همه‌چیز در صفحه سفارش.", "کد یا اطلاعات ورود، راهنمای فعال‌سازی و تاریخ پایان گارانتی."],
   ];
   return (
     <section className="light" id="shield">
       <div className="wrap shield-g">
         <div className="reveal">
           <Eyebrow dotColor="var(--ink)">ضمانت اک‌دراپ</Eyebrow>
-          <p className="big-quote" style={{ marginTop: 28 }}>پاس تو،<br /><b>تا روز آخر بیمه است.</b></p>
-          <p className="muted" style={{ marginTop: 18, fontSize: 14 }}>فعال نشد؟ کل مبلغ برمی‌گردد. قطع شد؟ جایگزین می‌کنیم. <Link className="link" href="/guarantee">شرایط کامل ضمانت</Link></p>
+          <p className="big-quote" style={{ marginTop: 28 }}>گارانتی هر محصول،<br /><b>قبل از خرید معلوم است.</b></p>
+          <p className="muted" style={{ marginTop: 18, fontSize: 14 }}>تحویلی کار نکرد؟ جایگزین یا بازگشت کامل وجه. بعد از تحویل، هر محصول مدت گارانتی خودش را دارد. <Link className="link" href="/guarantee">گارانتی همه محصولات</Link></p>
           <form className="track" onSubmit={(e) => { e.preventDefault(); const v = String(new FormData(e.currentTarget).get("code") || "").trim().toUpperCase(); if (/^AD-\d{5,6}$/.test(v)) { router.push(`/orders/${v}`); return; } setTracked(v || "AD-482137"); }}>
             <input name="code" placeholder="AD-48213" aria-label="کد سفارش" />
             <button>پیگیری <Icon id="arrow" className="arrow" style={{ width: 14, height: 14, verticalAlign: -2 }} /></button>
@@ -368,10 +392,10 @@ const TIERS = [
 ];
 
 const FAQ: [string, string][] = [
-  ["«روی ایمیل خودم» یعنی چه؟", "اشتراک روی اکانت شخصی خودت فعال می‌شود. تاریخچه‌ات می‌ماند و فقط تو به آن دسترسی داری."],
-  ["«اکانت آماده» چیست؟", "یک اکانت تازه که فقط مال توست. ایمیل و رمزش را تحویل می‌گیری. ارزان‌تر و سریع‌تر است."],
-  ["چقدر طول می‌کشد؟", "معمولاً کمتر از ۱۵ دقیقه. زمان هر ابزار روی پاسش نوشته شده."],
-  ["اگر وسط دوره قطع شد؟", "جایگزین می‌کنیم. اگر نشد، پول روزهای باقی‌مانده برمی‌گردد."],
+  ["بعد از پرداخت چه چیزی می‌گیرم؟", "بسته به محصول: کد رسمی که روی اکانت خودت وارد می‌کنی، اکانت آماده با ایمیل و رمز، لینک فعال‌سازی، کلید API یا شماره مجازی. روی صفحه هر محصول، کنار دکمه خرید، دقیق نوشته شده."],
+  ["چقدر طول می‌کشد؟", "بیشتر محصولات خودکارند و همان لحظه بعد از پرداخت در صفحه سفارش و پیامک تحویل می‌شوند، حتی نیمه‌شب. چند مورد چند دقیقه طول می‌کشد؛ زمانش روی صفحه محصول هست."],
+  ["گارانتی چطور است؟", "اگر چیزی که تحویل گرفتی کار نکرد، جایگزین می‌کنیم یا کل مبلغ برمی‌گردد. بعد از آن، هر محصول مدت خودش را دارد (مثلاً ۲۵ روز یا یک سال). چند محصول ارزان گارانتی کوتاه دارند یا بدون گارانتی‌اند؛ این‌ها قبل از پرداخت با رنگ زرد مشخص شده‌اند."],
+  ["از داخل ایران کار می‌کند؟", "بیشتر سرویس‌های خارجی کاربران ایران را محدود کرده‌اند و برای استفاده به اینترنت بدون محدودیت نیاز داری. راهنمای فعال‌سازی هر محصول کنار تحویلی‌اش در صفحه سفارش است."],
 ];
 
 export function Concierge() {
@@ -421,7 +445,7 @@ export function Footer() {
         <div className="ft-g">
           <div className="ft-brand">
             <Wordmark className="ft-wm" />
-            <p>اشتراک و سرویس‌های دیجیتال خارجی، با تومان و روی اکانت خودت. با ضمانت بازگشت وجه و پشتیبانی فارسی.</p>
+            <p>اکانت، اشتراک، گیفت‌کارت و شماره مجازی خارجی، با تومان. تحویل خودکار، گارانتی شفاف برای هر محصول و پشتیبانی فارسی.</p>
             <div className="ft-social">
               <a href="#" aria-label="تلگرام">تلگرام</a><a href="#" aria-label="اینستاگرام">اینستاگرام</a><a href="mailto:hello@accdrop.ir" className="en">hello@accdrop.ir</a>
             </div>
@@ -429,7 +453,7 @@ export function Footer() {
           </div>
           <nav aria-label="دسته‌ها"><h5>دسته‌ها</h5><ul>{(Object.keys(CATEGORIES) as (keyof typeof CATEGORIES)[]).filter((c) => c !== "all" && listed().some((p) => p.category === c)).map((c) => <li key={c}><Link href={`/services?c=${c}`}>{CATEGORIES[c]}</Link></li>)}</ul></nav>
           <nav aria-label="پرفروش‌ها"><h5>پرفروش‌ها</h5><ul>{popular.map((p) => <li key={p.id}><Link href={productHref(p)} className="en">{p.name}</Link></li>)}</ul></nav>
-          <nav aria-label="راهنما"><h5>راهنما</h5><ul><li><Link href="/account/orders">پیگیری سفارش</Link></li><li><Link href="/guarantee">ضمانت و بازگشت وجه</Link></li><li><Link href="/group">خرید گروهی</Link></li><li><Link href="/#concierge">سؤالات پرتکرار</Link></li><li><Link href="/account/tickets">تیکت پشتیبانی</Link></li><li><Link href="/terms">قوانین و مقررات</Link></li></ul></nav>
+          <nav aria-label="راهنما"><h5>راهنما</h5><ul><li><Link href="/account/orders">پیگیری سفارش</Link></li><li><Link href="/guarantee">گارانتی همه محصولات</Link></li><li><Link href="/group">خرید گروهی</Link></li><li><Link href="/#concierge">سؤالات پرتکرار</Link></li><li><Link href="/account/tickets">تیکت پشتیبانی</Link></li><li><Link href="/terms">قوانین و مقررات</Link></li></ul></nav>
           <nav aria-label="اک‌دراپ"><h5>اک‌دراپ</h5><ul><li><Link href="/blog">بلاگ</Link></li>{liveDrops().length > 0 && <li><Link href="/#drop">دراپ‌ها</Link></li>}<li><Link href="/reseller">نمایندگی فروش</Link></li><li><Link href="/contact">تماس با ما</Link></li></ul></nav>
         </div>
 

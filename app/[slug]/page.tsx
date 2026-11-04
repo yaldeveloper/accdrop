@@ -16,6 +16,7 @@ import { BuyPanel } from "@/components/buy-panel";
 import { NumberShop } from "@/components/numbers";
 import { Reviews } from "@/components/reviews";
 import { splitName } from "@/components/pass";
+import { receiveOf, warrantyOf, whenOf, whenShort } from "@/lib/facts";
 
 export const dynamicParams = true;
 export const revalidate = 60;
@@ -34,7 +35,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const kw = keywordOf(p);
   const tail = { sub: deliveryTypes(p).includes("username") ? "فعال‌سازی روی آیدی شما" : deliveryTypes(p).includes("code") ? "تحویل فوری و خودکار" : "فعال‌سازی روی ایمیل شما", gift: "کد قانونی از منبع رسمی", account: "اکانت اختصاصی", qty: "تحویل روی آیدی شما", number: "کد تأیید در پنل" }[kindOf(p)];
   const title = `${kw.includes(c.faName) ? kw : `${kw} (${c.faName})`} | ${tail}`;
-  const description = `${kw} با پرداخت تومانی، از ${money(minPrice(p))} تومان. تحویل ${etaText(p)}، ${DELIVERY[deliveryTypes(p)[0]].detail}؛ ضمانت بازگشت وجه و پشتیبانی فارسی.`;
+  const description = `${kw} با پرداخت تومانی، از ${money(minPrice(p))} تومان. ${receiveOf(p, deliveryTypes(p)[0]).title}، تحویل ${whenOf(p)}؛ ${warrantyOf(p).label} و پشتیبانی فارسی.`;
   return {
     title, description,
     alternates: { canonical: `/${c.slug}` },
@@ -59,13 +60,16 @@ function stepsFor(p: Product, t: DeliveryType): [string, string][] {
 
 function promisesFor(p: Product): [string, string][] {
   const tail: [string, string] = ["قیمت همان است که می‌بینی.", "بدون کارمزد پنهان، به تومان و نهایی."];
+  const w = warrantyOf(p), r = receiveOf(p, deliveryTypes(p)[0]);
   switch (kindOf(p)) {
-    case "sub": if (deliveryTypes(p).every((t) => t === "code")) return [["کد یا اکانت کار نکرد؟", "جایگزین می‌کنیم یا کل مبلغ برمی‌گردد."], ["تحویل همان لحظه.", "بعد از پرداخت، خودکار در حساب کاربری و پیامک."], ["گارانتی", guaranteeOf(p) + "."], tail];
-      return [["فعال نشد؟", "کل مبلغ را برمی‌گردانیم."], ["وسط دوره قطع شد؟", "ظرف ۲۴ ساعت جایگزین می‌کنیم؛ اگر نشد، مبلغ روزهای باقی‌مانده برمی‌گردد."], ["رمز عبورت امن است.", "هیچ‌وقت رمز عبور نمی‌خواهیم."], tail];
-    case "gift": return [["کد کار نکرد؟", "کد جایگزین یا بازگشت کامل وجه."], ["از منبع رسمی.", "کدها قانونی‌اند، نه کارت‌های دست‌دوم."], ["تحویل در حساب کاربری.", "کد در صفحه سفارش و پیامک."], tail];
-    case "account": return [["ورود نشد؟", "اکانت جایگزین یا بازگشت وجه."], ["فقط مال توست.", "اکانت با کسی به اشتراک گذاشته نمی‌شود و رمز را عوض می‌کنی."], ["اطلاعات کامل.", "ایمیل، رمز و سؤال‌های امنیتی را تحویل می‌گیری."], tail];
     case "qty": return [["کامل نرسید؟", "باقی‌مانده را می‌فرستیم یا مبلغش را برمی‌گردانیم."], ["امن.", "فقط یوزرنیم؛ هرگز کد ورود تلگرام نمی‌خواهیم."], ["هدیه هم می‌شود.", "روی آیدی هر کسی که بخواهی."], tail];
-    case "number": return [["کد نیامد؟", "شماره جدید می‌گیری یا کل مبلغ برمی‌گردد."], ["کد تأیید در پنل.", "کد پیامکی همان‌جا نمایش داده می‌شود."], ["کشور به انتخاب تو.", "آمریکا، انگلیس، کانادا یا هلند."], tail];
+    case "number": return [["کد نیامد؟", "شماره جدید می‌گیری یا کل مبلغ برمی‌گردد."], ["کد تأیید در پنل.", "کد پیامکی همان‌جا نمایش داده می‌شود."], ["کشور به انتخاب تو.", "از بین کشورهایی که همین الان شماره دارند."], tail];
+    default: return [
+      ["تحویلی کار نکرد؟", "جایگزین می‌کنیم یا کل مبلغ برمی‌گردد."],
+      [`${w.label}.`, w.note],
+      [`${r.title}.`, `${r.detail}؛ در صفحه سفارش و پیامک.`],
+      tail,
+    ];
   }
 }
 
@@ -98,7 +102,6 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   if (!p) notFound();
   const c = contentOf(p);
   const [tool, tier] = splitName(p.name);
-  const instant = p.etaMinutes === 0 && deliveryTypes(p).every((t) => t === "code");
   const months = planKeys(p);
   const seo = seoOf(p.id);
   const faq = [...(seo?.faq ?? []), ...faqFor(p)];
@@ -163,16 +166,15 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           </nav>
           <div className="p2-g">
             <div className="p2-info p2-head">
-              <div className="p2-brand"><span className="p2-logo"><BrandLogo id={p.id} size={30} /></span><div><small>{c.prefix ?? "خرید اکانت"} • {p.source ?? (isSub(p) ? "اشتراک رسمی" : "رسمی و قانونی")}</small><b className="en">{p.maker}</b></div></div>
+              <div className="p2-brand"><span className="p2-logo"><BrandLogo id={p.id} size={30} /></span><div><small>{receiveOf(p, deliveryTypes(p)[0]).title} • {p.source ?? whenShort(p)}</small><b className="en">{p.maker}</b></div></div>
               <h1 className="p2-h1"><span className="en">{tool}{tier && <i> {tier}</i>}</span></h1>
               <p className="p2-use">{p.use}</p>
               <p className="p2-lead">{c.intro}</p>
-              <ul className="p2-hl">{p.includes.slice(0, 3).map((x) => <li key={x}><Icon id="check" />{x}</li>)}</ul>
-              <ul className="p2-perks" aria-label="مزایای خرید از اک‌دراپ">
-                <li><span className="p2-pi"><Icon id="shield" /></span><span><b>{isSub(p) && !p.warranty ? "ضمانت تا روز آخر" : guaranteeOf(p)}</b><small>{isSub(p) && !p.warranty ? "اگر قطع شد، روزهای باقی‌مانده برمی‌گردد" : p.warranty?.startsWith("بدون گارانتی") ? "فقط تحویل سالم تضمین می‌شود" : "جایگزینی یا بازگشت کامل وجه"}</small></span></li>
-                <li><span className="p2-pi"><Icon id="user" /></span><span><b>{instant ? "تحویل فوری و خودکار" : isSub(p) ? "روی اکانت خودت" : "تحویل در حساب کاربری"}</b><small>{instant ? "همان لحظه، در حساب کاربری و پیامک" : isSub(p) ? "فقط ایمیل؛ رمز نمی‌خواهیم" : "همراه با پیامک"}</small></span></li>
-                {p.group?.length ? <li><a href="#buy" className="p2-pl"><span className="p2-pi"><Icon id="box" /></span><span><b>دنگی با دوستان</b><small>هر نفر تا {fa(p.group[p.group.length - 1][1])}٪ ارزان‌تر</small></span></a></li> : null}
-              </ul>
+              {/* What it does; delivery and warranty live in the buy box, so they are not repeated here. */}
+              <ul className="p2-hl">{p.includes.filter((x) => !/تحویل|گارانتی/.test(x)).slice(0, 3).map((x) => <li key={x}><Icon id="check" />{x}</li>)}</ul>
+              {p.group?.length ? <ul className="p2-perks" aria-label="خرید گروهی">
+                <li><a href="#buy" className="p2-pl"><span className="p2-pi"><Icon id="box" /></span><span><b>دنگی با دوستان</b><small>هر نفر تا {fa(p.group[p.group.length - 1][1])}٪ ارزان‌تر</small></span></a></li>
+              </ul> : null}
             </div>
             <BuyPanel product={p} />
             <div className="p2-info p2-more">
@@ -273,7 +275,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
         <section className="p2-sec" id="delivery">
           <div className="wrap p2-two">
-            <div className="p2-h"><span className="p2-k">تحویل</span><h2>تحویل {p.name} چطور انجام می‌شود؟</h2><p>{types.length > 1 ? "دو روش داریم. هر کدام را که در کادر خرید انتخاب کنی، همان‌طور تحویل می‌گیری." : "ساده و بدون نیاز به رمز عبور."}</p></div>
+            <div className="p2-h"><span className="p2-k">تحویل</span><h2>تحویل {p.name} چطور انجام می‌شود؟</h2><p>{types.length > 1 ? "دو روش داریم. هر کدام را که در کادر خرید انتخاب کنی، همان‌طور تحویل می‌گیری." : `${receiveOf(p, types[0]).title}، ${receiveOf(p, types[0]).detail}.`}</p></div>
             <div className="p2-ways">
               {types.map((t) => (
                 <div className="p2-way" key={t}>
@@ -308,7 +310,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
         <section className="p2-sec" id="guarantee">
           <div className="wrap p2-two">
-            <div className="p2-h"><span className="p2-k">ضمانت</span><h2>ضمانت اک‌دراپ</h2><p>{isSub(p) ? "اشتراکی که می‌خری تا روز آخر بیمه است." : "هر خرید ضمانت مشخص دارد."} این‌ها تعهد ماست، نه شعار.</p><Link className="link" href="/guarantee">شرایط کامل ضمانت</Link></div>
+            <div className="p2-h"><span className="p2-k">ضمانت</span><h2>ضمانت اک‌دراپ</h2><p>گارانتی این محصول: <b>{warrantyOf(p).label}</b>. {warrantyOf(p).note}</p><Link className="link" href="/guarantee">شرایط کامل ضمانت</Link></div>
             <ul className="p2-promise">
               {promisesFor(p).map(([b, d]) => <li key={b}><b>{b}</b><span>{d}</span></li>)}
             </ul>
@@ -341,7 +343,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               <span className="p2-k">پرسش و پاسخ</span>
               <h2>سؤالات پرتکرار خرید {p.name}</h2>
               <p>جوابت را پیدا نکردی؟ یک آدم واقعی جواب می‌دهد.</p>
-              <a className="btn btn-ink" href="#">پیام در تلگرام <Icon id="arrow" className="arrow" /></a>
+              <Link className="btn btn-ink" href="/contact">راه‌های تماس <Icon id="arrow" className="arrow" /></Link>
             </div>
             <div className="faq faq-l">
               {faq.map(([q, a], i) => <details key={q} open={i === 0}><summary>{q}<span className="pm" /></summary><p>{a}</p></details>)}

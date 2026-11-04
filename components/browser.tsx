@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CATEGORIES, listed, type Category } from "@/lib/catalog";
-import { CAT_LINE, CAT_TONE, inCat } from "./mega";
+import { CAT_TONE, inCat } from "./mega";
+import { catLine } from "@/lib/facts";
 import { browse, countIn, NEEDS, SORTS, type SortKey } from "@/lib/search";
 import { fa } from "@/lib/format";
 import { BrandLogo, Icon } from "./brand";
@@ -93,7 +94,7 @@ export function ServiceBrowser({ syncUrl = false }: { syncUrl?: boolean }) {
             if (!items.length) return null;
             return (
               <section key={k} className="cat-row" style={{ "--t": CAT_TONE[k] } as CSSProperties}>
-                <header><i /><h3>{CATEGORIES[k]}</h3><small className="muted">{CAT_LINE[k]}</small>
+                <header><i /><h3>{CATEGORIES[k]}</h3><small className="muted">{catLine(k)}</small>
                   <button type="button" className="link" onClick={() => { setCat(k); window.scrollTo({ top: (input.current?.getBoundingClientRect().top ?? 0) + scrollY - 120, behavior: "smooth" }); }}>همه {fa(items.length)} <Icon id="arrow" className="arrow" /></button>
                 </header>
                 <div className="cat-scroll">{items.map((p) => <ToolCard key={p.id} p={p} />)}</div>
