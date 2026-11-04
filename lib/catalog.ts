@@ -35,6 +35,9 @@ export type Product = {
   badge?: string;
   /** Group buy: [seats, percent off per seat], ascending. */
   group?: [number, number][];
+  /** Wholesale: [minimum quantity, percent off each unit], ascending. One line then carries up to MAX_QTY units
+   *  (stored in `seats`) and delivers that many codes or accounts. */
+  bulk?: [number, number][];
   /** Offers the dedicated foreign static IP add-on. */
   ip?: boolean;
   /** Brand colour for the product page (overrides the built-in theme). */
@@ -142,11 +145,14 @@ const SAMPLES: Product[] = [
     description: "استارز برای ربات‌ها، کانال‌ها و هدیه", use: "پرداخت داخل تلگرام",
     plans: { "100": { username: 190000 }, "250": { username: 450000 }, "500": { username: 890000 }, "1000": { username: 1750000 } },
     includes: ["خرید در ربات‌ها و مینی‌اپ‌ها", "حمایت از کانال‌ها و پست‌های پولی", "هدیه دادن به دوستان"] },
-  { id: "appleid", hidden: true, name: "Apple ID", maker: "Apple", category: "apple", kind: "account", monogram: "AP", etaMinutes: 30,
+  { id: "appleid", name: "Apple ID", maker: "Apple", category: "apple", kind: "account", monogram: "AP", etaMinutes: 0, badge: "عمده",
     axis: "کشور اکانت", labels: { us: "آمریکا", tr: "ترکیه", uk: "انگلیس" },
-    description: "اپل آیدی آماده و اختصاصی", use: "ورود به App Store",
-    plans: { us: { ready: 390000 }, tr: { ready: 390000 }, uk: { ready: 450000 } },
-    includes: ["اکانت تازه با ایمیل جدید، فقط برای تو", "سؤال‌های امنیتی و تاریخ تولد", "مناسب App Store و iCloud همان کشور"] },
+    description: "اپل آیدی آماده و اختصاصی، تکی یا عمده برای موبایل‌فروشی‌ها", use: "ورود به App Store",
+    plans: { us: { code: 390000 }, tr: { code: 390000 }, uk: { code: 450000 } },
+    bulk: [[5, 5], [10, 10], [25, 15], [50, 20]],
+    deliver: "بلافاصله بعد از پرداخت، ایمیل و رمز اپل آیدی، رمز ایمیل، سؤال‌های امنیتی و تاریخ تولد در حساب کاربری‌ات نمایش داده و پیامک می‌شود. در خرید عمده هر اکانت در یک خط جداست.",
+    howTo: "در گوشی به Settings › Media & Purchases (یا App Store) برو و فقط همان‌جا وارد شو، نه در iCloud بالای تنظیمات؛ این‌طوری گوشی به اکانت قفل نمی‌شود. بعد از ورود، رمز را عوض کن.",
+    includes: ["اکانت تازه با ایمیل جدید، فقط برای تو", "سؤال‌های امنیتی و تاریخ تولد", "تحویل خودکار، تکی یا عمده تا ۱۰۰ عدد"] },
   // Live 5sim numbers (lib/server/fivesim.ts): countries and prices come from 5sim; the plan below is only the
   // «از …» price shown in listings and is never sold (see priceLines).
   { id: "vnumber", name: "Virtual Number", maker: "AccDrop", category: "number", kind: "number", monogram: "VN", etaMinutes: 0,
@@ -473,11 +479,15 @@ export const STATIC_IP = {
   countries: { de: "آلمان", nl: "هلند", uk: "انگلیس", us: "آمریکا", fr: "فرانسه" } as Record<string, string>,
 };
 export const MAX_SEATS = 6;
+/** Most units of a wholesale product in one cart line. */
+export const MAX_QTY = 100;
+/** How many units one line of this product may carry: group seats, wholesale quantity, or just one. */
+export const maxUnits = (p: Product) => (p.bulk?.length ? MAX_QTY : p.group?.length ? MAX_SEATS : 1);
 
-/** Percent off per seat for a group of `seats`. */
+/** Percent off per seat for a group of `seats`, or per unit for a wholesale quantity. */
 export function groupOff(p: Product, seats: number) {
   let off = 0;
-  for (const [n, pct] of p.group ?? []) if (seats >= n) off = pct;
+  for (const [n, pct] of p.bulk ?? p.group ?? []) if (seats >= n) off = pct;
   return off;
 }
 export const ipPrice = (p: Product, plan: Months) => (p.ip && isSub(p) ? STATIC_IP.perMonth * Math.max(1, Number(plan) || 1) : 0);
@@ -485,7 +495,7 @@ export const ipPrice = (p: Product, plan: Months) => (p.ip && isSub(p) ? STATIC_
 /** Full price of one cart line: seats with group discount, plus add-ons. */
 export function linePrice(sel: Selection) {
   const p = productById(sel.id);
-  const seats = p.group?.length ? Math.min(MAX_SEATS, Math.max(1, sel.seats ?? 1)) : 1;
+  const seats = Math.min(maxUnits(p), Math.max(1, Math.trunc(sel.seats ?? 1)));
   const unit = priceOf(sel).price;
   const group = Math.round((unit * seats * (100 - groupOff(p, seats))) / 100 / 1000) * 1000;
   const ip = sel.ip && STATIC_IP.countries[sel.ip] ? ipPrice(p, sel.plan) : 0;
@@ -495,7 +505,7 @@ export function linePrice(sel: Selection) {
 /** «۳ نفر • آی‌پی ثابت آلمان», or "" for a plain line. */
 export function extrasLabel(sel: Selection) {
   const out: string[] = [];
-  if ((sel.seats ?? 1) > 1) out.push(`خرید گروهی ${fa(sel.seats!)} نفره`);
+  if ((sel.seats ?? 1) > 1) out.push(productById(sel.id)?.bulk?.length ? `${fa(sel.seats!)} عدد` : `خرید گروهی ${fa(sel.seats!)} نفره`);
   if (sel.ip && STATIC_IP.countries[sel.ip]) out.push(`${STATIC_IP.title} ${STATIC_IP.countries[sel.ip]}`);
   return out.join(" • ");
 }
