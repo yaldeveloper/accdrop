@@ -1,5 +1,6 @@
 import { randomInt } from "node:crypto";
-import { DELIVERY, MAX_SEATS, STATIC_IP, linePrice, productById, PRODUCTS, type DeliveryType } from "@/lib/catalog";
+import { DELIVERY, MAX_SEATS, STATIC_IP, linePrice, productById, PRODUCTS, sellable, type DeliveryType } from "@/lib/catalog";
+import { livePlan } from "@/lib/numbers";
 import { loadCatalog } from "./catalog";
 import { normalizeUsername, validEmail, validUsername, type Order, type OrderLine, type OrderStatus } from "@/lib/account";
 import { db } from "./db";
@@ -10,19 +11,22 @@ import { onSplitPaid } from "./splits";
 import { canInstall, type LegalInfo, type PayMethod } from "@/lib/billing";
 import { sendOrderSms } from "./sms";
 import { supplyLine } from "./supplier";
+import { cancelNumber, finishNumber, fivesimConfigured, livePrice, publicNumber, refreshNumber, supplyNumber, type NumRecord } from "./fivesim";
 
 type Sql = Awaited<ReturnType<typeof db>>;
 const ms = (d: Date | null) => (d ? new Date(d).getTime() : null);
 
 export type LineInput = { id: string; plan: string; type: DeliveryType; email?: string; username?: string; seats?: number; ip?: string; members?: string[] };
 
-/** Validates the cart and prices it from the catalog. Prices sent by the browser are ignored. */
-export function priceLines(input: LineInput[]): { lines: OrderLine[] } | { error: string; index?: number } {
+/** Validates the cart and prices it from the catalog. Prices sent by the browser are ignored.
+ * `live` holds the server's current price of each live virtual number plan (from 5sim). */
+export function priceLines(input: LineInput[], live: Record<string, number> = {}): { lines: OrderLine[] } | { error: string; index?: number } {
   if (!Array.isArray(input) || !input.length || input.length > 10) return { error: "bad_cart" };
   const lines: OrderLine[] = [];
   for (const [i, l] of input.entries()) {
     const p = PRODUCTS.find((x) => x.id === l?.id);
-    if (!p || p.hidden || !(l.type in DELIVERY) || !p.plans[l.plan]?.[l.type]) return { error: "bad_item", index: i };
+    if (!p || p.hidden || !(l.type in DELIVERY) || !sellable(p, l)) return { error: "bad_item", index: i };
+    if (livePlan(l.plan) && !live[l.plan]) return { error: "number_unavailable", index: i };
     const seats = p.group?.length ? Math.trunc(Number(l.seats ?? 1)) : 1;
     if (!(seats >= 1 && seats <= MAX_SEATS)) return { error: "bad_item", index: i };
     const ip = l.ip ? String(l.ip) : undefined;
@@ -37,7 +41,7 @@ export function priceLines(input: LineInput[]): { lines: OrderLine[] } | { error
     if (need === "username" && !validUsername(l.username ?? "")) return { error: "bad_username", index: i };
     lines.push({
       id: p.id, plan: l.plan, type: l.type, seats, ip, members,
-      price: linePrice({ id: p.id, plan: l.plan, type: l.type, seats, ip }),
+      price: linePrice({ id: p.id, plan: l.plan, type: l.type, seats, ip, unit: live[l.plan] }),
       email: need === "email" ? l.email!.trim().toLowerCase() : undefined,
       username: need === "username" ? normalizeUsername(l.username!) : undefined,
     });
@@ -56,7 +60,7 @@ export async function discountRate(code: string): Promise<number> {
 export async function createOrder(mobile: string, input: LineInput[], discountCode: string,
   opts: { split?: { code: string; unit: number }; invoice?: LegalInfo | null } = {}) {
   await loadCatalog();
-  const priced = priceLines(input);
+  const priced = priceLines(input, await livePrices(input));
   if ("error" in priced) return priced;
   // A «دنگ» share is one seat at the group's locked per-person price.
   if (opts.split) priced.lines[0].price = opts.split.unit;
@@ -87,6 +91,18 @@ export async function createOrder(mobile: string, input: LineInput[], discountCo
     if (email) await tx`update users set email = ${email} where mobile = ${mobile} and email = ''`;
   });
   return { code: orderCode, total };
+}
+
+/** Today's price of every live virtual number in the cart (missing = out of stock or 5sim not connected). */
+async function livePrices(input: LineInput[]): Promise<Record<string, number>> {
+  const plans = [...new Set((Array.isArray(input) ? input : []).map((l) => String(l?.plan ?? "")).filter((x) => livePlan(x)))];
+  if (!plans.length || !fivesimConfigured()) return {};
+  const out: Record<string, number> = {};
+  await Promise.all(plans.map(async (plan) => {
+    const price = await livePrice(plan).catch((e) => { console.error(e); return null; });
+    if (price) out[plan] = price;
+  }));
+  return out;
 }
 
 export type { PayMethod };
@@ -183,13 +199,22 @@ export async function fulfilInstant(sql: Sql, onlyOrder?: string) {
       if (r.length) touched.add(l.order_code);
     }
   }
+  // Live virtual numbers: buy one from 5sim for every paid line that has none yet.
+  const numbers = await sql`
+    select l.id, l.plan, l.price, l.order_code from order_lines l join orders o on o.code = l.order_code
+    where o.status in ('paid', 'activating') and l.delivery = 'number' and l.num is null and l.plan like '5s:%'
+      ${onlyOrder ? sql`and o.code = ${onlyOrder}` : sql``}
+    order by o.paid_at, l.idx`;
+  for (const l of numbers) await supplyNumber(l.id, l.plan, Number(l.price));
   for (const code of touched) await completeIfDelivered(sql, code);
 }
 
 /** An order whose every line is an instant line that has been delivered becomes active on its own. */
 async function completeIfDelivered(sql: Sql, code: string) {
-  const lines = await sql`select delivery, secret from order_lines where order_code = ${code}`;
-  const done = lines.every((l) => (l.delivery === "code" || l.delivery === "number") && l.secret);
+  const lines = await sql`select delivery, plan, secret, num from order_lines where order_code = ${code}`;
+  // A live number is delivered once its verification code has arrived.
+  const done = lines.every((l) => (l.delivery === "code" || l.delivery === "number") && l.secret
+    && (!livePlan(l.plan) || ((l.num as NumRecord | null)?.codes ?? []).length > 0));
   if (!done) return;
   const r = await sql`update orders set status = 'active', activated_at = now() where code = ${code} and status in ('paid', 'activating') returning mobile`;
   if (r.length) await sendOrderSms(r[0].mobile, code);
@@ -222,6 +247,8 @@ export async function loadOrders(where: { mobile?: string; code?: string; status
       lineId: l.id, id: l.product_id, plan: l.plan, type: l.delivery as DeliveryType, price: Number(l.price),
       email: l.email ?? undefined, username: l.username ?? undefined,
       seats: Number(l.seats ?? 1), ip: l.ip ?? undefined, members: l.members ? String(l.members).split(",") : undefined, secret: l.secret ?? undefined, deliveredAt: ms(l.delivered_at),
+      supplyRef: l.supply_ref ?? undefined,
+      number: livePlan(l.plan) ? publicNumber(l.num as NumRecord | null) ?? { status: "BUYING", codes: [], tries: 0 } : undefined,
     })),
   }));
 }
@@ -229,8 +256,37 @@ export async function loadOrders(where: { mobile?: string; code?: string; status
 /** Customers only see a line's secret (gift code, number, login) once it has been delivered and paid for. */
 export const forCustomer = (o: Order): Order => ({
   ...o, adminNote: undefined,
-  lines: o.lines.map((l) => ({ ...l, secret: o.status === "paid" || o.status === "activating" || o.status === "active" ? l.secret : undefined })),
+  lines: o.lines.map((l) => {
+    const show = o.status === "paid" || o.status === "activating" || o.status === "active";
+    return { ...l, supplyRef: undefined, secret: show ? l.secret : undefined, number: show ? l.number : undefined };
+  }),
 });
+
+/**
+ * Customer actions on a live virtual number line: refresh (fetch new SMS), cancel (no code yet), retry (new number after
+ * one that got no code), done (close it after the code arrived). Returns the line's number state.
+ */
+export async function numberAction(code: string, mobile: string | null, lineId: number, action: "refresh" | "cancel" | "retry" | "done") {
+  const sql = await db();
+  const [l] = await sql`select l.id, l.plan, l.price, o.status from order_lines l join orders o on o.code = l.order_code
+    where l.id = ${lineId} and o.code = ${code} ${mobile ? sql`and o.mobile = ${mobile}` : sql``}`;
+  if (!l || !livePlan(l.plan)) return { error: "not_found" as const };
+  if (!["paid", "activating", "active"].includes(l.status)) return { error: "not_paid" as const };
+  let n: NumRecord | null;
+  if (action === "cancel") n = await cancelNumber(l.id);
+  else if (action === "retry") {
+    n = await refreshNumber(l.id);
+    if (publicNumber(n)?.canRetry) await supplyNumber(l.id, l.plan, Number(l.price), true);
+    n = await refreshNumber(l.id);
+  } else if (action === "done") { await finishNumber(l.id); n = await refreshNumber(l.id); }
+  else {
+    // A paid line that has no number yet (e.g. 5sim was busy right after payment) gets one now.
+    if (!(await sql`select 1 from order_lines where id = ${l.id} and num is not null`).length) await supplyNumber(l.id, l.plan, Number(l.price));
+    n = await refreshNumber(l.id);
+  }
+  if (n?.codes?.length) await completeIfDelivered(sql, code);
+  return { number: publicNumber(n) };
+}
 
 // ----- Admin actions -----
 export async function adminUpdateOrder(code: string, patch: { status?: OrderStatus; note?: string; secrets?: Record<string, string>; taxId?: string }) {

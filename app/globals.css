@@ -2183,3 +2183,29 @@ footer.ft .legal{margin-top:18px}
 .sup-tbl .ok{color:var(--lime)}.sup-tbl .bad{color:#E06C6C}
 .od-secret b{white-space:pre-line}
 @media (max-width:760px){.sup-top{grid-template-columns:minmax(0,1fr)}}
+
+/* ----- Live virtual numbers (5sim) ----- */
+.vn-svc{display:flex;flex-wrap:wrap;gap:6px}
+.vn-svc button{height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--hair-l2);font-size:13px;color:var(--gray-l);transition:border-color .2s,color .2s}
+.vn-svc button:hover{color:var(--ink)}
+.vn-svc button.on{border-color:var(--ink);color:var(--ink);background:#fff;box-shadow:0 0 0 1px var(--ink)}
+.vn-q{width:100%;height:42px;border-radius:12px;border:1px solid var(--hair-l2);padding:0 14px;background:#fff;color:var(--ink);font:inherit;font-size:14px;margin-bottom:8px}
+.vn-list{display:grid;gap:8px;max-height:420px;overflow:auto;padding:2px}
+.vn-o{grid-template-columns:20px minmax(0,1fr) auto}
+.vn-wait{font-size:13px;color:var(--gray-l);padding:8px 2px}
+.vn-box{display:grid;gap:10px;margin-top:8px;padding:14px;border:1px solid var(--hair-2);border-radius:14px;background:var(--ink-2)}
+.vn-top{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px}
+.vn-st{display:inline-flex;align-items:center;gap:8px}
+.vn-st i{width:7px;height:7px;border-radius:50%;background:#E8C26A}
+.vn-pending .vn-st i,.vn-buying .vn-st i{animation:pulse 1.4s infinite}
+.vn-received .vn-st,.vn-finished .vn-st{color:var(--lime)}
+.vn-received .vn-st i,.vn-finished .vn-st i{background:var(--lime)}
+.vn-canceled .vn-st i,.vn-timeout .vn-st i,.vn-banned .vn-st i,.vn-failed .vn-st i{background:var(--gray-d)}
+.vn-phone{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:22px;letter-spacing:.02em;color:var(--paper);text-align:left;direction:ltr}
+.vn-phone small,.vn-code+small{font-size:11px;color:var(--gray-d)}
+.vn-codes{display:grid;gap:8px;list-style:none;padding:0;margin:0}
+.vn-codes li{display:grid;gap:4px}
+.vn-code{font-size:26px;letter-spacing:.18em;color:var(--lime);text-align:left;direction:ltr}
+.vn-act{display:flex;flex-wrap:wrap;gap:8px}
+.vn-act:empty{display:none}
+.vn-act .btn{height:38px;font-size:13px}

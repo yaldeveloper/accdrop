@@ -2,6 +2,7 @@
 import { productById, type Selection } from "./catalog";
 import { clubPoints } from "./format";
 import type { LegalInfo } from "./billing";
+import type { NumberState } from "./numbers";
 
 export type User = { mobile: string; name: string; email: string; createdAt: number };
 export type OrderLine = Selection & {
@@ -10,6 +11,10 @@ export type OrderLine = Selection & {
   members?: string[];
   /** Server fields: line id, and what was delivered (gift code, number or login) once it is ready. */
   lineId?: number; secret?: string; deliveredAt?: number | null;
+  /** Live virtual number (5sim): the number, its SMS codes and whether a new one can be requested. */
+  number?: NumberState;
+  /** Admin only: supplier reference (5sim order id or the error from the last attempt). */
+  supplyRef?: string;
 };
 /** pending = waiting for payment, canceled = payment failed or abandoned. */
 export type OrderStatus = "pending" | "paid" | "activating" | "active" | "canceled" | "refunded";

@@ -13,6 +13,8 @@ import { fa, money } from "@/lib/format";
 import { BrandLogo, Icon } from "@/components/brand";
 import { ToolCard } from "@/components/sections";
 import { BuyPanel } from "@/components/buy-panel";
+import { NumberPanel } from "@/components/numbers";
+import { fivesimConfigured } from "@/lib/server/fivesim";
 import { Reviews } from "@/components/reviews";
 import { splitName } from "@/components/pass";
 import { INSTALLMENTS, canInstall } from "@/lib/billing";
@@ -63,7 +65,7 @@ function promisesFor(p: Product): [string, string][] {
     case "gift": return [["کد کار نکرد؟", "کد جایگزین یا بازگشت کامل وجه."], ["از منبع رسمی.", "کدها قانونی‌اند، نه کارت‌های دست‌دوم."], ["تحویل در حساب کاربری.", "کد در صفحه سفارش و پیامک."], tail];
     case "account": return [["ورود نشد؟", "اکانت جایگزین یا بازگشت وجه."], ["فقط مال توست.", "اکانت با کسی به اشتراک گذاشته نمی‌شود و رمز را عوض می‌کنی."], ["اطلاعات کامل.", "ایمیل، رمز و سؤال‌های امنیتی را تحویل می‌گیری."], tail];
     case "qty": return [["کامل نرسید؟", "باقی‌مانده را می‌فرستیم یا مبلغش را برمی‌گردانیم."], ["امن.", "فقط یوزرنیم؛ هرگز کد ورود تلگرام نمی‌خواهیم."], ["هدیه هم می‌شود.", "روی آیدی هر کسی که بخواهی."], tail];
-    case "number": return [["کد نیامد؟", "کل مبلغ خودکار به حسابت برمی‌گردد."], ["کد تأیید در پنل.", "کد پیامکی همان‌جا نمایش داده می‌شود."], ["کشور به انتخاب تو.", "آمریکا، انگلیس، کانادا یا هلند."], tail];
+    case "number": return [["کد نیامد؟", "شماره جدید می‌گیری یا کل مبلغ برمی‌گردد."], ["کد تأیید در پنل.", "کد پیامکی همان‌جا نمایش داده می‌شود."], ["کشور به انتخاب تو.", "آمریکا، انگلیس، کانادا یا هلند."], tail];
   }
 }
 
@@ -161,7 +163,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                 {p.group?.length ? <li><a href="#buy" className="p2-pl"><span className="p2-pi"><Icon id="box" /></span><span><b>دنگی با دوستان</b><small>هر نفر تا {fa(p.group[p.group.length - 1][1])}٪ ارزان‌تر</small></span></a></li> : null}
               </ul>
             </div>
-            <BuyPanel product={p} />
+            {kindOf(p) === "number" && fivesimConfigured() ? <NumberPanel product={p} /> : <BuyPanel product={p} />}
             <div className="p2-info p2-more">
               <Scene id={p.id} />
             </div>

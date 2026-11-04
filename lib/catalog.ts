@@ -1,5 +1,6 @@
 // Sample catalogue. Prices are placeholders in Toman; replace with data from the admin panel / API.
 import { duration, fa } from "./format";
+import { livePlan, livePlanLabel } from "./numbers";
 
 /** How a purchase reaches the customer. */
 export type DeliveryType = "own" | "ready" | "username" | "code" | "number";
@@ -188,7 +189,7 @@ export const dropOf = (id: string) => DROPS.find((d) => d.productId === id);
 export const kindOf = (p: Product): ProductKind => p.kind ?? "sub";
 export const isSub = (p: Product) => kindOf(p) === "sub";
 /** Display name of an option key: «یک ماهه», «۱۰ دلار», «آمریکا». */
-export const optionLabel = (p: Product, key: string) => p.labels?.[key] ?? duration(key);
+export const optionLabel = (p: Product, key: string) => (livePlan(key) ? livePlanLabel(key) : p.labels?.[key] ?? duration(key));
 export const axisOf = (p: Product) => p.axis ?? "مدت اشتراک";
 /** «فوری» or «حدود ۱۰ دقیقه». */
 export const etaText = (p: Product) => (p.etaMinutes === 0 ? "خودکار" : `حدود ${fa(p.etaMinutes)} دقیقه`);
@@ -205,7 +206,13 @@ export const deliveryTypes = (p: Product) =>
   [...new Set(planKeys(p).flatMap((m) => Object.keys(p.plans[m] ?? {})))] as DeliveryType[];
 
 /** seats: group buy size (1 = just me). ip: country of the static IP add-on. */
-export type Selection = { id: string; plan: Months; type: DeliveryType; seats?: number; ip?: string };
+export type Selection = {
+  id: string; plan: Months; type: DeliveryType; seats?: number; ip?: string;
+  /** Live virtual number (plan `5s:…`): the Toman price shown when it was picked. The server re-prices it from 5sim. */
+  unit?: number;
+};
+/** A cart line whose option exists: a plan of the product, or a live 5sim number. */
+export const sellable = (p: Product, sel: Selection) => !!p.plans[sel.plan]?.[sel.type] || (sel.type === "number" && kindOf(p) === "number" && !!livePlan(sel.plan));
 
 /** Dedicated foreign static IP, sold as an add-on to some subscriptions. Price per month of the plan. */
 export const STATIC_IP = {
@@ -242,6 +249,7 @@ export function extrasLabel(sel: Selection) {
 }
 
 export function priceOf(sel: Selection): { price: number; was?: number } {
+  if (livePlan(sel.plan)) return { price: Math.max(0, Math.round(Number(sel.unit) || 0)) };
   const base = productById(sel.id).plans[sel.plan]?.[sel.type] ?? 0;
   const d = DROPS.find((x) => x.productId === sel.id && x.plan === sel.plan && x.type === sel.type);
   if (d) return { price: d.price, was: base };

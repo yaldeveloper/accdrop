@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ALL_PRODUCTS, CURRENT_DROP, linePrice, planKeys, priceOf, productById, type Selection } from "@/lib/catalog";
+import { ALL_PRODUCTS, CURRENT_DROP, linePrice, planKeys, priceOf, productById, sellable, type Selection } from "@/lib/catalog";
 
 export type CartLine = Selection & { price: number };
 export type SheetView = "product" | "cart" | "checkout" | "done" | null;
@@ -47,7 +47,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try {
       const saved = JSON.parse(localStorage.getItem(KEY) || "[]") as CartLine[];
       // Drop lines whose product or option no longer exists, and re-price the rest.
-      setCart(saved.filter((l) => ALL_PRODUCTS.some((p) => p.id === l.id && !p.hidden && p.plans[l.plan]?.[l.type])).map((l) => ({ ...l, price: linePrice(l) })));
+      setCart(saved.filter((l) => ALL_PRODUCTS.some((p) => p.id === l.id && !p.hidden && sellable(p, l))).map((l) => ({ ...l, price: linePrice(l) })));
     } catch { /* storage unavailable */ }
   }, []);
   const persist = (next: CartLine[]) => {

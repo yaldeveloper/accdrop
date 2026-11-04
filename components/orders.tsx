@@ -6,6 +6,7 @@ import { STAGES, STATUS_TITLE, isPaid, passWindow, stageOf, type Order } from "@
 import { fa, faDate, money } from "@/lib/format";
 import { INSTALLMENTS } from "@/lib/billing";
 import { BrandLogo, Icon } from "./brand";
+import { NumberBox } from "./numbers";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function StatusChip({ order, now }: { order: Order; now?: number }) {
@@ -77,7 +78,7 @@ export function OrderDetail({ order, now, onPay, paying }: { order: Order; now: 
           </> : paid ? <>
             {sp && <p className="od-tip"><Link className="link" href={`/dong/${sp.code}`}>سهم تو از دنگ <span className="en">{sp.code}</span></Link></p>}
             <OrderTimeline order={order} now={now} />
-            {s < 2 ? <p className="muted od-tip">لازم نیست این صفحه باز بماند؛ وقتی فعال شد پیامک می‌گیری.</p>
+            {s < 2 ? <p className="muted od-tip">{order.lines.some((l) => l.number) ? "شماره را در اپ وارد کن؛ کد تأیید در همین صفحه، کنار شماره نمایش داده می‌شود." : "لازم نیست این صفحه باز بماند؛ وقتی فعال شد پیامک می‌گیری."}</p>
               : <p className="od-tip ok">همه‌چیز فعال است. از خریدت لذت ببر.</p>}
           </> : order.status === "refunded" ? <p className="muted od-tip">مبلغ این سفارش به کارتت برگشت داده شد.</p> : <>
             <p className="od-tip">{order.status === "pending" ? "این سفارش هنوز پرداخت نشده." : "پرداخت انجام نشد. اگر از حسابت کم شده، بانک تا ۷۲ ساعت برمی‌گرداند."}</p>
@@ -101,8 +102,10 @@ export function OrderDetail({ order, now, onPay, paying }: { order: Order; now: 
                     {l.type === "own" && l.email && <small className="ltr-i">فعال‌سازی روی <span className="en">{l.email}</span></small>}
                     {l.type === "username" && l.username && <small className="ltr-i">ارسال به <span className="en">{l.username}</span></small>}
                     {s === 2 && isSub(p) && <small className="ok">فعال تا {faDate(w.end, false)}</small>}
+                    {paid && l.number && l.lineId ? <NumberBox code={order.code} lineId={l.lineId} initial={l.number} /> : <>
                     {l.secret && <small className="od-secret"><span>{{ code: "کد گیفت‌کارت", number: "شماره", ready: "اطلاعات ورود" }[l.type as "code"] ?? (l.ip ? "مشخصات آی‌پی ثابت" : "اطلاعات تحویل")}</span><b className="en">{l.secret}</b></small>}
                     {paid && !l.secret && (l.type === "code" || l.type === "number" || l.type === "ready") && <small className="muted">به‌محض آماده شدن همین‌جا نمایش داده می‌شود و پیامک می‌گیری.</small>}
+                    </>}
                   </div>
                   <span className="num">{money(l.price)}</span>
                 </li>
