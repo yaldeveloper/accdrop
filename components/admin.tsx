@@ -15,6 +15,7 @@ const NAV = [
   ["/admin", "خلاصه"],
   ["/admin/orders", "سفارش‌ها"],
   ["/admin/products", "محصولات"],
+  ["/admin/supplier", "تأمین‌کننده"],
   ["/admin/chat", "چت آنلاین"],
   ["/admin/reviews", "نظرات"],
   ["/admin/blog", "بلاگ"],

@@ -9,6 +9,7 @@ import { bnplConfigured, cancelBnpl, confirmBnpl, startBnpl } from "./bnpl";
 import { onSplitPaid } from "./splits";
 import { canInstall, type LegalInfo, type PayMethod } from "@/lib/billing";
 import { sendOrderSms } from "./sms";
+import { supplyLine } from "./supplier";
 
 type Sql = Awaited<ReturnType<typeof db>>;
 const ms = (d: Date | null) => (d ? new Date(d).getTime() : null);
@@ -159,7 +160,7 @@ async function markPaid(code: string, refId: string, cardPan?: string) {
 /** Hands out gift codes from stock for every paid line that is waiting for one. Completes orders that need nothing else. */
 export async function fulfilInstant(sql: Sql, onlyOrder?: string) {
   const waiting = await sql`
-    select l.id, l.product_id, l.plan, l.order_code from order_lines l join orders o on o.code = l.order_code
+    select l.id, l.product_id, l.plan, l.order_code, l.seats from order_lines l join orders o on o.code = l.order_code
     where o.status in ('paid', 'activating') and l.delivery = 'code' and l.secret is null
       and (o.split is null or exists (select 1 from splits s where s.code = o.split and s.status in ('full', 'closed')))
       ${onlyOrder ? sql`and o.code = ${onlyOrder}` : sql``}
@@ -174,6 +175,13 @@ export async function fulfilInstant(sql: Sql, onlyOrder?: string) {
       await tx`update order_lines set secret = ${c.code}, delivered_at = now() where id = ${l.id}`;
       touched.add(l.order_code);
     });
+    if (touched.has(l.order_code) && (await sql`select 1 from order_lines where id = ${l.id} and secret is not null`).length) continue;
+    // Our own stock is empty: buy the code from the supplier, if this product/plan is connected to one.
+    const codes = await supplyLine(l.id, l.product_id, l.plan, Math.max(1, Number(l.seats ?? 1)));
+    if (codes?.length) {
+      const r = await sql`update order_lines set secret = ${codes.join("\n")}, delivered_at = now() where id = ${l.id} and secret is null returning id`;
+      if (r.length) touched.add(l.order_code);
+    }
   }
   for (const code of touched) await completeIfDelivered(sql, code);
 }

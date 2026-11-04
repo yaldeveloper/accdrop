@@ -125,6 +125,17 @@ export function AdminProduct({ id }: { id: string }) {
   const { notify } = useStore();
   const { data, reload } = useCatalog();
   const [d, setD] = useState<Draft | null>(isNew ? BLANK : null);
+  /** Prefilled from the supplier page: /admin/products/new?ix=<supplier id>&name=&desc=&price= */
+  const [ix, setIx] = useState(0);
+  useEffect(() => {
+    if (!isNew) return;
+    const q = new URLSearchParams(location.search);
+    const sid = Number(q.get("ix"));
+    if (!sid) return;
+    setIx(sid);
+    setD({ ...BLANK, name: q.get("name") ?? "", description: q.get("desc") ?? "", maker: q.get("maker") ?? "", kind: "gift", etaMinutes: "0", types: ["code"],
+      rows: [{ key: "1", label: q.get("label") ?? "", prices: { code: q.get("price") ?? "" } }] });
+  }, [isNew]);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
   const product = data?.products.find((p) => p.id === id);
@@ -144,7 +155,8 @@ export function AdminProduct({ id }: { id: string }) {
       : await api(`/api/admin/products/${id}`, { method: "PUT", body: b });
     setSaving(false);
     if (r.error) { setErr(ERR[r.error] ?? "ذخیره نشد"); return; }
-    notify("ذخیره شد؛ تا چند ثانیه دیگر روی سایت است");
+    if (isNew && ix && b.product.plans["1"]?.code) await api("/api/admin/supplier", { body: { productId: b.id, plan: "1", supplierId: ix } });
+    notify(ix ? "ذخیره شد و به تأمین‌کننده وصل شد" : "ذخیره شد؛ تا چند ثانیه دیگر روی سایت است");
     if (isNew) router.replace(`/admin/products/${b.id}`); else reload();
   };
   const reset = async () => {
