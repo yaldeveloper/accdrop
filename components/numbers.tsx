@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Product } from "@/lib/catalog";
+import { SERVICE_LOGOS } from "@/lib/number-logos";
 import { NUMBER_SERVICES, livePlanKey, type NumberState } from "@/lib/numbers";
 import { fa, money } from "@/lib/format";
 import { api } from "./account";
@@ -50,7 +51,7 @@ export function NumberShop({ product: p }: { product: Product }) {
         <div className="vn-svc" role="radiogroup" aria-label="سرویس">
           {NUMBER_SERVICES.map((s) => (
             <button key={s.id} type="button" role="radio" aria-checked={s.id === service} className={s.id === service ? "on" : ""} onClick={() => { setService(s.id); setQ(""); }}>
-              <i className="en" aria-hidden="true">{s.name[0]}</i>{s.fa}
+              <ServiceLogo id={s.id} />{s.fa}
             </button>
           ))}
         </div>
@@ -58,7 +59,7 @@ export function NumberShop({ product: p }: { product: Product }) {
 
       <div className="vn-step">
         <div className="vn-bar">
-          <h2><span className="num">۲</span> کشور شماره {svc.fa}</h2>
+          <h2><span className="num">۲</span> کشور شماره <ServiceLogo id={service} small /> {svc.fa}</h2>
           <div className="vn-tools">
             <input className="vn-q" placeholder="جست‌وجوی کشور" value={q} onChange={(e) => setQ(e.target.value)} aria-label="جست‌وجوی کشور" />
             <select className="vn-sort" value={sort} onChange={(e) => setSort(e.target.value as "price")} aria-label="مرتب‌سازی">
@@ -75,7 +76,7 @@ export function NumberShop({ product: p }: { product: Product }) {
               {list.map((o) => (
                 <li key={o.country}>
                   <span className="vn-c">
-                    {o.iso ? <img src={`https://flagcdn.com/w40/${o.iso}.png`} alt="" width={28} height={20} loading="lazy" /> : <span className="vn-flag" />}
+                    {o.iso ? <img src={`/flags/${o.iso}.svg`} alt="" width={28} height={21} loading="lazy" /> : <span className="vn-flag" />}
                     <b>{o.name}</b>
                   </span>
                   <small className="vn-n num">{o.count > 999 ? "+۱۰۰۰" : fa(o.count)} عدد</small>
@@ -168,5 +169,17 @@ export function NumberBox({ code, lineId, initial, onDone }: { code: string; lin
         <small className="muted">کدی نیامد و سقف {fa(n.tries)} شماره هم پر شد. مبلغ این شماره را برمی‌گردانیم؛ اگر عجله داری تیکت بزن.</small>
       )}
     </div>
+  );
+}
+
+/** A service's mark on its brand colour. */
+export function ServiceLogo({ id, small }: { id: string; small?: boolean }) {
+  const l = SERVICE_LOGOS[id];
+  if (!l) return null;
+  const light = /^#(FFF|E7E|A2A)/i.test(l.c);
+  return (
+    <span className={`vn-logo ${small ? "sm" : ""}`} style={{ background: l.c }} aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill={light ? "#111418" : "#fff"}><path d={l.d} /></svg>
+    </span>
   );
 }

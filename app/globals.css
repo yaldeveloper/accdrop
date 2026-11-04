@@ -2194,10 +2194,12 @@ footer.ft .legal{margin-top:18px}
 .vn-step h2 .num{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--lime);color:var(--ink);font-size:13px}
 .vn-svc{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 .vn-svc button{display:flex;align-items:center;gap:10px;height:48px;padding:0 12px;border-radius:12px;border:1px solid var(--hair-2);background:var(--ink-1);color:var(--gray-d);font-size:14px;text-align:right;transition:border-color .2s,color .2s}
-.vn-svc button i{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:8px;background:var(--ink-2);font-style:normal;font-size:13px;color:var(--paper)}
+.vn-logo{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:8px;flex:none}
+.vn-logo svg{width:16px;height:16px}
+.vn-logo.sm{width:22px;height:22px;border-radius:6px}
+.vn-logo.sm svg{width:13px;height:13px}
 .vn-svc button:hover{color:var(--paper);border-color:var(--hair-2)}
 .vn-svc button.on{border-color:var(--lime);color:var(--paper);background:var(--ink-2)}
-.vn-svc button.on i{background:var(--lime);color:var(--ink)}
 .vn-bar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px}
 .vn-tools{display:flex;gap:8px;flex:1;justify-content:flex-end;min-width:260px}
 .vn-q,.vn-sort{height:42px;border-radius:10px;border:1px solid var(--hair-2);background:var(--ink-1);color:var(--paper);font:inherit;font-size:14px;padding:0 12px}
@@ -2207,7 +2209,7 @@ footer.ft .legal{margin-top:18px}
 .vn-rows li:first-child{border-top:0}
 .vn-rows li:hover{background:var(--ink-1)}
 .vn-c{display:flex;align-items:center;gap:12px;min-width:0}
-.vn-c img,.vn-flag{width:28px;height:20px;border-radius:3px;object-fit:cover;background:var(--ink-2);flex:none}
+.vn-c img,.vn-flag{width:28px;height:21px;border-radius:4px;object-fit:cover;background:var(--ink-2);flex:none;box-shadow:0 0 0 1px var(--hair)}
 .vn-c b{font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .vn-n{color:var(--gray-d);font-size:12px}
 .vn-p{font-weight:500;text-align:left}
@@ -2226,10 +2228,10 @@ footer.ft .legal{margin-top:18px}
   .vn-svc button{flex:none;height:42px}
   .vn-tools{min-width:0;flex:1 1 100%}
   .vn-q{min-width:0}
-  .vn-rows li{padding:10px 12px}
   .vn-q{max-width:none}
-  .vn-rows li{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"c p" "n b";row-gap:6px;padding:12px}
-  .vn-c{grid-area:c}.vn-p{grid-area:p}.vn-n{grid-area:n}.vn-buy{grid-area:b;height:34px}
+  .vn-rows li{grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"c p b" "n p b";row-gap:2px;column-gap:10px;padding:10px 12px}
+  .vn-c{grid-area:c}.vn-p{grid-area:p}.vn-n{grid-area:n;padding-inline-start:40px}.vn-buy{grid-area:b;height:36px;padding:0 14px}
+  .vn-p small{display:none}
   .vn-how{grid-template-columns:1fr}
 }
 .vn-box{display:grid;gap:10px;margin-top:8px;padding:14px;border:1px solid var(--hair-2);border-radius:14px;background:var(--ink-2)}
