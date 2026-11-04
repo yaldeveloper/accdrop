@@ -13,7 +13,7 @@ import { fa, money } from "@/lib/format";
 import { BrandLogo, Icon } from "@/components/brand";
 import { ToolCard } from "@/components/sections";
 import { BuyPanel } from "@/components/buy-panel";
-import { NumberPanel } from "@/components/numbers";
+import { NumberShop } from "@/components/numbers";
 import { fivesimConfigured } from "@/lib/server/fivesim";
 import { Reviews } from "@/components/reviews";
 import { splitName } from "@/components/pass";
@@ -142,7 +142,18 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     <main className={`pdp2 pt-${themeOf(p.id).motif}`} style={{ "--b": themeOf(p.id).c, "--b2": themeOf(p.id).c2 } as React.CSSProperties}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
-      <section className="p2-top">
+      {kindOf(p) === "number" && fivesimConfigured() ? (
+        <section className="p2-top vn-top-s">
+          <div className="wrap">
+            <nav className="crumbs" aria-label="مسیر">
+              <Link href="/">اک‌دراپ</Link><span>/</span><span>{CATEGORIES[p.category]}</span>
+            </nav>
+            <h1 className="vn-h1">خرید شماره مجازی</h1>
+            <p className="vn-lead">سرویس و کشور را انتخاب کن، پرداخت کن، شماره و کد تأیید را همین‌جا بگیر. کد نیامد؟ پولت برمی‌گردد.</p>
+            <NumberShop product={p} />
+          </div>
+        </section>
+      ) : <section className="p2-top">
         <div className="wrap">
           <nav className="crumbs" aria-label="مسیر">
             <Link href="/">اک‌دراپ</Link><span>/</span><Link href={`/services?c=${p.category}`}>{CATEGORIES[p.category]}</Link><span>/</span><span className="en">{p.name}</span>
@@ -163,13 +174,13 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                 {p.group?.length ? <li><a href="#buy" className="p2-pl"><span className="p2-pi"><Icon id="box" /></span><span><b>دنگی با دوستان</b><small>هر نفر تا {fa(p.group[p.group.length - 1][1])}٪ ارزان‌تر</small></span></a></li> : null}
               </ul>
             </div>
-            {kindOf(p) === "number" && fivesimConfigured() ? <NumberPanel product={p} /> : <BuyPanel product={p} />}
+            <BuyPanel product={p} />
             <div className="p2-info p2-more">
               <Scene id={p.id} />
             </div>
           </div>
         </div>
-      </section>
+      </section>}
 
       <Toc items={[
         ...(seo ? [["about", "معرفی"], ["features", "امکانات"]] as [string, string][] : []),

@@ -77,10 +77,11 @@ async function servicePrices(service: string): Promise<PriceTable> {
 }
 
 /** English country names from 5sim (cached a day; empty when unreachable). */
-async function countryNames(): Promise<Record<string, string>> {
+async function countryNames(): Promise<Record<string, { en: string; iso: string }>> {
   return cached("countries", 86_400_000, async () => {
-    const j = await call<Record<string, { text_en?: string }>>("/guest/countries", false);
-    return Object.fromEntries(Object.entries(j).map(([k, v]) => [k, String(v?.text_en ?? k)]));
+    const j = await call<Record<string, { text_en?: string; iso?: Record<string, unknown> }>>("/guest/countries", false);
+    // iso is { "gb": 1 }: the key is the two-letter country code (used for the flag).
+    return Object.fromEntries(Object.entries(j).map(([k, v]) => [k, { en: String(v?.text_en ?? k), iso: Object.keys(v?.iso ?? {})[0] ?? "" }]));
   }).catch(() => ({}));
 }
 
@@ -99,7 +100,7 @@ const sellPrice = (cost: number, perUnit: number) => {
 /** Cheapest operator that has numbers in stock, then the rest by price. */
 const byPrice = (ops: Record<string, Op>) => Object.entries(ops).filter(([, o]) => o.count > 0).sort((a, b) => a[1].cost - b[1].cost);
 
-export type LiveOffer = { country: string; name: string; price: number; count: number };
+export type LiveOffer = { country: string; name: string; iso: string; price: number; count: number };
 
 /** Every country that has numbers for this service, with our Toman price, cheapest first. */
 export async function liveOffers(service: string): Promise<LiveOffer[]> {
@@ -108,7 +109,7 @@ export async function liveOffers(service: string): Promise<LiveOffer[]> {
   return Object.entries(t).flatMap(([country, ops]) => {
     const best = byPrice(ops);
     if (!best.length) return [];
-    return [{ country, name: countryFa(country, names[country]), price: sellPrice(best[0][1].cost, perUnit), count: best.reduce((s, [, o]) => s + o.count, 0) }];
+    return [{ country, name: countryFa(country, names[country]?.en), iso: /^[a-z]{2}$/.test(names[country]?.iso ?? "") ? names[country].iso : "", price: sellPrice(best[0][1].cost, perUnit), count: best.reduce((s, [, o]) => s + o.count, 0) }];
   }).sort((a, b) => a.price - b.price);
 }
 

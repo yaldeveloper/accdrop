@@ -6,30 +6,27 @@ import type { Product } from "@/lib/catalog";
 import { NUMBER_SERVICES, livePlanKey, type NumberState } from "@/lib/numbers";
 import { fa, money } from "@/lib/format";
 import { api } from "./account";
-import { Icon } from "./brand";
 import { useStore } from "./store";
 
-type Offer = { country: string; name: string; price: number; count: number };
+type Offer = { country: string; name: string; iso: string; price: number; count: number };
 
-/** Product-page picker for live 5sim numbers: service → country (live price and stock) → checkout. */
-export function NumberPanel({ product: p }: { product: Product }) {
-  const { addLine, notify } = useStore();
+/** Live 5sim numbers: pick a service, then buy from a plain list of countries (price, stock, one button). */
+export function NumberShop({ product: p }: { product: Product }) {
+  const { addLine } = useStore();
   const router = useRouter();
   const [service, setService] = useState("telegram");
   const [offers, setOffers] = useState<Offer[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [q, setQ] = useState("");
-  const [country, setCountry] = useState<string | null>(null);
-  const [all, setAll] = useState(false);
+  const [sort, setSort] = useState<"price" | "stock">("price");
 
   useEffect(() => {
     let stop = false;
-    setOffers(null); setFailed(false); setCountry(null);
+    setOffers(null); setFailed(false);
     api<{ offers: Offer[] }>(`/api/numbers?service=${service}`).then((r) => {
       if (stop) return;
       setOffers(r.offers ?? []);
       setFailed(!!r.error || !r.offers);
-      if (r.offers?.length) setCountry(r.offers[0].country);
     });
     return () => { stop = true; };
   }, [service]);
@@ -37,57 +34,64 @@ export function NumberPanel({ product: p }: { product: Product }) {
   const list = useMemo(() => {
     const s = q.trim().toLowerCase();
     const l = (offers ?? []).filter((o) => !s || o.name.toLowerCase().includes(s) || o.country.includes(s));
-    return s || all ? l : l.slice(0, 8);
-  }, [offers, q, all]);
-  const chosen = offers?.find((o) => o.country === country) ?? null;
-  const sel = chosen ? { id: p.id, plan: livePlanKey(chosen.country, service), type: "number" as const, unit: chosen.price } : null;
+    return sort === "stock" ? [...l].sort((a, b) => b.count - a.count) : l;
+  }, [offers, q, sort]);
   const svc = NUMBER_SERVICES.find((s) => s.id === service)!;
 
-  const buy = () => { if (!sel) return; addLine(sel); router.push("/checkout"); };
-  const add = () => sel && notify(addLine(sel) ? `شماره ${svc.fa} ${chosen!.name} به سبد اضافه شد` : "این شماره از قبل در سبد هست");
+  const buy = (o: Offer) => {
+    addLine({ id: p.id, plan: livePlanKey(o.country, service), type: "number", unit: o.price });
+    router.push("/checkout");
+  };
 
   return (
-    <div className="bx" id="buy">
-      <h2 className="bx-t">انتخاب شماره</h2>
-      <fieldset className="bx-g">
-        <legend>برای کدام سرویس؟</legend>
+    <div className="vn" id="buy">
+      <div className="vn-step">
+        <h2><span className="num">۱</span> سرویس</h2>
         <div className="vn-svc" role="radiogroup" aria-label="سرویس">
           {NUMBER_SERVICES.map((s) => (
-            <button key={s.id} type="button" role="radio" aria-checked={s.id === service} className={s.id === service ? "on" : ""} onClick={() => setService(s.id)}>{s.fa}</button>
+            <button key={s.id} type="button" role="radio" aria-checked={s.id === service} className={s.id === service ? "on" : ""} onClick={() => { setService(s.id); setQ(""); }}>
+              <i className="en" aria-hidden="true">{s.name[0]}</i>{s.fa}
+            </button>
           ))}
         </div>
-      </fieldset>
-      <fieldset className="bx-g">
-        <legend>کشور شماره</legend>
-        <input className="vn-q" placeholder="جست‌وجوی کشور" value={q} onChange={(e) => setQ(e.target.value)} aria-label="جست‌وجوی کشور" />
+      </div>
+
+      <div className="vn-step">
+        <div className="vn-bar">
+          <h2><span className="num">۲</span> کشور شماره {svc.fa}</h2>
+          <div className="vn-tools">
+            <input className="vn-q" placeholder="جست‌وجوی کشور" value={q} onChange={(e) => setQ(e.target.value)} aria-label="جست‌وجوی کشور" />
+            <select className="vn-sort" value={sort} onChange={(e) => setSort(e.target.value as "price")} aria-label="مرتب‌سازی">
+              <option value="price">ارزان‌ترین</option>
+              <option value="stock">بیشترین موجودی</option>
+            </select>
+          </div>
+        </div>
         {offers === null ? <p className="vn-wait">در حال گرفتن قیمت‌های لحظه‌ای…</p>
           : !offers.length ? <p className="vn-wait">{failed ? "الان به سرور شماره‌ها وصل نشدیم. چند لحظه دیگر دوباره امتحان کن." : `فعلاً شماره‌ای برای ${svc.fa} موجود نیست.`}</p>
+          : !list.length ? <p className="vn-wait">کشوری با این نام پیدا نشد.</p>
           : (
-            <div className="vn-list" role="radiogroup" aria-label="کشور">
+            <ul className="vn-rows">
               {list.map((o) => (
-                <label key={o.country} className={`bx-o vn-o ${o.country === country ? "on" : ""}`}>
-                  <input type="radio" name="vn-country" checked={o.country === country} onChange={() => setCountry(o.country)} />
-                  <span className="bx-r" aria-hidden="true" />
-                  <span className="bx-l"><b>{o.name}</b><small className="num">{o.count > 999 ? "موجود" : `${fa(o.count)} شماره آزاد`}</small></span>
-                  <span className="bx-p num">{money(o.price)}</span>
-                </label>
+                <li key={o.country}>
+                  <span className="vn-c">
+                    {o.iso ? <img src={`https://flagcdn.com/w40/${o.iso}.png`} alt="" width={28} height={20} loading="lazy" /> : <span className="vn-flag" />}
+                    <b>{o.name}</b>
+                  </span>
+                  <small className="vn-n num">{o.count > 999 ? "+۱۰۰۰" : fa(o.count)} عدد</small>
+                  <b className="vn-p num">{money(o.price)} <small>تومان</small></b>
+                  <button className="btn btn-paper vn-buy" onClick={() => buy(o)}>خرید</button>
+                </li>
               ))}
-              {!q && !all && offers.length > list.length && <button type="button" className="add-link" onClick={() => setAll(true)}>همه {fa(offers.length)} کشور</button>}
-              {!list.length && <p className="vn-wait">کشوری با این نام پیدا نشد.</p>}
-            </div>
+            </ul>
           )}
-      </fieldset>
-      <div className="bx-sum">
-        <div className="bx-row"><span>مبلغ قابل پرداخت</span><span><b className="num">{chosen ? money(chosen.price) : "—"}</b> <small>تومان</small></span></div>
       </div>
-      <p className="bx-note">قیمت لحظه‌ای است. بعد از پرداخت، شماره فوراً در صفحه سفارش نمایش داده می‌شود و کد تأیید {svc.fa} همان‌جا می‌آید. اگر کد نیامد، شماره جدید می‌گیری یا مبلغ برمی‌گردد.</p>
-      <button className="btn btn-paper btn-block bx-cta" onClick={buy} disabled={!sel}>ادامه خرید <Icon id="arrow" className="arrow" /></button>
-      <button className="add-link" onClick={add} disabled={!sel}>افزودن به سبد خرید</button>
-      <ul className="bx-trust">
-        <li><Icon id="shield" /><span>کد نیامد؟<br />بازگشت وجه</span></li>
-        <li><Icon id="user" /><span>تحویل فوری<br />و خودکار</span></li>
-        <li><Icon id="chat" /><span>پشتیبانی<br />تا ۱۲ شب</span></li>
-      </ul>
+
+      <ol className="vn-how">
+        <li><b>پرداخت</b><span>قیمت لحظه‌ای است و همان را می‌پردازی.</span></li>
+        <li><b>شماره</b><span>فوراً در صفحه سفارش نمایش داده می‌شود.</span></li>
+        <li><b>کد</b><span>کد تأیید همان‌جا می‌آید. کد نیامد؟ شماره جدید یا بازگشت وجه.</span></li>
+      </ol>
     </div>
   );
 }
