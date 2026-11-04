@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Product } from "@/lib/catalog";
+import { optionLabel, planKeys, type Product } from "@/lib/catalog";
 import { SERVICE_LOGOS } from "@/lib/number-logos";
 import { NUMBER_SERVICES, livePlanKey, type NumberState } from "@/lib/numbers";
 import { fa, money } from "@/lib/format";
@@ -10,6 +10,11 @@ import { api } from "./account";
 import { useStore } from "./store";
 
 type Offer = { country: string; name: string; iso: string; price: number; count: number };
+
+/** Fixed-price countries from the catalog, used while 5sim is not connected (no FIVESIM_API_KEY). */
+const staticOffers = (p: Product): Offer[] => planKeys(p).filter((k) => p.plans[k]?.number).map((k) => ({
+  country: k, name: optionLabel(p, k), iso: k === "uk" ? "gb" : /^[a-z]{2}$/.test(k) ? k : "", price: p.plans[k]!.number!, count: 0,
+})).sort((a, b) => a.price - b.price);
 
 /** Live 5sim numbers: pick a service, then buy from a plain list of countries (price, stock, one button). */
 export function NumberShop({ product: p }: { product: Product }) {
@@ -20,17 +25,20 @@ export function NumberShop({ product: p }: { product: Product }) {
   const [failed, setFailed] = useState(false);
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<"price" | "stock">("price");
+  /** false = 5sim is not connected: sell the catalog's fixed countries instead. */
+  const [live, setLive] = useState(true);
 
   useEffect(() => {
     let stop = false;
     setOffers(null); setFailed(false);
-    api<{ offers: Offer[] }>(`/api/numbers?service=${service}`).then((r) => {
+    api<{ offers: Offer[]; live?: boolean }>(`/api/numbers?service=${service}`).then((r) => {
       if (stop) return;
+      if (r.live === false) { setLive(false); setOffers(staticOffers(p)); return; }
       setOffers(r.offers ?? []);
       setFailed(!!r.error || !r.offers);
     });
     return () => { stop = true; };
-  }, [service]);
+  }, [service, p]);
 
   const list = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -40,13 +48,13 @@ export function NumberShop({ product: p }: { product: Product }) {
   const svc = NUMBER_SERVICES.find((s) => s.id === service)!;
 
   const buy = (o: Offer) => {
-    addLine({ id: p.id, plan: livePlanKey(o.country, service), type: "number", unit: o.price });
+    addLine(live ? { id: p.id, plan: livePlanKey(o.country, service), type: "number", unit: o.price } : { id: p.id, plan: o.country, type: "number" });
     router.push("/checkout");
   };
 
   return (
     <div className="vn" id="buy">
-      <div className="vn-step">
+      {live && <div className="vn-step">
         <h2><span className="num">۱</span> سرویس</h2>
         <div className="vn-svc" role="radiogroup" aria-label="سرویس">
           {NUMBER_SERVICES.map((s) => (
@@ -55,11 +63,11 @@ export function NumberShop({ product: p }: { product: Product }) {
             </button>
           ))}
         </div>
-      </div>
+      </div>}
 
       <div className="vn-step">
         <div className="vn-bar">
-          <h2><span className="num">۲</span> کشور شماره <ServiceLogo id={service} small /> {svc.fa}</h2>
+          {live ? <h2><span className="num">۲</span> کشور شماره <ServiceLogo id={service} small /> {svc.fa}</h2> : <h2>کشور شماره</h2>}
           <div className="vn-tools">
             <input className="vn-q" placeholder="جست‌وجوی کشور" value={q} onChange={(e) => setQ(e.target.value)} aria-label="جست‌وجوی کشور" />
             <select className="vn-sort" value={sort} onChange={(e) => setSort(e.target.value as "price")} aria-label="مرتب‌سازی">
@@ -79,7 +87,7 @@ export function NumberShop({ product: p }: { product: Product }) {
                     {o.iso ? <img src={`/flags/${o.iso}.svg`} alt="" width={28} height={21} loading="lazy" /> : <span className="vn-flag" />}
                     <b>{o.name}</b>
                   </span>
-                  <small className="vn-n num">{o.count > 999 ? "+۱۰۰۰" : fa(o.count)} عدد</small>
+                  <small className="vn-n num">{!live ? "موجود" : o.count > 999 ? "+۱۰۰۰" : `${fa(o.count)} عدد`}</small>
                   <b className="vn-p num">{money(o.price)} <small>تومان</small></b>
                   <button className="btn btn-paper vn-buy" onClick={() => buy(o)}>خرید</button>
                 </li>

@@ -14,7 +14,6 @@ import { BrandLogo, Icon } from "@/components/brand";
 import { ToolCard } from "@/components/sections";
 import { BuyPanel } from "@/components/buy-panel";
 import { NumberShop } from "@/components/numbers";
-import { fivesimConfigured } from "@/lib/server/fivesim";
 import { Reviews } from "@/components/reviews";
 import { splitName } from "@/components/pass";
 import { INSTALLMENTS, canInstall } from "@/lib/billing";
@@ -142,7 +141,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     <main className={`pdp2 pt-${themeOf(p.id).motif}`} style={{ "--b": themeOf(p.id).c, "--b2": themeOf(p.id).c2 } as React.CSSProperties}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
-      {kindOf(p) === "number" && fivesimConfigured() ? (
+      {kindOf(p) === "number" ? (
         <section className="p2-top vn-top-s">
           <div className="wrap">
             <nav className="crumbs" aria-label="مسیر">
