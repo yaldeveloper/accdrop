@@ -113,12 +113,14 @@ export async function firstOutOfStock(lines: { id: string; plan: string; type: s
     const qd = prod?.qd?.[l.plan];
     const cb = prod?.cb?.[l.plan];
     const sid = qd || cb || !supplierConfigured() ? null : await supplierIdOf(l.id, l.plan);
-    if (!qd && !cb && !sid) continue;
+    // Wholesale products are promised as instant, so with no supplier behind them we only sell what is in stock.
+    if (!qd && !cb && !sid && !prod?.bulk?.length) continue;
     const need = Math.max(1, l.seats ?? 1);
     if (sql) {
       const [r] = await sql`select count(*)::int as n from gift_codes where product_id = ${l.id} and plan = ${l.plan} and line_id is null`;
       if (Number(r?.n ?? 0) >= need) continue;
     }
+    if (!qd && !cb && !sid) { if (sql) return i; continue; }
     if (qd) { if (!(await qdCanSupply(qd, need))) return i; continue; }
     if (cb) { if (!(await cbCanSupply(cb, need))) return i; continue; }
     if (stock === undefined) stock = await cachedStock();

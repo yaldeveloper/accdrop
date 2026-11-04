@@ -3,7 +3,7 @@
 import type React from "react";
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { CATEGORIES, DELIVERY, PRODUCTS, liveDrops, dropOf, listed, tiersLabel, variantsOf, minPrice, optionLabel, productById, type Category, type Product } from "@/lib/catalog";
+import { CATEGORIES, DELIVERY, PRODUCTS, liveDrops, dropOf, listed, tiersLabel, variantsOf, minPrice, optionLabel, productById, type Category, type Product, deliveryOf } from "@/lib/catalog";
 import { duration, fa, money, pad2 } from "@/lib/format";
 import { BrandLogo, Dots, Eyebrow, Glyph, Icon, Wordmark } from "./brand";
 import Link from "next/link";
@@ -301,7 +301,7 @@ export function DropSection() {
               <article key={d.number} className={`dropc ${i === at ? "on" : ""}`} data-i={i} style={{ "--b": themeOf(p.id).c } as React.CSSProperties} aria-label={`دراپ ${fa(d.number)}: ${p.name}`}>
                 <div className="dropc-top"><span className="mono"><BrandLogo id={p.id} size={26} /></span><span className="tag">№{fa(String(d.number).padStart(2, "0"))}</span></div>
                 <h3 className="en">{p.name}</h3>
-                <div className="sub">{optionLabel(p, d.plan)} · {DELIVERY[d.type].title}</div>
+                <div className="sub">{optionLabel(p, d.plan)} · {deliveryOf(p, d.type).title}</div>
                 <div className="price"><b className="num">{money(d.price)}</b><small>تومان</small><s className="num">{money(d.was)}</s><em className="num">{fa(Math.round((1 - d.price / d.was) * 100))}٪</em></div>
                 <div className="stock"><span>فقط <b>{fa(d.left)}</b> از {fa(d.of)} باقی مانده</span></div>
                 <div className="meter"><i style={{ width: `${(d.left / d.of) * 100}%` }} /></div>

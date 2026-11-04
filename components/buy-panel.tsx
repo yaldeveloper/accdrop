@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { DELIVERY, MAX_SEATS, axisOf, deliveryTypes, dropOf, groupOff, isSub, linePrice, minPrice, nounOf, optionLabel, planKeys, priceOf, variantsOf, type DeliveryType, type Months, type Product, type Selection } from "@/lib/catalog";
+import { DELIVERY, MAX_QTY, MAX_SEATS, axisOf, deliveryTypes, dropOf, groupOff, isSub, linePrice, minPrice, nounOf, optionLabel, planKeys, priceOf, variantsOf, type DeliveryType, type Months, type Product, type Selection, deliveryOf } from "@/lib/catalog";
 import { productHref } from "@/lib/content";
 import { INSTALLMENTS, canInstall, installment } from "@/lib/billing";
 import { api } from "./account";
@@ -36,12 +36,22 @@ export function BuyPanel({ product: p }: { product: Product }) {
   const was = full > price ? full : undefined;
   const off = groupOff(p, seats);
   const variants = variantsOf(p);
-  const group = seats > 1;
+  const group = seats > 1 && !p.bulk?.length;
   const maxOff = p.group?.length ? p.group[p.group.length - 1][1] : 0;
   /** Group buy where every member pays their own share («دنگ») instead of one person paying for all. */
   const [dong, setDong] = useState(true);
   const [making, setMaking] = useState(false);
   const share = Math.round(price / seats / 1000) * 1000;
+  const bulk = !!p.bulk?.length;
+  /** Wholesale: units ready for instant delivery per option (null = unknown or refilled by a supplier). */
+  const [stock, setStock] = useState<Record<string, number> | null>(null);
+  useEffect(() => {
+    if (!bulk) return;
+    fetch(`/api/stock?id=${p.id}`).then((r) => r.json()).then((j) => setStock(j.stock ?? null)).catch(() => {});
+  }, [bulk, p.id]);
+  const left = stock ? stock[sel.plan] ?? 0 : MAX_QTY;
+  const soldOut = bulk && left < 1;
+  const tooMany = bulk && seats > left;
 
   // Renewal links from the dashboard carry ?plan=&type=.
   useEffect(() => {
@@ -50,6 +60,7 @@ export function BuyPanel({ product: p }: { product: Product }) {
     if (plan && type && p.plans[plan]?.[type]) setSel((s) => ({ ...s, plan, type }));
     const seats = Number(q.get("seats"));
     if (p.group?.length && seats > 1 && seats <= MAX_SEATS) setSel((s) => ({ ...s, seats }));
+    if (p.bulk?.length && seats > 1 && seats <= MAX_QTY) setSel((s) => ({ ...s, seats }));
     if (p.group?.length && q.get("dong") === "1") { setDong(true); setSel((s) => ({ ...s, seats: Math.max(2, s.seats ?? 1) })); }
   }, [p]);
 
@@ -77,8 +88,9 @@ export function BuyPanel({ product: p }: { product: Product }) {
     if (r.error === "unauthorized") { router.push(`/login?next=${encodeURIComponent(`${location.pathname}?plan=${sel.plan}&type=${sel.type}&seats=${seats}&dong=1#buy`)}`); return; }
     notify("ساخت گروه انجام نشد. دوباره امتحان کن.");
   };
-  const buy = () => { if (group && dong) { startDong(); return; } addLine(sel); router.push("/checkout"); };
-  const add = () => notify(addLine(sel) ? `${p.name} به سبد اضافه شد` : "این مورد از قبل در سبد هست");
+  const setQty = (n: number) => setSel((s) => ({ ...s, seats: Math.min(MAX_QTY, Math.max(1, Math.trunc(n) || 1)) }));
+  const buy = () => { if (soldOut || tooMany) return; if (group && dong) { startDong(); return; } addLine(sel); router.push("/checkout"); };
+  const add = () => (soldOut || tooMany) ? undefined : notify(addLine(sel) ? `${p.name} به سبد اضافه شد` : "این مورد از قبل در سبد هست");
 
   return (
     <div className="bx" id="buy">
@@ -126,14 +138,46 @@ export function BuyPanel({ product: p }: { product: Product }) {
             <label key={t} className={`bx-o bx-o2 ${on ? "on" : ""} ${amount ? "" : "dis"}`}>
               <input type="radio" name="type" checked={on} disabled={!amount} onChange={() => choose({ type: t })} />
               <span className="bx-r" aria-hidden="true" />
-              <span className="bx-l"><b>{DELIVERY[t].title}</b><small>{amount ? DELIVERY[t].detail : "برای این گزینه موجود نیست"}</small></span>
+              <span className="bx-l"><b>{deliveryOf(p, t).title}</b><small>{amount ? deliveryOf(p, t).detail : "برای این گزینه موجود نیست"}</small></span>
               {types.length > 1 && amount ? <span className="bx-p num">{money(priceOf({ id: p.id, plan: sel.plan, type: t }).price)}</span> : null}
             </label>
           );
         })}
       </fieldset> : (
-        <p className="bx-one"><span>{months.length === 1 ? <>{optionLabel(p, sel.plan)} • </> : null}{DELIVERY[sel.type].title}</span><small>{DELIVERY[sel.type].detail}</small></p>
+        <p className="bx-one"><span>{months.length === 1 ? <>{optionLabel(p, sel.plan)} • </> : null}{deliveryOf(p, sel.type).title}</span><small>{deliveryOf(p, sel.type).detail}</small></p>
       )}
+
+      {bulk ? (
+        <fieldset className="bx-g">
+          <legend>تعداد</legend>
+          <div className="bx-who" role="radiogroup" aria-label="خرید تکی یا عمده">
+            <button type="button" role="radio" aria-checked={seats === 1} className={seats === 1 ? "on" : ""} onClick={() => setQty(1)}>
+              <b>تکی</b><small>یک {nounOf(p)}</small>
+            </button>
+            <button type="button" role="radio" aria-checked={seats > 1} className={seats > 1 ? "on" : ""} onClick={() => setQty(Math.max(p.bulk![0][0], seats))}>
+              <b>عمده</b><small>تا {fa(p.bulk![p.bulk!.length - 1][1])}٪ ارزان‌تر هر عدد</small>
+            </button>
+          </div>
+          {seats > 1 && (
+            <div className="bx-grp">
+              <div className="bx-step">
+                <span>تعداد {nounOf(p)}</span>
+                <div>
+                  <button type="button" aria-label="یکی کمتر" disabled={seats <= 2} onClick={() => setQty(seats - 1)}>−</button>
+                  <input className="bx-qty num" inputMode="numeric" aria-label="تعداد" value={fa(seats)}
+                    onChange={(e) => setQty(Number(e.target.value.replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d))).replace(/\D/g, "")))} />
+                  <button type="button" aria-label="یکی بیشتر" disabled={seats >= Math.min(MAX_QTY, left)} onClick={() => setQty(seats + 1)}>+</button>
+                </div>
+              </div>
+              <ol className="bx-tiers bx-tiers-q">{p.bulk!.map(([n, o]) => (
+                <li key={n} className={seats >= n ? "on" : ""}><button type="button" onClick={() => setQty(n)}><b className="num">{fa(n)}+ عدد</b><small>{fa(o)}٪ تخفیف</small></button></li>
+              ))}</ol>
+              <p className="bx-note">هر عدد <b className="num">{money(share)}</b> تومان{off ? `، ${fa(off)}٪ کمتر از خرید تکی` : ""}. همه اکانت‌ها با هم و خودکار تحویل می‌شوند، هر کدام در یک خط.</p>
+            </div>
+          )}
+          {stock && <p className={`bx-stock ${soldOut || tooMany ? "bad" : ""}`}>{soldOut ? "این کشور فعلاً ناموجود است." : tooMany ? `فقط ${fa(left)} عدد برای تحویل فوری موجود است.` : left >= MAX_QTY ? "موجود برای تحویل فوری" : `${fa(left)} عدد موجود برای تحویل فوری`}</p>}
+        </fieldset>
+      ) : null}
 
       {p.group?.length ? (
         <fieldset className="bx-g">
@@ -187,7 +231,7 @@ export function BuyPanel({ product: p }: { product: Product }) {
         </div>
       )}
 
-      <button ref={cta} className="btn btn-paper btn-block bx-cta" onClick={buy} disabled={making}>{group && dong ? (making ? "در حال ساخت گروه…" : "ساخت گروه و گرفتن لینک") : "ادامه خرید"} <Icon id="arrow" className="arrow" /></button>
+      <button ref={cta} className="btn btn-paper btn-block bx-cta" onClick={buy} disabled={making || soldOut || tooMany}>{group && dong ? (making ? "در حال ساخت گروه…" : "ساخت گروه و گرفتن لینک") : soldOut ? "ناموجود" : "ادامه خرید"} <Icon id="arrow" className="arrow" /></button>
       {!(group && dong) && <button className="add-link" onClick={add}>افزودن به سبد خرید</button>}
 
       <ul className="bx-trust">
@@ -197,8 +241,8 @@ export function BuyPanel({ product: p }: { product: Product }) {
       </ul>
 
       <div className={`buybar ${ctaVisible ? "" : "on"}`} role="region" aria-label="خرید سریع">
-        <div><small>{optionLabel(p, sel.plan)}{seats > 1 ? ` • ${fa(seats)} نفر${dong ? " • دنگی" : ""}` : ""}</small><b className="num">{money(group && dong ? share : price)} <small>تومان{group && dong ? " / نفر" : ""}</small></b></div>
-        <button className="btn btn-paper" onClick={buy} disabled={making}>{group && dong ? "ساخت گروه" : "ادامه خرید"}</button>
+        <div><small>{optionLabel(p, sel.plan)}{seats > 1 ? (bulk ? ` • ${fa(seats)} عدد` : ` • ${fa(seats)} نفر${dong ? " • دنگی" : ""}`) : ""}</small><b className="num">{money(group && dong ? share : price)} <small>تومان{group && dong ? " / نفر" : ""}</small></b></div>
+        <button className="btn btn-paper" onClick={buy} disabled={making || soldOut || tooMany}>{group && dong ? "ساخت گروه" : "ادامه خرید"}</button>
       </div>
     </div>
   );

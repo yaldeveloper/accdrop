@@ -35,6 +35,9 @@ export type Product = {
   badge?: string;
   /** Group buy: [seats, percent off per seat], ascending. */
   group?: [number, number][];
+  /** Wholesale: [minimum quantity, percent off each unit], ascending. One line then carries up to MAX_QTY units
+   *  (stored in `seats`) and delivers that many codes or accounts. */
+  bulk?: [number, number][];
   /** Offers the dedicated foreign static IP add-on. */
   ip?: boolean;
   /** Brand colour for the product page (overrides the built-in theme). */
@@ -45,6 +48,8 @@ export type Product = {
   tier?: string;
   /** Supplier (Insight Store) product id per option; paid code lines are bought and delivered automatically. */
   ix?: Record<string, number>;
+  /** Per-product names of delivery methods, e.g. «آماده ۲۰۱۸» and «سفارشی» for Apple ID. `explain` replaces the long text. */
+  types?: Partial<Record<DeliveryType, { title: string; detail: string; explain?: string }>>;
   /** What the customer receives, replacing the generic text of the delivery method. */
   deliver?: string;
   /** The last step after delivery: how to redeem or use what was delivered. */
@@ -144,11 +149,27 @@ const SAMPLES: Product[] = [
     description: "استارز برای ربات‌ها، کانال‌ها و هدیه", use: "پرداخت داخل تلگرام",
     plans: { "100": { username: 190000 }, "250": { username: 450000 }, "500": { username: 890000 }, "1000": { username: 1750000 } },
     includes: ["خرید در ربات‌ها و مینی‌اپ‌ها", "حمایت از کانال‌ها و پست‌های پولی", "هدیه دادن به دوستان"] },
-  { id: "appleid", hidden: true, name: "Apple ID", maker: "Apple", category: "apple", kind: "account", monogram: "AP", etaMinutes: 30,
-    axis: "کشور اکانت", labels: { us: "آمریکا", tr: "ترکیه", uk: "انگلیس" },
-    description: "اپل آیدی آماده و اختصاصی", use: "ورود به App Store",
-    plans: { us: { ready: 390000 }, tr: { ready: 390000 }, uk: { ready: 450000 } },
-    includes: ["اکانت تازه با ایمیل جدید، فقط برای تو", "سؤال‌های امنیتی و تاریخ تولد", "مناسب App Store و iCloud همان کشور"] },
+  // Sold the way Iranian shops offer it: what it is for and how long the warranty lasts, ready (made in 2018, instant
+  // from our stock, single or wholesale) or made to order with a new personal email. Priced just under competitors
+  // (Nov 2026: ready 380–440k, made to order 420–480k).
+  { id: "appleid", name: "Apple ID", maker: "Apple", category: "apple", kind: "account", monogram: "AP", etaMinutes: 0, badge: "عمده",
+    axis: "نوع و گارانتی", labels: { life: "iCloud مادام‌العمر", icloud: "iCloud ۳۰ روزه", store: "App Store ۳۰ روزه" },
+    description: "اپل آیدی آماده یا سفارشی با گارانتی، تکی یا عمده برای موبایل‌فروشی‌ها", use: "App Store و iCloud",
+    plans: {
+      life: { code: 429000, ready: 469000 },
+      icloud: { code: 409000, ready: 429000 },
+      store: { code: 369000, ready: 409000 },
+    },
+    types: {
+      code: { title: "آماده (ساخت ۲۰۱۸)", detail: "تحویل فوری و خودکار؛ تکی یا عمده" },
+      ready: { title: "سفارشی", detail: "با ایمیل شخصی تازه، معمولاً تا چند ساعت",
+        explain: "یک اپل آیدی تازه با ایمیل شخصی جدید فقط برای تو می‌سازیم. ایمیل، رمزها، سؤال‌های امنیتی و تاریخ تولد را در حساب کاربری‌ات تحویل می‌گیری و اکانت کاملاً مال خودت است." },
+    },
+    bulk: [[5, 8], [10, 12], [25, 18], [50, 25]],
+    deliver: "بلافاصله بعد از پرداخت، ایمیل و رمز اپل آیدی، رمز ایمیل، سؤال‌های امنیتی و تاریخ تولد در حساب کاربری‌ات نمایش داده و پیامک می‌شود. در خرید عمده هر اکانت در یک خط جداست.",
+    howTo: "اکانت‌های App Store را فقط در Settings › Media & Purchases وارد کن، نه در iCloud بالای تنظیمات. اکانت‌های iCloud را می‌توانی در iCloud هم وارد کنی. بعد از ورود، رمز را عوض کن.",
+    warranty: "گارانتی ۳۰ روزه یا مادام‌العمر",
+    includes: ["آماده ۲۰۱۸ یا سفارشی با ایمیل شخصی", "سؤال‌های امنیتی و تاریخ تولد", "اکانت آماده: تکی یا عمده تا ۱۰۰ عدد"] },
   // Live 5sim numbers (lib/server/fivesim.ts): countries and prices come from 5sim; the plan below is only the
   // «از …» price shown in listings and is never sold (see priceLines).
   { id: "vnumber", name: "Virtual Number", maker: "AccDrop", category: "number", kind: "number", monogram: "VN", etaMinutes: 0,
@@ -537,11 +558,15 @@ export const STATIC_IP = {
   countries: { de: "آلمان", nl: "هلند", uk: "انگلیس", us: "آمریکا", fr: "فرانسه" } as Record<string, string>,
 };
 export const MAX_SEATS = 6;
+/** Most units of a wholesale product in one cart line. */
+export const MAX_QTY = 100;
+/** How many units one line of this product may carry: group seats, wholesale quantity, or just one. */
+export const maxUnits = (p: Product) => (p.bulk?.length ? MAX_QTY : p.group?.length ? MAX_SEATS : 1);
 
-/** Percent off per seat for a group of `seats`. */
+/** Percent off per seat for a group of `seats`, or per unit for a wholesale quantity. */
 export function groupOff(p: Product, seats: number) {
   let off = 0;
-  for (const [n, pct] of p.group ?? []) if (seats >= n) off = pct;
+  for (const [n, pct] of p.bulk ?? p.group ?? []) if (seats >= n) off = pct;
   return off;
 }
 export const ipPrice = (p: Product, plan: Months) => (p.ip && isSub(p) ? STATIC_IP.perMonth * Math.max(1, Number(plan) || 1) : 0);
@@ -549,7 +574,7 @@ export const ipPrice = (p: Product, plan: Months) => (p.ip && isSub(p) ? STATIC_
 /** Full price of one cart line: seats with group discount, plus add-ons. */
 export function linePrice(sel: Selection) {
   const p = productById(sel.id);
-  const seats = p.group?.length ? Math.min(MAX_SEATS, Math.max(1, sel.seats ?? 1)) : 1;
+  const seats = Math.min(maxUnits(p), Math.max(1, Math.trunc(sel.seats ?? 1)));
   const unit = priceOf(sel).price;
   const group = Math.round((unit * seats * (100 - groupOff(p, seats))) / 100 / 1000) * 1000;
   const ip = sel.ip && STATIC_IP.countries[sel.ip] ? ipPrice(p, sel.plan) : 0;
@@ -559,7 +584,7 @@ export function linePrice(sel: Selection) {
 /** «۳ نفر • آی‌پی ثابت آلمان», or "" for a plain line. */
 export function extrasLabel(sel: Selection) {
   const out: string[] = [];
-  if ((sel.seats ?? 1) > 1) out.push(`خرید گروهی ${fa(sel.seats!)} نفره`);
+  if ((sel.seats ?? 1) > 1) out.push(productById(sel.id)?.bulk?.length ? `${fa(sel.seats!)} عدد` : `خرید گروهی ${fa(sel.seats!)} نفره`);
   if (sel.ip && STATIC_IP.countries[sel.ip]) out.push(`${STATIC_IP.title} ${STATIC_IP.countries[sel.ip]}`);
   return out.join(" • ");
 }
@@ -572,8 +597,13 @@ export function priceOf(sel: Selection): { price: number; was?: number } {
   return { price: base };
 }
 
+/** Title and one-line detail of a delivery method, as this product names it. */
+export const deliveryOf = (p: Product | undefined, t: DeliveryType) => ({ ...DELIVERY[t], ...p?.types?.[t] });
+
 /** What each delivery method means, in plain words, for this product. */
 export function deliveryExplain(p: Product, t: DeliveryType) {
+  const own = p.types?.[t]?.explain;
+  if (own) return own;
   switch (t) {
     case "own": return `ایمیل اکانت ${p.maker} خودت را می‌دهی و اشتراک روی همان فعال می‌شود. رمز نمی‌خواهیم و تاریخچه‌ات می‌ماند.`;
     case "ready": return isSub(p) ? "یک اکانت تازه با ایمیل و رمز تحویل می‌گیری که فقط مال توست. ارزان‌تر و سریع‌تر است." : "یک اکانت تازه با ایمیل، رمز و اطلاعات امنیتی تحویل می‌گیری که فقط مال توست و می‌توانی رمزش را عوض کنی.";
