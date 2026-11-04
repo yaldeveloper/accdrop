@@ -3,6 +3,7 @@
 // Docs: https://api.insightxpro.store/docs
 import { ALL_PRODUCTS } from "@/lib/catalog";
 import { crSupplyLine } from "./cryptorefills";
+import { qdCanSupply, qdSupplyLine } from "./quickdigi";
 import { db, dbUrl } from "./db";
 import { siteUrl } from "./pay";
 
@@ -103,18 +104,19 @@ export async function setSupplierMap(productId: string, plan: string, supplierId
 
 /** Index of the first code line that can't be delivered right now (our own stock is empty and the supplier is out), or -1. */
 export async function firstOutOfStock(lines: { id: string; plan: string; type: string; seats?: number }[]): Promise<number> {
-  if (!supplierConfigured()) return -1;
   const sql = dbUrl() ? await db() : null;
   let stock: SupplierProduct[] | null | undefined;
   for (const [i, l] of lines.entries()) {
     if (l.type !== "code") continue;
-    const sid = await supplierIdOf(l.id, l.plan);
-    if (!sid) continue;
+    const qd = ALL_PRODUCTS.find((x) => x.id === l.id)?.qd?.[l.plan];
+    const sid = qd || !supplierConfigured() ? null : await supplierIdOf(l.id, l.plan);
+    if (!qd && !sid) continue;
     const need = Math.max(1, l.seats ?? 1);
     if (sql) {
       const [r] = await sql`select count(*)::int as n from gift_codes where product_id = ${l.id} and plan = ${l.plan} and line_id is null`;
       if (Number(r?.n ?? 0) >= need) continue;
     }
+    if (qd) { if (!(await qdCanSupply(qd, need))) return i; continue; }
     if (stock === undefined) stock = await cachedStock();
     if (!stock) return -1;
     const sp = stock.find((x) => x.id === sid);
@@ -127,6 +129,7 @@ export async function firstOutOfStock(lines: { id: string; plan: string; type: s
 export async function supplyLine(lineId: number, productId: string, plan: string, quantity: number): Promise<string[] | null> {
   const p = ALL_PRODUCTS.find((x) => x.id === productId);
   if (p?.cr?.[plan]) return crSupplyLine(lineId, p, plan, quantity, siteUrl());
+  if (p?.qd?.[plan]) return qdSupplyLine(lineId, p, plan, quantity);
   if (!supplierConfigured()) return null;
   const sid = await supplierIdOf(productId, plan);
   if (!sid) return null;
