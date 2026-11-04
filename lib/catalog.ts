@@ -148,11 +148,11 @@ const SAMPLES: Product[] = [
   { id: "appleid", name: "Apple ID", maker: "Apple", category: "apple", kind: "account", monogram: "AP", etaMinutes: 0, badge: "عمده",
     axis: "کشور اکانت", labels: { us: "آمریکا", tr: "ترکیه", uk: "انگلیس" },
     description: "اپل آیدی آماده و اختصاصی، تکی یا عمده برای موبایل‌فروشی‌ها", use: "ورود به App Store",
-    plans: { us: { code: 390000, own: 490000 }, tr: { code: 390000, own: 490000 }, uk: { code: 450000, own: 550000 } },
+    plans: { us: { code: 390000 }, tr: { code: 390000 }, uk: { code: 450000 } },
     bulk: [[5, 5], [10, 10], [25, 15], [50, 20]],
     deliver: "بلافاصله بعد از پرداخت، ایمیل و رمز اپل آیدی، رمز ایمیل، سؤال‌های امنیتی و تاریخ تولد در حساب کاربری‌ات نمایش داده و پیامک می‌شود. در خرید عمده هر اکانت در یک خط جداست.",
     howTo: "در گوشی به Settings › Media & Purchases (یا App Store) برو و فقط همان‌جا وارد شو، نه در iCloud بالای تنظیمات؛ این‌طوری گوشی به اکانت قفل نمی‌شود. بعد از ورود، رمز را عوض کن.",
-    includes: ["آماده و فوری، یا ساخته‌شده روی ایمیل خودت", "سؤال‌های امنیتی و تاریخ تولد", "اکانت آماده: تکی یا عمده تا ۱۰۰ عدد"] },
+    includes: ["اکانت تازه با ایمیل جدید، فقط برای تو", "سؤال‌های امنیتی و تاریخ تولد", "تحویل خودکار، تکی یا عمده تا ۱۰۰ عدد"] },
   // Live 5sim numbers (lib/server/fivesim.ts): countries and prices come from 5sim; the plan below is only the
   // «از …» price shown in listings and is never sold (see priceLines).
   { id: "vnumber", name: "Virtual Number", maker: "AccDrop", category: "number", kind: "number", monogram: "VN", etaMinutes: 0,
@@ -481,9 +481,8 @@ export const STATIC_IP = {
 export const MAX_SEATS = 6;
 /** Most units of a wholesale product in one cart line. */
 export const MAX_QTY = 100;
-/** How many units one line may carry: group seats, a wholesale quantity (instant code lines only), or just one. */
-export const maxUnits = (p: Product, type?: DeliveryType) =>
-  p.bulk?.length ? (!type || type === "code" ? MAX_QTY : 1) : p.group?.length ? MAX_SEATS : 1;
+/** How many units one line of this product may carry: group seats, wholesale quantity, or just one. */
+export const maxUnits = (p: Product) => (p.bulk?.length ? MAX_QTY : p.group?.length ? MAX_SEATS : 1);
 
 /** Percent off per seat for a group of `seats`, or per unit for a wholesale quantity. */
 export function groupOff(p: Product, seats: number) {
@@ -496,7 +495,7 @@ export const ipPrice = (p: Product, plan: Months) => (p.ip && isSub(p) ? STATIC_
 /** Full price of one cart line: seats with group discount, plus add-ons. */
 export function linePrice(sel: Selection) {
   const p = productById(sel.id);
-  const seats = Math.min(maxUnits(p, sel.type), Math.max(1, Math.trunc(sel.seats ?? 1)));
+  const seats = Math.min(maxUnits(p), Math.max(1, Math.trunc(sel.seats ?? 1)));
   const unit = priceOf(sel).price;
   const group = Math.round((unit * seats * (100 - groupOff(p, seats))) / 100 / 1000) * 1000;
   const ip = sel.ip && STATIC_IP.countries[sel.ip] ? ipPrice(p, sel.plan) : 0;
@@ -522,8 +521,7 @@ export function priceOf(sel: Selection): { price: number; was?: number } {
 /** What each delivery method means, in plain words, for this product. */
 export function deliveryExplain(p: Product, t: DeliveryType) {
   switch (t) {
-    case "own": if (kindOf(p) === "account") return `ایمیلت را می‌دهی و اکانت ${p.maker} را با همان ایمیل برایت می‌سازیم. اکانت کاملاً مال خودت است و همیشه با ایمیلت قابل بازیابی است؛ رمز و اطلاعات امنیتی را در حساب کاربری‌ات تحویل می‌گیری.`;
-      return `ایمیل اکانت ${p.maker} خودت را می‌دهی و اشتراک روی همان فعال می‌شود. رمز نمی‌خواهیم و تاریخچه‌ات می‌ماند.`;
+    case "own": return `ایمیل اکانت ${p.maker} خودت را می‌دهی و اشتراک روی همان فعال می‌شود. رمز نمی‌خواهیم و تاریخچه‌ات می‌ماند.`;
     case "ready": return isSub(p) ? "یک اکانت تازه با ایمیل و رمز تحویل می‌گیری که فقط مال توست. ارزان‌تر و سریع‌تر است." : "یک اکانت تازه با ایمیل، رمز و اطلاعات امنیتی تحویل می‌گیری که فقط مال توست و می‌توانی رمزش را عوض کنی.";
     case "username": return "فقط یوزرنیم تلگرامت را وارد می‌کنی و به‌صورت هدیه روی همان آیدی فعال می‌شود. نه کد ورود می‌خواهیم، نه رمز.";
     case "code": return p.deliver ?? (kindOf(p) === "gift"
