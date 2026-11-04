@@ -6,9 +6,9 @@ import { normalizeUsername, validEmail, validUsername, type Order, type OrderLin
 import { db } from "./db";
 import { gatewayConfigured, startPayment, verifyPayment } from "./pay";
 import { cryptoConfigured, startCrypto } from "./crypto";
-import { bnplConfigured, cancelBnpl, confirmBnpl, startBnpl } from "./bnpl";
+import { cancelBnpl, confirmBnpl } from "./bnpl";
 import { onSplitPaid } from "./splits";
-import { canInstall, type LegalInfo, type PayMethod } from "@/lib/billing";
+import { type LegalInfo, type PayMethod } from "@/lib/billing";
 import { sendOrderSms } from "./sms";
 import { firstOutOfStock, supplyLine } from "./supplier";
 import { cancelNumber, finishNumber, fivesimConfigured, livePrice, publicNumber, refreshNumber, supplyNumber, type NumRecord } from "./fivesim";
@@ -108,7 +108,8 @@ async function livePrices(input: LineInput[]): Promise<Record<string, number>> {
 }
 
 export type { PayMethod };
-export const asMethod = (m: unknown): PayMethod => (m === "crypto" || m === "bnpl" ? m : "card");
+// Installments (SnappPay) are switched off for new orders; old "bnpl" orders still settle and refund through ./bnpl.
+export const asMethod = (m: unknown): PayMethod => (m === "crypto" ? m : "card");
 
 /** Sends the customer to the gateway (or marks a free order paid). */
 export async function payOrder(code: string, mobile: string, method: PayMethod = "card"): Promise<{ url: string } | { error: string }> {
@@ -118,21 +119,6 @@ export async function payOrder(code: string, mobile: string, method: PayMethod =
   if (o.status !== "pending" && o.status !== "canceled") return { url: `/orders/${code}` };
   if (Number(o.total) === 0) { await markPaid(code, "FREE"); return { url: `/orders/${code}` }; }
   if (method === "crypto" && !cryptoConfigured() && gatewayConfigured()) return { error: "crypto_unavailable" };
-  if (method === "bnpl") {
-    if (!canInstall(Number(o.total))) return { error: "bnpl_min" };
-    if (!bnplConfigured() && gatewayConfigured()) return { error: "bnpl_unavailable" };
-    await loadCatalog();
-    const lines = await sql`select product_id, plan, price from order_lines where order_code = ${code} order by idx`;
-    try {
-      const p = await startBnpl(code, Number(o.subtotal), Number(o.discount), mobile,
-        lines.map((l) => ({ id: `${l.product_id}-${l.plan}`, name: productById(l.product_id)?.name ?? l.product_id, amount: Number(l.price) })));
-      await sql`update orders set authority = ${p.authority}, pay_token = ${p.token ?? null}, status = 'pending', pay_method = 'bnpl' where code = ${code}`;
-      return { url: p.url };
-    } catch (e) {
-      console.error(e);
-      return { error: String((e as Error).message) === "bnpl_not_eligible" ? "bnpl_not_eligible" : "bnpl_failed" };
-    }
-  }
   const p = method === "crypto" ? await startCrypto(code, Number(o.total)) : await startPayment(code, Number(o.total), mobile);
   await sql`update orders set authority = ${p.authority}, status = 'pending', pay_method = ${method} where code = ${code}`;
   return { url: p.url };
