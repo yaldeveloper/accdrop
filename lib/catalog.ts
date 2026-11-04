@@ -171,8 +171,8 @@ const SAMPLES: Product[] = [
 ];
 
 /** Real catalogue: official codes and ready accounts from Insight Store, bought and delivered automatically after payment.
- *  `ix` maps each option to its supplier product id. Prices below are in Toman at BASE_RATE; on the site they follow the
- *  live Tether rate (lib/server/catalog.ts → priceByRate), so the margin over the supplier's USDT cost stays the same. */
+ *  `ix` maps each option to its supplier product id. Real prices are set in USDT (USDT_PRICE below) and converted at the
+ *  live Tether rate (lib/server/catalog.ts), so the margin over the supplier's USDT cost stays the same. */
 const REAL: Product[] = [
   { id: "chatgpt", tier: "Plus", name: "ChatGPT Plus", maker: "OpenAI", category: "ai", monogram: "GPT", badge: "پرفروش", etaMinutes: 0, warranty: "۲۵ روز گارانتی",
     description: "اکانت آماده ChatGPT Plus، تحویل فوری", use: "برای نوشتن، فکر کردن و ساختن",
@@ -251,11 +251,31 @@ const REAL: Product[] = [
 ];
 
 
-/** Toman per USDT that the REAL prices above were written at. */
-export const BASE_RATE = 105_000;
-for (const p of REAL) p.usdt = Object.fromEntries(Object.entries(p.plans).filter(([, o]) => o?.code).map(([k, o]) => [k, Math.round((o!.code! / BASE_RATE) * 100) / 100]));
+/** Fallback Toman per USDT, used only when no live rate is available (set CRYPTO_RATE_TOMAN to change it on the server). */
+export const BASE_RATE = 270_000;
 /** Toman price of a USDT amount at `rate`, rounded up to 10,000 Toman. */
 export const tomanAt = (usdt: number, rate: number) => Math.ceil((usdt * rate) / 10_000) * 10_000;
+/** Selling price in USDT per option. Supplier cost in the comment; roughly +25–35% on larger items, more on sub-$2 codes. */
+const USDT_PRICE: Record<string, Record<string, number>> = {
+  chatgpt: { "1": 9.9 },            // 7.5
+  manus: { "12": 62 },              // 50
+  elevenlabs: { "3": 9.5 },         // 7
+  lovable: { "12": 56 },            // 45
+  warp: { "12": 15.5 },             // 12
+  framer: { "12": 10.9 },           // 8
+  capcut: { "6": 14.5, "12": 28 },  // 11, 22
+  "adobe-express": { "12": 2 },     // 0.5
+  linkedin: { "3": 3.5 },           // 1
+  "linkedin-business": { "2": 3.5 },// 1
+  "linkedin-sales": { "2": 4.5 },   // 1.5
+  airtable: { "12": 7.5 },          // 5
+  duolingo: { "12": 2.2 },          // 0.5
+  nordvpn: { "3": 4.5 },            // 2.5
+};
+for (const p of REAL) {
+  p.usdt = USDT_PRICE[p.id];
+  for (const [k, v] of Object.entries(p.usdt ?? {})) p.plans[k] = { ...p.plans[k], code: tomanAt(v, BASE_RATE) };
+}
 
 /** Limited-price weekly drops, shown as a slider on the home page. Empty until real offers are set. */
 const DROP_LIST: Drop[] = [];
