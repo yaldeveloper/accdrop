@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { DELIVERY, MAX_QTY, MAX_SEATS, axisOf, deliveryTypes, dropOf, groupOff, isSub, linePrice, minPrice, nounOf, optionLabel, planKeys, priceOf, variantsOf, type DeliveryType, type Months, type Product, type Selection, deliveryOf } from "@/lib/catalog";
 import { productHref } from "@/lib/content";
-import { INSTALLMENTS, canInstall, installment } from "@/lib/billing";
 import { api } from "./account";
 import { fa, money } from "@/lib/format";
 import { Icon } from "./brand";
@@ -224,12 +223,6 @@ export function BuyPanel({ product: p }: { product: Product }) {
           ? <div className="bx-row"><span>سهم هر نفر</span><span>{unit.price > share ? <s className="num">{money(unit.price)}</s> : null}<b className="num">{money(share)}</b> <small>تومان</small></span></div>
           : <div className="bx-row"><span>مبلغ قابل پرداخت</span><span>{was ? <s className="num">{money(was)}</s> : null}<b className="num">{money(price)}</b> <small>تومان</small></span></div>}
       </div>
-      {!(group && dong) && canInstall(price) && (
-        <div className="bx-inst">
-          <img src="/pay/snapppay.svg" alt="اسنپ‌پی" width={34} height={34} />
-          <span><b>یا <span className="num">{fa(INSTALLMENTS.parts)}</span> قسط <span className="num">{money(installment(price))}</span> تومانی</b><small>با اسنپ‌پی، بدون کارمزد و ضامن</small></span>
-        </div>
-      )}
 
       <button ref={cta} className="btn btn-paper btn-block bx-cta" onClick={buy} disabled={making || soldOut || tooMany}>{group && dong ? (making ? "در حال ساخت گروه…" : "ساخت گروه و گرفتن لینک") : soldOut ? "ناموجود" : "ادامه خرید"} <Icon id="arrow" className="arrow" /></button>
       {!(group && dong) && <button className="add-link" onClick={add}>افزودن به سبد خرید</button>}
