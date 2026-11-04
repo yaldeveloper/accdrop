@@ -10,7 +10,7 @@ import { bnplConfigured, cancelBnpl, confirmBnpl, startBnpl } from "./bnpl";
 import { onSplitPaid } from "./splits";
 import { canInstall, type LegalInfo, type PayMethod } from "@/lib/billing";
 import { sendOrderSms } from "./sms";
-import { supplyLine } from "./supplier";
+import { firstOutOfStock, supplyLine } from "./supplier";
 import { cancelNumber, finishNumber, fivesimConfigured, livePrice, publicNumber, refreshNumber, supplyNumber, type NumRecord } from "./fivesim";
 
 type Sql = Awaited<ReturnType<typeof db>>;
@@ -62,6 +62,8 @@ export async function createOrder(mobile: string, input: LineInput[], discountCo
   await loadCatalog();
   const priced = priceLines(input, await livePrices(input));
   if ("error" in priced) return priced;
+  const out = await firstOutOfStock(priced.lines);
+  if (out >= 0) return { error: "out_of_stock", index: out };
   // A «دنگ» share is one seat at the group's locked per-person price.
   if (opts.split) priced.lines[0].price = opts.split.unit;
   const sql = await db();

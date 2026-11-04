@@ -1,6 +1,7 @@
 import { ALL_PRODUCTS, optionLabel } from "@/lib/catalog";
 import { loadCatalog } from "@/lib/server/catalog";
 import { usdtRate } from "@/lib/server/crypto";
+import { crConfigured, crWallet } from "@/lib/server/cryptorefills";
 import { body, fail, json, route, withAdmin } from "@/lib/server/http";
 import { fivesimBalance, fivesimConfigured, fivesimSettings, liveOffers } from "@/lib/server/fivesim";
 import { setSupplierMap, supplierBalance, supplierConfigured, supplierMap, supplierProducts } from "@/lib/server/supplier";
@@ -9,14 +10,15 @@ import { setSupplierMap, supplierBalance, supplierConfigured, supplierMap, suppl
 export const GET = route(async () => withAdmin(async () => {
   await loadCatalog();
   const ours = ALL_PRODUCTS.flatMap((p) => Object.entries(p.plans).filter(([, o]) => o?.code).map(([plan, o]) => ({ productId: p.id, plan, name: p.name, label: optionLabel(p, plan), price: o!.code! })));
-  const [rate, map, fivesim] = await Promise.all([usdtRate(), supplierMap(), fivesimInfo()]);
-  if (!supplierConfigured()) return json({ configured: false, rate, ours, map, products: [], balance: null, fivesim });
+  const [rate, map, cr, fivesim] = await Promise.all([usdtRate(), supplierMap(), crWallet().catch((e) => ({ error: String((e as Error).message).slice(0, 160) })), fivesimInfo()]);
+  const crInfo = { configured: crConfigured(), wallet: cr };
+  if (!supplierConfigured()) return json({ configured: false, rate, ours, map, products: [], balance: null, cr: crInfo, fivesim });
   try {
     const [products, balance] = await Promise.all([supplierProducts(), supplierBalance()]);
-    return json({ configured: true, rate, ours, map, products, balance, test: process.env.INSIGHT_TEST_MODE === "1", fivesim });
+    return json({ configured: true, rate, ours, map, products, balance, test: process.env.INSIGHT_TEST_MODE === "1", cr: crInfo, fivesim });
   } catch (e) {
     console.error(e);
-    return json({ configured: true, rate, ours, map, products: [], balance: null, fivesim, error: String((e as Error).message).slice(0, 200) });
+    return json({ configured: true, rate, ours, map, products: [], balance: null, error: String((e as Error).message).slice(0, 200), cr: crInfo, fivesim });
   }
 }));
 

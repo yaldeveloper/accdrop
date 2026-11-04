@@ -7,7 +7,7 @@ import { StoreProvider } from "@/components/store";
 import { AccountProvider } from "@/components/account";
 import { SiteChrome } from "@/components/chrome";
 import { CatalogBoot } from "@/components/catalog-boot";
-import { loadCatalog } from "@/lib/server/catalog";
+import { catalogRate, loadCatalog } from "@/lib/server/catalog";
 
 /** Product edits from the admin panel reach static pages within a minute (and instantly via revalidatePath). */
 export const revalidate = 60;
@@ -15,7 +15,7 @@ export const revalidate = 60;
 export const metadata: Metadata = {
   metadataBase: new URL("https://accdrop.ir"),
   title: { default: "اک‌دراپ | خرید اکانت ChatGPT، هوش مصنوعی و نرم‌افزارهای حرفه‌ای", template: "%s | اک‌دراپ" },
-  description: "خرید اکانت و اشتراک ChatGPT، Claude، Adobe، تلگرام پرمیوم، گیفت‌کارت اپل، شماره مجازی و سرویس‌های دیجیتال دیگر با تومان؛ تحویل روی ایمیل یا آیدی خودت با ضمانت بازگشت وجه.",
+  description: "خرید ChatGPT Plus، Manus، Lovable، CapCut، ElevenLabs، LinkedIn Premium و سرویس‌های دیجیتال دیگر با تومان؛ کد رسمی یا اکانت آماده با تحویل فوری و ضمانت بازگشت وجه.",
   alternates: { canonical: "/" },
   openGraph: { title: "اک‌دراپ", description: "اشتراک و سرویس‌های دیجیتال، به ساده‌ترین شکل", locale: "fa_IR", siteName: "AccDrop" },
 };
@@ -28,7 +28,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="fa" dir="rtl">
       <body>
         <Sprites />
-        <CatalogBoot data={catalog}><AccountProvider><StoreProvider><SiteChrome>{children}</SiteChrome></StoreProvider></AccountProvider></CatalogBoot>
+        <CatalogBoot data={catalog} rate={catalogRate()}><AccountProvider><StoreProvider><SiteChrome>{children}</SiteChrome></StoreProvider></AccountProvider></CatalogBoot>
       </body>
     </html>
   );

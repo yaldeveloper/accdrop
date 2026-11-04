@@ -1,10 +1,10 @@
-// Sample catalogue. Prices are placeholders in Toman; replace with data from the admin panel / API.
+// Product catalogue (prices in Toman). Admin edits are layered on top by lib/catalog-sync.ts.
 import { duration, fa } from "./format";
 import { livePlan, livePlanLabel } from "./numbers";
 
 /** How a purchase reaches the customer. */
 export type DeliveryType = "own" | "ready" | "username" | "code" | "number";
-export type Category = "ai" | "code" | "create" | "work" | "apple" | "telegram" | "number";
+export type Category = "ai" | "code" | "create" | "work" | "apple" | "game" | "telegram" | "number";
 /** What the customer picks: a subscription length, a gift-card amount, a region, a quantity or a country. */
 export type ProductKind = "sub" | "gift" | "account" | "qty" | "number";
 /** Key of one purchasable option: months ("1", "12"), dollars ("10"), a region ("us"), a quantity ("500"). */
@@ -43,6 +43,18 @@ export type Product = {
   family?: string;
   /** Short variant name shown in the tier switcher: «Go», «Plus», «Pro», «Max». */
   tier?: string;
+  /** Supplier (Insight Store) product id per option; paid code lines are bought and delivered automatically. */
+  ix?: Record<string, number>;
+  /** What the customer receives, replacing the generic text of the delivery method. */
+  deliver?: string;
+  /** The last step after delivery: how to redeem or use what was delivered. */
+  howTo?: string;
+  /** Short warranty line when it differs from the default promise, e.g. «۲۵ روز گارانتی». */
+  warranty?: string;
+  /** Cryptorefills gift card per option: brand name, fixed denomination («10 USD») or a range value, and our cost in USDT. */
+  cr?: Record<string, { brand: string; denom?: string; value?: number; cost: number }>;
+  /** Selling price in USDT per code option. When set, the Toman price follows the live Tether rate. */
+  usdt?: Record<string, number>;
 };
 
 export type Drop = {
@@ -63,6 +75,7 @@ export const CATEGORIES: Record<"all" | Category, string> = {
   create: "طراحی و ویدئو",
   work: "کار و آموزش",
   apple: "اپل و گیفت‌کارت",
+  game: "گیم",
   telegram: "تلگرام",
   number: "شماره مجازی",
 };
@@ -72,119 +85,273 @@ export const DELIVERY: Record<DeliveryType, { title: string; detail: string; inp
   own: { title: "روی ایمیل خودم", detail: "روی اکانت شخصی خودت فعال می‌شود", input: "email" },
   ready: { title: "اکانت آماده", detail: "یک اکانت تازه، فقط برای تو", input: null },
   username: { title: "روی آیدی تلگرام", detail: "فقط یوزرنیم لازم است؛ ورود و رمز نمی‌خواهیم", input: "username" },
-  code: { title: "کد گیفت‌کارت", detail: "کد فوراً در حساب کاربری و پیامک", input: null },
+  code: { title: "تحویل فوری و خودکار", detail: "کد یا اطلاعات ورود، فوراً در حساب کاربری و پیامک", input: null },
   number: { title: "شماره آماده", detail: "شماره و کد تأیید در حساب کاربری", input: null },
 };
 
-export const PRODUCTS: Product[] = [
-  { id: "chatgpt", tier: "Plus", name: "ChatGPT Plus", maker: "OpenAI", category: "ai", monogram: "GPT", group: [[2, 5], [3, 8], [5, 12]], ip: true, badge: "پرفروش", etaMinutes: 10,
-    description: "دستیار همه‌کاره برای نوشتن، تحلیل و ساخت", use: "برای نوشتن، فکر کردن و ساختن",
-    plans: { "1": { own: 1890000, ready: 1590000 }, "3": { own: 5390000, ready: 4490000 } },
-    includes: ["جدیدترین مدل‌های OpenAI", "تولید تصویر، صدا و Deep Research", "سقف پیام بسیار بالاتر"] },
-  { id: "claude", tier: "Pro", name: "Claude Pro", maker: "Anthropic", category: "ai", monogram: "CL", group: [[2, 5], [3, 8], [5, 12]], ip: true, etaMinutes: 20,
+/** The first demo catalogue (placeholder prices). Kept hidden so old orders, reviews and blog links still resolve; unhide from the admin panel. */
+const SAMPLES: Product[] = [
+  { id: "claude", hidden: true, tier: "Pro", name: "Claude Pro", maker: "Anthropic", category: "ai", monogram: "CL", group: [[2, 5], [3, 8], [5, 12]], ip: true, etaMinutes: 20,
     description: "برای نوشتن دقیق، کدنویسی و اسناد طولانی", use: "برای متن دقیق و کد تمیز",
     plans: { "1": { own: 2090000 }, "3": { own: 5990000 } },
     includes: ["مدل‌های Claude با سقف استفاده بالاتر", "Projects و Claude Code", "پردازش فایل‌های حجیم"] },
-  { id: "gemini", tier: "Pro", name: "Google AI Pro", maker: "Google", category: "ai", monogram: "GE", group: [[2, 5], [3, 8], [5, 12]], ip: true, etaMinutes: 15,
+  { id: "gemini", hidden: true, tier: "Pro", name: "Google AI Pro", maker: "Google", category: "ai", monogram: "GE", group: [[2, 5], [3, 8], [5, 12]], ip: true, etaMinutes: 15,
     description: "Gemini به‌همراه ۲ ترابایت فضای ابری", use: "هوش گوگل، کنار Gmail و Docs",
     plans: { "1": { own: 1190000 }, "12": { own: 11900000 } },
     includes: ["Gemini Pro و Deep Research", "۲ ترابایت Google One", "Gemini در Gmail و Docs"] },
-  { id: "perplexity", name: "Perplexity Pro", maker: "Perplexity", category: "ai", monogram: "PX", ip: true, etaMinutes: 10,
+  { id: "perplexity", hidden: true, name: "Perplexity Pro", maker: "Perplexity", category: "ai", monogram: "PX", ip: true, etaMinutes: 10,
     description: "جست‌وجوی هوشمند با منبع", use: "جواب دقیق، با منبع",
     plans: { "1": { own: 990000 }, "12": { own: 7900000 } },
     includes: ["جست‌وجوی Pro نامحدود", "انتخاب بین مدل‌های برتر", "تحلیل فایل"] },
-  { id: "grok", name: "SuperGrok", maker: "xAI", category: "ai", monogram: "GK", ip: true, etaMinutes: 20,
+  { id: "grok", hidden: true, name: "SuperGrok", maker: "xAI", category: "ai", monogram: "GK", ip: true, etaMinutes: 20,
     description: "مدل‌های پیشرفته Grok", use: "سریع و بی‌پرده",
     plans: { "1": { own: 2190000, ready: 1890000 } },
     includes: ["مدل‌های پیشرفته Grok", "تولید تصویر", "سقف استفاده بالاتر"] },
-  { id: "cursor", name: "Cursor Pro", maker: "Anysphere", category: "code", monogram: "CU", group: [[2, 5], [3, 8], [5, 12]], ip: true, etaMinutes: 20,
+  { id: "cursor", hidden: true, name: "Cursor Pro", maker: "Anysphere", category: "code", monogram: "CU", group: [[2, 5], [3, 8], [5, 12]], ip: true, etaMinutes: 20,
     description: "ادیتور کد با هوش مصنوعی", use: "کدنویسی با هوش مصنوعی",
     plans: { "1": { own: 1990000 }, "12": { own: 18900000 } },
     includes: ["تکمیل کد نامحدود", "درخواست‌های سریع ماهانه", "Agent و Background Agents"] },
-  { id: "copilot", name: "GitHub Copilot", maker: "GitHub", category: "code", monogram: "CO", ip: true, etaMinutes: 20,
+  { id: "copilot", hidden: true, name: "GitHub Copilot", maker: "GitHub", category: "code", monogram: "CO", ip: true, etaMinutes: 20,
     description: "دستیار کدنویسی در IDE", use: "دستیار کد در ادیتور تو",
     plans: { "1": { own: 990000 }, "12": { own: 9500000 } },
     includes: ["تکمیل کد در VS Code و JetBrains", "Copilot Chat", "چند مدل"] },
-  { id: "adobe", name: "Creative Cloud", maker: "Adobe", category: "create", monogram: "AD", etaMinutes: 30,
+  { id: "adobe", hidden: true, name: "Creative Cloud", maker: "Adobe", category: "create", monogram: "AD", etaMinutes: 30,
     description: "همه اپ‌های Adobe به‌همراه Firefly", use: "همه ابزارهای خلق Adobe",
     plans: { "1": { own: 3490000 }, "12": { own: 34900000 } },
     includes: ["Photoshop، Illustrator، Premiere و بیشتر", "اعتبار Firefly", "۱۰۰ گیگ فضای ابری"] },
-  { id: "canva", name: "Canva Pro", maker: "Canva", category: "create", monogram: "CA", group: [[2, 5], [3, 8], [5, 12]], etaMinutes: 5,
+  { id: "canva", hidden: true, name: "Canva Pro", maker: "Canva", category: "create", monogram: "CA", group: [[2, 5], [3, 8], [5, 12]], etaMinutes: 5,
     description: "طراحی سریع با قالب‌های حرفه‌ای", use: "طراحی در چند دقیقه",
     plans: { "1": { own: 390000 }, "12": { own: 2900000 } },
     includes: ["همه قالب‌ها و المان‌های Pro", "Magic Studio", "Brand Kit"] },
-  { id: "capcut", name: "CapCut Pro", maker: "ByteDance", category: "create", monogram: "CC", etaMinutes: 10,
-    description: "تدوین ویدئو برای تولیدکننده محتوا", use: "تدوین ویدئو، حرفه‌ای",
-    plans: { "1": { own: 690000, ready: 490000 }, "12": { own: 5900000 } },
-    includes: ["افکت‌ها و فیلترهای Pro", "خروجی بدون واترمارک", "ابزارهای هوش مصنوعی"] },
-  { id: "kling", name: "Kling AI", maker: "Kuaishou", category: "create", monogram: "KL", etaMinutes: 20,
+  { id: "kling", hidden: true, name: "Kling AI", maker: "Kuaishou", category: "create", monogram: "KL", etaMinutes: 20,
     description: "ساخت ویدئو با هوش مصنوعی", use: "از متن به ویدئو",
     plans: { "1": { own: 1490000 } },
     includes: ["اعتبار ماهانه ساخت ویدئو", "کیفیت حرفه‌ای", "بدون واترمارک"] },
-  { id: "notion", name: "Notion Plus", maker: "Notion", category: "work", monogram: "NO", group: [[2, 5], [3, 8], [5, 12]], etaMinutes: 15,
+  { id: "notion", hidden: true, name: "Notion Plus", maker: "Notion", category: "work", monogram: "NO", group: [[2, 5], [3, 8], [5, 12]], etaMinutes: 15,
     description: "فضای کار و دانش، همراه Notion AI", use: "نوشتن، برنامه‌ریزی، یادداشت",
     plans: { "1": { own: 890000 }, "12": { own: 8500000 } },
     includes: ["Notion AI", "فضای کاری تیمی", "تاریخچه نسخه‌ها"] },
-  { id: "tgpremium", name: "Telegram Premium", maker: "Telegram", category: "telegram", monogram: "TG", etaMinutes: 10,
+  { id: "tgpremium", hidden: true, name: "Telegram Premium", maker: "Telegram", category: "telegram", monogram: "TG", etaMinutes: 10,
     description: "امکانات ویژه تلگرام، روی آیدی خودت", use: "تلگرام بدون محدودیت",
     plans: { "3": { username: 1190000 }, "6": { username: 1590000 }, "12": { username: 2790000 } },
     includes: ["آپلود فایل تا ۴ گیگابایت و دانلود سریع‌تر", "تبدیل ویس به متن و بدون تبلیغ", "استیکر، ری‌اکشن و نشان ویژه"] },
-  { id: "tgstars", name: "Telegram Stars", maker: "Telegram", category: "telegram", kind: "qty", monogram: "ST", etaMinutes: 10,
+  { id: "tgstars", hidden: true, name: "Telegram Stars", maker: "Telegram", category: "telegram", kind: "qty", monogram: "ST", etaMinutes: 10,
     axis: "تعداد استارز", labels: { "100": "۱۰۰ استارز", "250": "۲۵۰ استارز", "500": "۵۰۰ استارز", "1000": "۱۰۰۰ استارز" },
     description: "استارز برای ربات‌ها، کانال‌ها و هدیه", use: "پرداخت داخل تلگرام",
     plans: { "100": { username: 190000 }, "250": { username: 450000 }, "500": { username: 890000 }, "1000": { username: 1750000 } },
     includes: ["خرید در ربات‌ها و مینی‌اپ‌ها", "حمایت از کانال‌ها و پست‌های پولی", "هدیه دادن به دوستان"] },
-  { id: "appleid", name: "Apple ID", maker: "Apple", category: "apple", kind: "account", monogram: "AP", etaMinutes: 30,
+  { id: "appleid", hidden: true, name: "Apple ID", maker: "Apple", category: "apple", kind: "account", monogram: "AP", etaMinutes: 30,
     axis: "کشور اکانت", labels: { us: "آمریکا", tr: "ترکیه", uk: "انگلیس" },
     description: "اپل آیدی آماده و اختصاصی", use: "ورود به App Store",
     plans: { us: { ready: 390000 }, tr: { ready: 390000 }, uk: { ready: 450000 } },
     includes: ["اکانت تازه با ایمیل جدید، فقط برای تو", "سؤال‌های امنیتی و تاریخ تولد", "مناسب App Store و iCloud همان کشور"] },
-  { id: "applegift", name: "Apple Gift Card", maker: "Apple", category: "apple", kind: "gift", monogram: "GC", etaMinutes: 0,
-    axis: "مبلغ کارت (آمریکا)", labels: { "5": "۵ دلار", "10": "۱۰ دلار", "25": "۲۵ دلار", "50": "۵۰ دلار" },
-    description: "گیفت‌کارت اپل آمریکا از منبع رسمی", use: "شارژ اپل آیدی",
-    plans: { "5": { code: 520000 }, "10": { code: 1020000 }, "25": { code: 2520000 }, "50": { code: 4990000 } },
-    includes: ["کد قانونی از منبع رسمی", "تحویل خودکار در حساب کاربری", "برای اپ، بازی، iCloud و اشتراک‌ها"] },
-  { id: "linkedin", name: "LinkedIn Premium", maker: "LinkedIn", category: "work", monogram: "IN", etaMinutes: 30,
-    description: "دیده‌شدن بیشتر و پیام به استخدام‌کننده‌ها", use: "برای پیدا کردن کار بهتر",
-    plans: { "1": { own: 3290000 }, "3": { own: 9490000 } },
-    includes: ["InMail به استخدام‌کننده‌ها", "دیدن بازدیدکننده‌های پروفایل", "دوره‌های LinkedIn Learning"] },
-  { id: "duolingo", name: "Super Duolingo", maker: "Duolingo", category: "work", monogram: "DU", etaMinutes: 20,
-    description: "یادگیری زبان بدون تبلیغ و محدودیت", use: "زبان یاد بگیر، بی‌وقفه",
-    plans: { "1": { own: 690000 }, "12": { own: 4900000 } },
-    includes: ["بدون تبلیغ", "قلب نامحدود", "تمرین شخصی‌سازی‌شده"] },
+  // Live 5sim numbers (lib/server/fivesim.ts): countries and prices come from 5sim; the plan below is only the
+  // «از …» price shown in listings and is never sold (see priceLines).
   { id: "vnumber", name: "Virtual Number", maker: "AccDrop", category: "number", kind: "number", monogram: "VN", etaMinutes: 0,
-    axis: "کشور شماره", labels: { us: "آمریکا", uk: "انگلیس", ca: "کانادا", nl: "هلند" },
-    description: "شماره مجازی برای تلگرام و واتس‌اپ", use: "ثبت‌نام بدون سیم‌کارت",
-    plans: { ca: { number: 250000 }, us: { number: 290000 }, uk: { number: 390000 }, nl: { number: 450000 } },
-    includes: ["شماره اختصاصی برای ثبت‌نام", "کد تأیید در حساب کاربری", "اگر کد نیامد، کل مبلغ برمی‌گردد"] },
+    axis: "کشور شماره", labels: { from: "بیش از ۱۰۰ کشور" },
+    description: "شماره مجازی برای تلگرام، واتس‌اپ و بیش از ۱۰ سرویس دیگر", use: "ثبت‌نام بدون سیم‌کارت",
+    plans: { from: { number: 40000 } },
+    includes: ["شماره اختصاصی از بیش از ۱۰۰ کشور", "کد تأیید در همان صفحه سفارش", "کد نیامد؟ شماره جدید یا بازگشت وجه"] },
   // ----- Variants (one page each, grouped on the product page by `family`) -----
-  { id: "chatgpt-go", family: "chatgpt", tier: "Go", name: "ChatGPT Go", maker: "OpenAI", category: "ai", monogram: "GO", etaMinutes: 10,
+  { id: "chatgpt-go", hidden: true, family: "chatgpt", tier: "Go", name: "ChatGPT Go", maker: "OpenAI", category: "ai", monogram: "GO", etaMinutes: 10,
     description: "نسخه اقتصادی ChatGPT با سقف بالاتر از رایگان", use: "برای استفاده روزمره، ارزان",
     plans: { "1": { own: 690000 }, "3": { own: 1950000 } },
     includes: ["سقف پیام و تصویر بالاتر از نسخه رایگان", "حافظه طولانی‌تر", "آپلود فایل بیشتر"] },
-  { id: "chatgpt-pro", family: "chatgpt", tier: "Pro", name: "ChatGPT Pro", maker: "OpenAI", category: "ai", monogram: "PRO", etaMinutes: 30, ip: true,
+  { id: "chatgpt-pro", hidden: true, family: "chatgpt", tier: "Pro", name: "ChatGPT Pro", maker: "OpenAI", category: "ai", monogram: "PRO", etaMinutes: 30, ip: true,
     description: "قوی‌ترین نسخه ChatGPT برای کار سنگین", use: "برای کار حرفه‌ای بدون سقف",
     plans: { "1": { own: 19900000 } },
     includes: ["استفاده تقریباً نامحدود از مدل‌ها", "حالت Pro برای سخت‌ترین سؤال‌ها", "Deep Research و Agent با سقف بالا"] },
-  { id: "claude-max", family: "claude", tier: "Max", name: "Claude Max", maker: "Anthropic", category: "ai", monogram: "MAX", etaMinutes: 30, ip: true,
+  { id: "claude-max", hidden: true, family: "claude", tier: "Max", name: "Claude Max", maker: "Anthropic", category: "ai", monogram: "MAX", etaMinutes: 30, ip: true,
     description: "Claude با ۵ برابر سقف Pro", use: "برای کدنویسی و کار سنگین",
     plans: { "1": { own: 9900000 } },
     includes: ["۵ برابر سقف استفاده Pro", "Claude Code با سقف بالا", "دسترسی زودتر به امکانات تازه"] },
-  { id: "gemini-ultra", family: "gemini", tier: "Ultra", name: "Google AI Ultra", maker: "Google", category: "ai", monogram: "UL", etaMinutes: 30,
+  { id: "gemini-ultra", hidden: true, family: "gemini", tier: "Ultra", name: "Google AI Ultra", maker: "Google", category: "ai", monogram: "UL", etaMinutes: 30,
     description: "بالاترین سطح Gemini به‌همراه ۳۰ ترابایت فضا", use: "همه هوش گوگل، بدون سقف",
     plans: { "1": { own: 24500000 } },
     includes: ["Gemini با بالاترین سقف و Deep Think", "ساخت ویدئو با Veo", "۳۰ ترابایت فضای ابری"] },
 ];
 
-/** Limited-price weekly drops, shown as a slider on the home page. */
-export const DROPS: Drop[] = [
-  { number: 7, productId: "chatgpt", plan: "1", type: "own", was: 1890000, price: 1490000, left: 7, of: 40 },
-  { number: 8, productId: "cursor", plan: "1", type: "own", was: 1990000, price: 1690000, left: 12, of: 30 },
-  { number: 9, productId: "tgpremium", plan: "12", type: "username", was: 2790000, price: 2390000, left: 18, of: 50 },
-  { number: 10, productId: "canva", plan: "12", type: "own", was: 2900000, price: 2290000, left: 9, of: 25 },
+/** Real catalogue: official codes and ready accounts from Insight Store, bought and delivered automatically after payment.
+ *  `ix` maps each option to its supplier product id. Real prices are set in USDT (USDT_PRICE below) and converted at the
+ *  live Tether rate (lib/server/catalog.ts), so the margin over the supplier's USDT cost stays the same. */
+const REAL: Product[] = [
+  { id: "chatgpt", tier: "Plus", name: "ChatGPT Plus", maker: "OpenAI", category: "ai", monogram: "GPT", badge: "پرفروش", etaMinutes: 0, warranty: "۲۵ روز گارانتی",
+    description: "اکانت آماده ChatGPT Plus، تحویل فوری", use: "برای نوشتن، فکر کردن و ساختن",
+    plans: { "1": { code: 1190000 } }, ix: { "1": 117 },
+    deliver: "بلافاصله بعد از پرداخت، ایمیل، رمز و کلید ورود دومرحله‌ای (2FA) یک اکانت Plus در حساب کاربری‌ات نمایش داده و پیامک می‌شود. کلید 2FA را تغییر نده و فقط روی یک دستگاه وارد شو.",
+    howTo: "با ایمیل و رمز وارد شو و کد تأیید را با کلید 2FA در یک اپ Authenticator بساز.",
+    includes: ["اکانت Plus با ایمیل و رمز", "تحویل خودکار و فوری", "۲۵ روز گارانتی"] },
+  { id: "manus", name: "Manus Pro", maker: "Manus", category: "ai", monogram: "MA", etaMinutes: 0, warranty: "یک سال گارانتی کامل",
+    description: "ایجنت هوش مصنوعی که کار را از اول تا آخر انجام می‌دهد", use: "کارها را به ایجنت بسپار",
+    plans: { "12": { code: 6890000 } }, ix: { "12": 87 },
+    howTo: "در اکانت Manus پلن Pro سالانه (۴۰۰۰ اعتبار) را انتخاب کن و کد را در صفحه پرداخت وارد کن.",
+    includes: ["۴۰۰۰ اعتبار در ماه", "کد رسمی روی اکانت خودت", "یک سال گارانتی کامل"] },
+  { id: "elevenlabs", name: "ElevenLabs Creator", maker: "ElevenLabs", category: "ai", monogram: "11", etaMinutes: 0, warranty: "تحویل سالم یا جایگزینی",
+    description: "صداگذاری و تبدیل متن به گفتار با هوش مصنوعی", use: "صدای طبیعی، به هر زبان",
+    plans: { "3": { code: 1190000 } }, ix: { "3": 46 },
+    deliver: "بلافاصله بعد از پرداخت، اطلاعات ورود یک اکانت آماده Creator در حساب کاربری‌ات نمایش داده و پیامک می‌شود.",
+    howTo: "با اطلاعات تحویلی وارد elevenlabs.io شو و شروع کن.",
+    includes: ["۱۳۱ هزار اعتبار در ماه", "اکانت آماده، تحویل فوری", "شبیه‌سازی صدا و دوبله"] },
+  { id: "lovable", name: "Lovable Pro", maker: "Lovable", category: "code", monogram: "LO", etaMinutes: 0, warranty: "یک سال گارانتی کامل",
+    description: "ساخت اپ و سایت فقط با توضیح دادن", use: "اپ بساز، بدون کدنویسی",
+    plans: { "12": { code: 6190000 } }, ix: { "12": 88 },
+    howTo: "در اکانت Lovable پلن Pro را با پرداخت ماهانه انتخاب کن و کد را وارد کن؛ تخفیف یک سال اعمال می‌شود.",
+    includes: ["۱۰۰ اعتبار در ماه", "کد رسمی روی اکانت خودت", "یک سال گارانتی کامل"] },
+  { id: "warp", name: "Warp Build", maker: "Warp", category: "code", monogram: "WA", etaMinutes: 0, warranty: "یک سال گارانتی کامل",
+    description: "ترمینال هوشمند با ایجنت کدنویسی", use: "ترمینال، با هوش مصنوعی",
+    plans: { "12": { code: 1690000 } }, ix: { "12": 107 },
+    howTo: "در اکانت Warp پلن Build را با پرداخت ماهانه انتخاب کن و کد را وارد کن؛ تخفیف یک سال اعمال می‌شود.",
+    includes: ["پلن Build یک‌ساله", "کد رسمی روی اکانت خودت", "یک سال گارانتی کامل"] },
+  { id: "framer", name: "Framer Pro", maker: "Framer", category: "create", monogram: "FR", etaMinutes: 0, warranty: "کد سالم یا بازگشت وجه",
+    description: "طراحی و انتشار سایت بدون کد", use: "سایت حرفه‌ای در یک روز",
+    plans: { "12": { code: 1390000 } }, ix: { "12": 4 },
+    howTo: "در Framer از Site Settings بخش Plans، پلن Pro سالانه را انتخاب کن و کد را در Add promotion code وارد کن.",
+    includes: ["پلن Pro یک‌ساله", "کد رسمی روی اکانت خودت", "تحویل فوری"] },
+  { id: "capcut", name: "CapCut Pro", maker: "ByteDance", category: "create", monogram: "CC", etaMinutes: 0, warranty: "گارانتی تا پایان اشتراک",
+    description: "تدوین ویدئو برای تولیدکننده محتوا", use: "تدوین ویدئو، حرفه‌ای",
+    plans: { "6": { code: 1490000 }, "12": { code: 2890000 } }, ix: { "6": 68, "12": 113 },
+    deliver: "بلافاصله بعد از پرداخت، ایمیل و رمز یک اکانت CapCut Pro در حساب کاربری‌ات نمایش داده و پیامک می‌شود. تا ۲ روز ایمیل اکانت را به ایمیل خودت تغییر بده.",
+    howTo: "وارد اکانت شو و تا ۲ روز ایمیلش را عوض کن؛ حداکثر روی ۲ دستگاه.",
+    includes: ["افکت‌ها، قالب‌ها و ابزارهای هوش مصنوعی", "خروجی 4K بدون واترمارک", "گارانتی تا پایان اشتراک"] },
+  { id: "adobe-express", name: "Adobe Express Premium", maker: "Adobe", category: "create", monogram: "AE", group: [[2, 5], [3, 8], [5, 12]], etaMinutes: 0, warranty: "کد سالم یا بازگشت وجه",
+    description: "طراحی سریع پست، پوستر و ویدئو کوتاه", use: "طراحی سریع با Firefly",
+    plans: { "12": { code: 390000 } }, ix: { "12": 78 },
+    howTo: "با اکانت Adobe خودت (جدید یا قدیمی) کد را فعال کن. اگر خطای منطقه دیدی، به پشتیبانی پیام بده.",
+    includes: ["همه قالب‌ها و فونت‌های Premium", "اعتبار Firefly", "بدون نیاز به کارت بانکی"] },
+  { id: "linkedin", tier: "Career", name: "LinkedIn Premium", maker: "LinkedIn", category: "work", monogram: "IN", group: [[2, 5], [3, 8], [5, 12]], etaMinutes: 0, warranty: "کد سالم یا بازگشت وجه",
+    description: "دیده‌شدن بیشتر و پیام به استخدام‌کننده‌ها", use: "برای پیدا کردن کار بهتر",
+    plans: { "3": { code: 690000 } }, ix: { "3": 17 },
+    howTo: "کد را روی اکانتی فعال کن که قبلاً هیچ‌وقت Premium نداشته است.",
+    includes: ["InMail به استخدام‌کننده‌ها", "دیدن بازدیدکننده‌های پروفایل", "فقط برای اکانت‌هایی که Premium نداشته‌اند"] },
+  { id: "linkedin-business", family: "linkedin", tier: "Business", name: "LinkedIn Premium Business", maker: "LinkedIn", category: "work", monogram: "IN", etaMinutes: 0, warranty: "کد سالم یا بازگشت وجه",
+    description: "برای شبکه‌سازی و رشد کسب‌وکار در لینکدین", use: "برای شبکه‌سازی حرفه‌ای",
+    plans: { "2": { code: 690000 } }, ix: { "2": 114 },
+    howTo: "کد را روی اکانتی فعال کن که قبلاً هیچ‌وقت Premium نداشته است.",
+    includes: ["جست‌وجوی نامحدود افراد", "InMail و اطلاعات شرکت‌ها", "فقط برای اکانت‌هایی که Premium نداشته‌اند"] },
+  { id: "linkedin-sales", family: "linkedin", tier: "Sales Navigator", name: "LinkedIn Sales Navigator", maker: "LinkedIn", category: "work", monogram: "IN", etaMinutes: 0, warranty: "کد سالم یا بازگشت وجه",
+    description: "پیدا کردن مشتری و فروش B2B در لینکدین", use: "برای فروش و پیدا کردن مشتری",
+    plans: { "2": { code: 890000 } }, ix: { "2": 26 },
+    howTo: "کد را روی اکانتی فعال کن که قبلاً هیچ‌وقت Premium نداشته است.",
+    includes: ["فیلترهای پیشرفته جست‌وجوی مشتری", "لیست‌های لید و هشدارها", "فقط برای اکانت‌هایی که Premium نداشته‌اند"] },
+  { id: "airtable", name: "Airtable Team", maker: "Airtable", category: "work", monogram: "AT", etaMinutes: 0, warranty: "کد سالم یا بازگشت وجه",
+    description: "دیتابیس و اتوماسیون تیمی بدون کد", use: "داده و کار تیم، یک‌جا",
+    plans: { "12": { code: 990000 } }, ix: { "12": 76 },
+    howTo: "در Airtable روی Upgrade بزن، پلن ماهانه Team را انتخاب کن و کد را در صفحه پرداخت وارد کن.",
+    includes: ["پلن Team یک‌ساله", "۱۵ هزار اعتبار هوش مصنوعی در ماه", "کد رسمی روی اکانت خودت"] },
+  { id: "duolingo", name: "Super Duolingo", maker: "Duolingo", category: "work", monogram: "DU", group: [[2, 5], [3, 8], [5, 12]], etaMinutes: 0, warranty: "کد سالم یا بازگشت وجه",
+    description: "یادگیری زبان بدون تبلیغ و محدودیت", use: "زبان یاد بگیر، بی‌وقفه",
+    plans: { "12": { code: 490000 } }, ix: { "12": 75 },
+    deliver: "بلافاصله بعد از پرداخت، لینک فعال‌سازی یک‌ساله در حساب کاربری‌ات نمایش داده و پیامک می‌شود. بدون کارت بانکی، با یک کلیک روی اکانت خودت.",
+    howTo: "در مرورگر وارد اکانت Duolingo شو، لینک را باز کن و Claim Offer را بزن. اگر خطای منطقه دیدی، به پشتیبانی پیام بده.",
+    includes: ["بدون تبلیغ", "قلب نامحدود", "روی اکانت خودت، بدون کارت بانکی"] },
 ];
-export const CURRENT_DROP: Drop = DROPS[0];
-export const dropOf = (id: string) => DROPS.find((d) => d.productId === id);
+
+
+/** Fallback Toman per USDT, used only when no live rate is available (set CRYPTO_RATE_TOMAN to change it on the server). */
+export const BASE_RATE = 270_000;
+/** Toman price of a USDT amount at `rate`, rounded up to 10,000 Toman. */
+export const tomanAt = (usdt: number, rate: number) => Math.ceil((usdt * rate) / 10_000) * 10_000;
+
+// ----- Gift cards (Cryptorefills, US region). Bought on-chain per order and delivered automatically. -----
+type G = { id: string; name: string; maker: string; category: Category; monogram: string; brand: string; axis?: string;
+  description: string; use: string; howTo: string; includes: string[];
+  /** option key → [label, denomination or range value, Cryptorefills cost in USDT] */
+  opts: [string, string, string | number, number][] };
+const usd = (n: number) => `${fa(n)} دلار`;
+const GIFTS: G[] = [
+  { id: "applegift", name: "Apple Gift Card", maker: "Apple", category: "apple", monogram: "GC", brand: "Everything Apple",
+    description: "گیفت‌کارت اپل آمریکا، تحویل فوری", use: "شارژ اپل آیدی",
+    howTo: "در App Store روی عکس پروفایل بزن، Redeem Gift Card or Code را انتخاب کن و کد را وارد کن.",
+    includes: ["کد رسمی آمریکا", "تحویل خودکار در حساب کاربری", "برای اپ، بازی، iCloud و Apple Music"],
+    opts: [["5", usd(5), 5, 5.37], ["10", usd(10), 10, 10.75], ["25", usd(25), 25, 26.87], ["50", usd(50), 50, 53.74]] },
+  { id: "googleplay", name: "Google Play Gift Card", maker: "Google", category: "apple", monogram: "GP", brand: "Google Play",
+    description: "گیفت‌کارت گوگل‌پلی آمریکا", use: "خرید اپ و بازی اندروید",
+    howTo: "در Google Play روی عکس پروفایل بزن، Payments & subscriptions و بعد Redeem code را بزن و کد را وارد کن. اکانت باید ریجن آمریکا باشد.",
+    includes: ["کد رسمی آمریکا", "تحویل خودکار", "برای اپ، بازی و اشتراک‌های اندروید"],
+    opts: [["5", usd(5), 5, 5.2], ["10", usd(10), 10, 10.4], ["25", usd(25), 25, 26.01], ["50", usd(50), 50, 52.02]] },
+  { id: "steam", name: "Steam Gift Card", maker: "Valve", category: "game", monogram: "ST", brand: "Steam",
+    description: "شارژ کیف پول استیم", use: "خرید بازی در استیم",
+    howTo: "در store.steampowered.com/account/redeemwalletcode وارد اکانت استیم شو و کد را وارد کن.",
+    includes: ["کد رسمی Steam Wallet", "تحویل خودکار", "شارژ مستقیم کیف پول استیم"],
+    opts: [["10", usd(10), "10 USD", 11.28], ["20", usd(20), "20 USD", 22.57], ["50", usd(50), "50 USD", 56.42]] },
+  { id: "playstation", name: "PlayStation Store", maker: "Sony", category: "game", monogram: "PS", brand: "PlayStation Store",
+    description: "گیفت‌کارت پلی‌استیشن آمریکا", use: "بازی و PS Plus",
+    howTo: "در PlayStation Store یا کنسول، Redeem Codes را بزن و کد را وارد کن. اکانت باید ریجن آمریکا باشد.",
+    includes: ["کد رسمی آمریکا", "تحویل خودکار", "برای بازی، PS Plus و آیتم‌ها"],
+    opts: [["25", usd(25), 25, 25.11], ["50", usd(50), 50, 50.22], ["100", usd(100), 100, 100.45]] },
+  { id: "xbox", name: "Xbox Gift Card", maker: "Microsoft", category: "game", monogram: "XB", brand: "Xbox",
+    description: "گیفت‌کارت ایکس‌باکس آمریکا", use: "بازی و Game Pass",
+    howTo: "در xbox.com/redeemcode یا Microsoft Store کد را وارد کن. اکانت باید ریجن آمریکا باشد.",
+    includes: ["کد رسمی آمریکا", "تحویل خودکار", "برای بازی و Game Pass"],
+    opts: [["10", usd(10), "10 USD", 10.84], ["25", usd(25), "25 USD", 27.1], ["50", usd(50), "50 USD", 54.2]] },
+  { id: "nintendo", name: "Nintendo eShop", maker: "Nintendo", category: "game", monogram: "NI", brand: "Nintendo eShop",
+    description: "شارژ اکانت نینتندو آمریکا", use: "بازی سوییچ",
+    howTo: "در eShop روی پروفایل بزن، Redeem Code را انتخاب کن و کد را وارد کن.",
+    includes: ["کد رسمی آمریکا", "تحویل خودکار", "برای بازی‌های Switch"],
+    opts: [["10", usd(10), "10 USD", 10.36], ["20", usd(20), "20 USD", 20.71], ["50", usd(50), "50 USD", 51.78]] },
+  { id: "razer", name: "Razer Gold", maker: "Razer", category: "game", monogram: "RZ", brand: "Razer Gold USD",
+    description: "شارژ Razer Gold برای صدها بازی", use: "آیتم و ارز بازی‌ها",
+    howTo: "در gold.razer.com وارد شو، Reload را بزن و کد را وارد کن.",
+    includes: ["کد رسمی Razer Gold", "تحویل خودکار", "برای ارز داخل صدها بازی"],
+    opts: [["5", usd(5), "5 USD", 5.29], ["10", usd(10), "10 USD", 10.44], ["20", usd(20), "20 USD", 20.75], ["50", usd(50), "50 USD", 51.65]] },
+  { id: "pubg", name: "PUBG Mobile UC", maker: "Krafton", category: "game", monogram: "UC", brand: "PUBG Mobile", axis: "تعداد یوسی",
+    description: "یوسی پابجی موبایل با کد رسمی", use: "یوسی برای پابجی",
+    howTo: "در midasbuy.com/midasbuy/ot/redeem/pubgm آیدی بازی را بزن و کد را وارد کن.",
+    includes: ["کد رسمی یوسی", "تحویل خودکار", "شارژ با آیدی بازی، بدون رمز"],
+    opts: [["60", "۶۰ یوسی", "60 UC", 1.08], ["325", "۳۲۵ یوسی", "300 + 25 UC", 5.01], ["660", "۶۶۰ یوسی", "600 + 60 UC", 10.03], ["1800", "۱۸۰۰ یوسی", "1500 + 300 UC", 25.1]] },
+  { id: "freefire", name: "Free Fire Diamonds", maker: "Garena", category: "game", monogram: "FF", brand: "Free Fire",
+    description: "الماس فری‌فایر با کد رسمی", use: "الماس برای فری‌فایر",
+    howTo: "در shop.garena.sg یا reward.ff.garena.com با آیدی بازی وارد شو و کد را وارد کن.",
+    includes: ["کد رسمی Garena", "تحویل خودکار", "شارژ با آیدی بازی"],
+    opts: [["2", usd(2), "2 USD", 2.13], ["5", usd(5), "5 USD", 5.16], ["10", usd(10), "10 USD", 10.2]] },
+  { id: "valorant", name: "Valorant Points", maker: "Riot Games", category: "game", monogram: "VP", brand: "Valorant Point (VP)",
+    description: "ولورانت پوینت با کد رسمی", use: "اسکین و بتل‌پس",
+    howTo: "در بازی روی آیکون VP بزن، Prepaid Cards & Codes را انتخاب کن و کد را وارد کن.",
+    includes: ["کد رسمی Riot", "تحویل خودکار", "برای اسکین و Battle Pass"],
+    opts: [["5", usd(5), "5 USD", 5.61], ["10", usd(10), "10 USD", 11.09], ["25", usd(25), "25 USD", 27.53]] },
+  { id: "roblox", name: "Roblox Gift Card", maker: "Roblox", category: "game", monogram: "RB", brand: "Roblox",
+    description: "گیفت‌کارت روبلاکس برای روباکس", use: "روباکس و پریمیوم",
+    howTo: "در roblox.com/redeem وارد اکانت شو و کد را وارد کن.",
+    includes: ["کد رسمی Roblox", "تحویل خودکار", "تبدیل به روباکس یا Premium"],
+    opts: [["10", usd(10), 10, 10.16], ["25", usd(25), 25, 25.39], ["50", usd(50), 50, 50.78]] },
+];
+/** Our margin on gift cards over the Cryptorefills cost. */
+const GIFT_MARKUP = 1.08;
+const GIFT_PRODUCTS: Product[] = GIFTS.map((g) => ({
+  id: g.id, name: g.name, maker: g.maker, category: g.category, kind: "gift", monogram: g.monogram, etaMinutes: 5,
+  axis: g.axis ?? "مبلغ کارت (آمریکا)", labels: Object.fromEntries(g.opts.map(([k, l]) => [k, l])),
+  description: g.description, use: g.use, howTo: g.howTo, includes: g.includes, warranty: "کد سالم یا بازگشت وجه",
+  deliver: "بعد از پرداخت، کد رسمی معمولاً ظرف چند دقیقه به‌صورت خودکار در حساب کاربری‌ات نمایش داده و پیامک می‌شود.",
+  plans: Object.fromEntries(g.opts.map(([k]) => [k, { code: 0 }])),
+  usdt: Object.fromEntries(g.opts.map(([k, , , c]) => [k, Math.ceil(c * GIFT_MARKUP * 20) / 20])),
+  cr: Object.fromEntries(g.opts.map(([k, , d, c]) => [k, typeof d === "number" ? { brand: g.brand, value: d, cost: c } : { brand: g.brand, denom: d, cost: c }])),
+}));
+/** Selling price in USDT per option. Supplier cost in the comment; roughly +25–35% on larger items, more on sub-$2 codes. */
+const USDT_PRICE: Record<string, Record<string, number>> = {
+  chatgpt: { "1": 9.9 },            // 7.5
+  manus: { "12": 62 },              // 50
+  elevenlabs: { "3": 9.5 },         // 7
+  lovable: { "12": 56 },            // 45
+  warp: { "12": 15.5 },             // 12
+  framer: { "12": 10.9 },           // 8
+  capcut: { "6": 14.5, "12": 28 },  // 11, 22
+  "adobe-express": { "12": 2 },     // 0.5
+  linkedin: { "3": 3.5 },           // 1
+  "linkedin-business": { "2": 3.5 },// 1
+  "linkedin-sales": { "2": 4.5 },   // 1.5
+  airtable: { "12": 7.5 },          // 5
+  duolingo: { "12": 2.2 },          // 0.5
+};
+for (const p of REAL) p.usdt = USDT_PRICE[p.id];
+REAL.push(...GIFT_PRODUCTS);
+for (const p of REAL) for (const [k, v] of Object.entries(p.usdt ?? {})) p.plans[k] = { ...p.plans[k], code: tomanAt(v, BASE_RATE) };
+
+/** Limited-price weekly drops, shown as a slider on the home page. Empty until real offers are set. */
+const DROP_LIST: Drop[] = [];
+/** Drops of products that are on sale right now. */
+export const liveDrops = () => DROP_LIST.filter((d) => PRODUCTS.some((p) => p.id === d.productId && p.plans[d.plan]?.[d.type]));
+export const currentDrop = (): Drop | undefined => liveDrops()[0];
+export const dropOf = (id: string) => liveDrops().find((d) => d.productId === id);
 
 export const kindOf = (p: Product): ProductKind => p.kind ?? "sub";
 export const isSub = (p: Product) => kindOf(p) === "sub";
@@ -197,7 +364,8 @@ export const etaText = (p: Product) => (p.etaMinutes === 0 ? "خودکار" : `�
 export const nounOf = (p: Product) => ({ sub: "اشتراک", gift: "گیفت‌کارت", account: "اکانت", qty: "استارز", number: "شماره" })[kindOf(p)];
 
 /** Every product including hidden ones (old orders still need to show them). PRODUCTS holds only the visible ones. */
-export const ALL_PRODUCTS: Product[] = [...PRODUCTS];
+export const ALL_PRODUCTS: Product[] = [...REAL, ...SAMPLES];
+export const PRODUCTS: Product[] = ALL_PRODUCTS.filter((p) => !p.hidden);
 export const productById = (id: string) => ALL_PRODUCTS.find((p) => p.id === id) ?? PRODUCTS.find((p) => p.id === id)!;
 export const planKeys = (p: Product) => Object.keys(p.plans) as Months[];
 export const minPrice = (p: Product) =>
@@ -212,7 +380,8 @@ export type Selection = {
   unit?: number;
 };
 /** A cart line whose option exists: a plan of the product, or a live 5sim number. */
-export const sellable = (p: Product, sel: Selection) => !!p.plans[sel.plan]?.[sel.type] || (sel.type === "number" && kindOf(p) === "number" && !!livePlan(sel.plan));
+export const sellable = (p: Product, sel: Selection) =>
+  kindOf(p) === "number" ? sel.type === "number" && !!livePlan(sel.plan) : !!p.plans[sel.plan]?.[sel.type];
 
 /** Dedicated foreign static IP, sold as an add-on to some subscriptions. Price per month of the plan. */
 export const STATIC_IP = {
@@ -251,7 +420,7 @@ export function extrasLabel(sel: Selection) {
 export function priceOf(sel: Selection): { price: number; was?: number } {
   if (livePlan(sel.plan)) return { price: Math.max(0, Math.round(Number(sel.unit) || 0)) };
   const base = productById(sel.id).plans[sel.plan]?.[sel.type] ?? 0;
-  const d = DROPS.find((x) => x.productId === sel.id && x.plan === sel.plan && x.type === sel.type);
+  const d = liveDrops().find((x) => x.productId === sel.id && x.plan === sel.plan && x.type === sel.type);
   if (d) return { price: d.price, was: base };
   return { price: base };
 }
@@ -262,13 +431,15 @@ export function deliveryExplain(p: Product, t: DeliveryType) {
     case "own": return `ایمیل اکانت ${p.maker} خودت را می‌دهی و اشتراک روی همان فعال می‌شود. رمز نمی‌خواهیم و تاریخچه‌ات می‌ماند.`;
     case "ready": return isSub(p) ? "یک اکانت تازه با ایمیل و رمز تحویل می‌گیری که فقط مال توست. ارزان‌تر و سریع‌تر است." : "یک اکانت تازه با ایمیل، رمز و اطلاعات امنیتی تحویل می‌گیری که فقط مال توست و می‌توانی رمزش را عوض کنی.";
     case "username": return "فقط یوزرنیم تلگرامت را وارد می‌کنی و به‌صورت هدیه روی همان آیدی فعال می‌شود. نه کد ورود می‌خواهیم، نه رمز.";
-    case "code": return "بلافاصله بعد از پرداخت، کد گیفت‌کارت در حساب کاربری‌ات نمایش داده و پیامک می‌شود. کد را در App Store وارد می‌کنی و تمام.";
+    case "code": return p.deliver ?? (kindOf(p) === "gift"
+      ? "بلافاصله بعد از پرداخت، کد گیفت‌کارت در حساب کاربری‌ات نمایش داده و پیامک می‌شود. کد را در App Store وارد می‌کنی و تمام."
+      : `بلافاصله بعد از پرداخت، کد رسمی در حساب کاربری‌ات نمایش داده و پیامک می‌شود و آن را روی اکانت ${p.maker} خودت فعال می‌کنی.`);
     case "number": return "بعد از پرداخت، شماره در حساب کاربری‌ات نمایش داده می‌شود. در تلگرام یا واتس‌اپ واردش می‌کنی و کد تأیید همان‌جا می‌آید.";
   }
 }
 
 /** One-line promise used on product pages. */
-export const guaranteeOf = (p: Product) =>
+export const guaranteeOf = (p: Product) => p.warranty ??
   ({ sub: "تا روز آخر اشتراک", gift: "کد سالم یا بازگشت وجه", account: "تحویل سالم یا جایگزینی", qty: "دریافت کامل یا بازگشت وجه", number: "کد نیامد؟ بازگشت وجه" })[kindOf(p)];
 
 

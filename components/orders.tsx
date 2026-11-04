@@ -103,7 +103,8 @@ export function OrderDetail({ order, now, onPay, paying }: { order: Order; now: 
                     {l.type === "username" && l.username && <small className="ltr-i">ارسال به <span className="en">{l.username}</span></small>}
                     {s === 2 && isSub(p) && <small className="ok">فعال تا {faDate(w.end, false)}</small>}
                     {paid && l.number && l.lineId ? <NumberBox code={order.code} lineId={l.lineId} initial={l.number} /> : <>
-                    {l.secret && <small className="od-secret"><span>{{ code: "کد گیفت‌کارت", number: "شماره", ready: "اطلاعات ورود" }[l.type as "code"] ?? (l.ip ? "مشخصات آی‌پی ثابت" : "اطلاعات تحویل")}</span><b className="en">{l.secret}</b></small>}
+                    {l.secret && <small className="od-secret"><span>{{ code: p.kind === "gift" ? "کد گیفت‌کارت" : "کد / اطلاعات تحویل", number: "شماره", ready: "اطلاعات ورود" }[l.type as "code"] ?? (l.ip ? "مشخصات آی‌پی ثابت" : "اطلاعات تحویل")}</span><b className="en">{l.secret}</b></small>}
+                    {l.secret && l.type === "code" && p.howTo && <small className="muted">{p.howTo}</small>}
                     {paid && !l.secret && (l.type === "code" || l.type === "number" || l.type === "ready") && <small className="muted">به‌محض آماده شدن همین‌جا نمایش داده می‌شود و پیامک می‌گیری.</small>}
                     </>}
                   </div>

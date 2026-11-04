@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { optionLabel, planKeys, type Product } from "@/lib/catalog";
+import type { Product } from "@/lib/catalog";
 import { SERVICE_LOGOS } from "@/lib/number-logos";
 import { NUMBER_SERVICES, livePlanKey, type NumberState } from "@/lib/numbers";
 import { fa, money } from "@/lib/format";
@@ -10,11 +10,6 @@ import { api } from "./account";
 import { useStore } from "./store";
 
 type Offer = { country: string; name: string; iso: string; price: number; count: number };
-
-/** Fixed-price countries from the catalog, used while 5sim is not connected (no FIVESIM_API_KEY). */
-const staticOffers = (p: Product): Offer[] => planKeys(p).filter((k) => p.plans[k]?.number).map((k) => ({
-  country: k, name: optionLabel(p, k), iso: k === "uk" ? "gb" : /^[a-z]{2}$/.test(k) ? k : "", price: p.plans[k]!.number!, count: 0,
-})).sort((a, b) => a.price - b.price);
 
 /** Live 5sim numbers: pick a service, then buy from a plain list of countries (price, stock, one button). */
 export function NumberShop({ product: p }: { product: Product }) {
@@ -33,12 +28,12 @@ export function NumberShop({ product: p }: { product: Product }) {
     setOffers(null); setFailed(false);
     api<{ offers: Offer[]; live?: boolean }>(`/api/numbers?service=${service}`).then((r) => {
       if (stop) return;
-      if (r.live === false) { setLive(false); setOffers(staticOffers(p)); return; }
+      if (r.live === false) { setLive(false); setOffers([]); return; }
       setOffers(r.offers ?? []);
       setFailed(!!r.error || !r.offers);
     });
     return () => { stop = true; };
-  }, [service, p]);
+  }, [service]);
 
   const list = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -48,7 +43,7 @@ export function NumberShop({ product: p }: { product: Product }) {
   const svc = NUMBER_SERVICES.find((s) => s.id === service)!;
 
   const buy = (o: Offer) => {
-    addLine(live ? { id: p.id, plan: livePlanKey(o.country, service), type: "number", unit: o.price } : { id: p.id, plan: o.country, type: "number" });
+    addLine({ id: p.id, plan: livePlanKey(o.country, service), type: "number", unit: o.price });
     router.push("/checkout");
   };
 
@@ -77,6 +72,7 @@ export function NumberShop({ product: p }: { product: Product }) {
           </div>
         </div>
         {offers === null ? <p className="vn-wait">در حال گرفتن قیمت‌های لحظه‌ای…</p>
+          : !live ? <p className="vn-wait">فروش شماره مجازی به‌زودی فعال می‌شود.</p>
           : !offers.length ? <p className="vn-wait">{failed ? "الان به سرور شماره‌ها وصل نشدیم. چند لحظه دیگر دوباره امتحان کن." : `فعلاً شماره‌ای برای ${svc.fa} موجود نیست.`}</p>
           : !list.length ? <p className="vn-wait">کشوری با این نام پیدا نشد.</p>
           : (

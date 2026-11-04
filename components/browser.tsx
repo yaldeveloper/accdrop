@@ -60,7 +60,7 @@ export function ServiceBrowser({ syncUrl = false }: { syncUrl?: boolean }) {
       </div>
 
       <div className="cat-rail" role="tablist" aria-label="دسته‌بندی">
-        {CATS.map((k) => {
+        {CATS.filter((k) => k === "all" || inCat(k).length).map((k) => {
           const logos = (k === "all" ? listed() : inCat(k)).slice(0, 4);
           return (
             <button key={k} className={`cat-c ${k === cat ? "on" : ""}`} style={{ "--t": k === "all" ? "#B9FF63" : CAT_TONE[k] } as CSSProperties}

@@ -13,7 +13,7 @@ export type OrderLine = Selection & {
   lineId?: number; secret?: string; deliveredAt?: number | null;
   /** Live virtual number (5sim): the number, its SMS codes and whether a new one can be requested. */
   number?: NumberState;
-  /** Admin only: supplier reference (5sim order id or the error from the last attempt). */
+  /** Admin only: supplier order reference («IX-…», «CR-…», or an error). */
   supplyRef?: string;
 };
 /** pending = waiting for payment, canceled = payment failed or abandoned. */
