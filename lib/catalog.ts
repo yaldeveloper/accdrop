@@ -52,6 +52,8 @@ export type Product = {
   warranty?: string;
   /** Cryptorefills gift card per option: brand name, fixed denomination («10 USD») or a range value, and our cost in USDT. */
   cr?: Record<string, { brand: string; denom?: string; value?: number; cost: number }>;
+  /** QuickDigi product per option: its P_ id and our cost in USDT. Paid lines are bought and delivered automatically. */
+  qd?: Record<string, { id: string; cost: number }>;
   /** Selling price in USDT per code option. When set, the Toman price follows the live Tether rate. */
   usdt?: Record<string, number>;
 };
@@ -206,7 +208,7 @@ const REAL: Product[] = [
     includes: ["پلن Pro یک‌ساله", "کد رسمی روی اکانت خودت", "تحویل فوری"] },
   { id: "capcut", name: "CapCut Pro", maker: "ByteDance", category: "create", monogram: "CC", etaMinutes: 0, warranty: "گارانتی تا پایان اشتراک",
     description: "تدوین ویدئو برای تولیدکننده محتوا", use: "تدوین ویدئو، حرفه‌ای",
-    plans: { "6": { code: 1490000 }, "12": { code: 2890000 } }, ix: { "6": 68, "12": 113 },
+    plans: { "1": { code: 790000 }, "6": { code: 1490000 }, "12": { code: 2890000 } }, ix: { "6": 68, "12": 113 }, qd: { "1": { id: "P_10017", cost: 1.89 } },
     deliver: "بلافاصله بعد از پرداخت، ایمیل و رمز یک اکانت CapCut Pro در حساب کاربری‌ات نمایش داده و پیامک می‌شود. تا ۲ روز ایمیل اکانت را به ایمیل خودت تغییر بده.",
     howTo: "وارد اکانت شو و تا ۲ روز ایمیلش را عوض کن؛ حداکثر روی ۲ دستگاه.",
     includes: ["افکت‌ها، قالب‌ها و ابزارهای هوش مصنوعی", "خروجی 4K بدون واترمارک", "گارانتی تا پایان اشتراک"] },
@@ -331,7 +333,7 @@ const USDT_PRICE: Record<string, Record<string, number>> = {
   lovable: { "12": 56 },            // 45
   warp: { "12": 15.5 },             // 12
   framer: { "12": 10.9 },           // 8
-  capcut: { "6": 14.5, "12": 28 },  // 11, 22
+  capcut: { "1": 2.9, "6": 14.5, "12": 28 }, // 1.89 (QuickDigi), 11, 22
   "adobe-express": { "12": 2 },     // 0.5
   linkedin: { "3": 3.5 },           // 1
   "linkedin-business": { "2": 3.5 },// 1
@@ -341,6 +343,87 @@ const USDT_PRICE: Record<string, Record<string, number>> = {
 };
 for (const p of REAL) p.usdt = USDT_PRICE[p.id];
 REAL.push(...GIFT_PRODUCTS);
+/** Products bought from QuickDigi (lib/server/quickdigi.ts): ready accounts and activation codes the store did not have yet.
+ *  `qd` maps each option to the QuickDigi product id and its USDT cost; `usdt` is our selling price (roughly +30%).
+ *  QuickDigi only automates orders below 15 USDT, so options that cost more are left out. */
+const QD_INSTANT = "بعد از پرداخت، معمولاً ظرف چند دقیقه به‌صورت خودکار در حساب کاربری‌ات نمایش داده و پیامک می‌شود.";
+const QD_PRODUCTS: Product[] = [
+  { id: "google-ai-pro", tier: "Pro", name: "Google AI Pro", maker: "Google", category: "ai", monogram: "GE", etaMinutes: 5, warranty: "گارانتی فعال‌سازی",
+    description: "Gemini Pro و ۲ ترابایت فضای ابری، شش ماه روی اکانت گوگل خودت", use: "هوش گوگل، کنار Gmail و Docs",
+    plans: { "6": { code: 0 } }, usdt: { "6": 4.9 }, qd: { "6": { id: "P_11185", cost: 2.77 } },
+    deliver: "کد فعال‌سازی شش‌ماهه " + QD_INSTANT,
+    howTo: "قبل از فعال‌سازی، همه کارت‌ها و پروفایل‌های پرداخت اکانت گوگل را حذف کن و اگر عضو Family هستی خارج شو. بعد در renewgpt.online با اکانت خودت وارد شو و کد را وارد کن (ویدئوی راهنما در همان سایت هست).",
+    includes: ["Gemini Pro و Deep Research", "۲ ترابایت Google One", "روی اکانت گوگل خودت، بدون کارت بانکی"] },
+  { id: "grok-cursor", name: "SuperGrok + Cursor Pro", maker: "xAI", category: "ai", monogram: "GK", etaMinutes: 5, warranty: "۲۸ روز گارانتی",
+    description: "اکانت آماده Grok پریمیوم به‌همراه Cursor پریمیوم، یک ماه", use: "هوش مصنوعی و کدنویسی در یک اکانت",
+    plans: { "1": { code: 0 } }, usdt: { "1": 18.9 }, qd: { "1": { id: "P_11149", cost: 14.3 } },
+    deliver: "ایمیل، رمز اکانت و رمز ایمیل " + QD_INSTANT,
+    howTo: "با ایمیل و رمز وارد grok.com شو؛ Cursor هم با همین ایمیل فعال است. بعد از ورود، رمز را عوض کن و 2FA بگذار.",
+    includes: ["مدل‌های پیشرفته Grok", "Cursor پریمیوم برای کدنویسی", "۲۸ روز گارانتی"] },
+  { id: "gamma", tier: "Plus", name: "Gamma Plus", maker: "Gamma", category: "work", monogram: "GA", etaMinutes: 5, warranty: "۲۵ روز گارانتی",
+    description: "ساخت ارائه، سند و سایت با هوش مصنوعی", use: "اسلاید حرفه‌ای در چند دقیقه",
+    plans: { "1": { code: 0 } }, usdt: { "1": 8.9 }, qd: { "1": { id: "P_10156", cost: 6.47 } },
+    deliver: "ایمیل و رمز یک اکانت آماده Plus " + QD_INSTANT,
+    howTo: "وارد gamma.app شو، رمز را عوض کن و از همه دستگاه‌های دیگر خارج شو.",
+    includes: ["ساخت ارائه نامحدود با هوش مصنوعی", "حذف واترمارک Gamma", "۲۵ روز گارانتی پلن"] },
+  { id: "gamma-pro", family: "gamma", tier: "Pro", name: "Gamma Pro", maker: "Gamma", category: "work", monogram: "GA", etaMinutes: 5, warranty: "۲۵ روز گارانتی",
+    description: "Gamma با مدل‌های پیشرفته و امکانات کامل", use: "ارائه‌های سنگین و برندشده",
+    plans: { "1": { code: 0 } }, usdt: { "1": 18.9 }, qd: { "1": { id: "P_10155", cost: 14.5 } },
+    deliver: "ایمیل و رمز یک اکانت آماده Pro " + QD_INSTANT,
+    howTo: "وارد gamma.app شو، رمز را عوض کن و از همه دستگاه‌های دیگر خارج شو.",
+    includes: ["مدل‌های تصویر و متن پیشرفته", "دامنه و برند اختصاصی", "۲۵ روز گارانتی پلن"] },
+  { id: "grammarly", name: "Grammarly Edu", maker: "Grammarly", category: "work", monogram: "GR", etaMinutes: 5, warranty: "گارانتی تا پایان اشتراک",
+    description: "ویرایش و بازنویسی متن انگلیسی با هوش مصنوعی", use: "انگلیسی بی‌غلط و روان",
+    plans: { "1": { code: 0 }, "3": { code: 0 } }, usdt: { "1": 9.9, "3": 15.9 },
+    qd: { "1": { id: "P_10227", cost: 7.24 }, "3": { id: "P_10228", cost: 12.24 } },
+    deliver: "اطلاعات ورود اکانت آماده (نسخه آموزشی با هوش مصنوعی) " + QD_INSTANT,
+    howTo: "با اطلاعات تحویلی وارد grammarly.com شو و افزونه مرورگر یا اپ را نصب کن.",
+    includes: ["اصلاح لحن، وضوح و گرامر", "بازنویسی و تولید متن با هوش مصنوعی", "گارانتی تا پایان اشتراک"] },
+  { id: "quizlet", name: "Quizlet Plus", maker: "Quizlet", category: "work", monogram: "QZ", etaMinutes: 5, warranty: "گارانتی تا پایان اشتراک",
+    description: "فلش‌کارت و آزمون هوشمند برای حفظ لغت و درس", use: "حفظ کردن، سریع‌تر",
+    plans: { "12": { code: 0 } }, usdt: { "12": 9.9 }, qd: { "12": { id: "P_10211", cost: 7.24 } },
+    deliver: "اطلاعات اکانت Plus یک‌ساله " + QD_INSTANT,
+    howTo: "با اطلاعات تحویلی وارد quizlet.com یا اپ Quizlet شو.",
+    includes: ["حالت‌های یادگیری و آزمون نامحدود", "بدون تبلیغ و آفلاین", "گارانتی تا پایان اشتراک"] },
+  { id: "scribd", name: "Scribd Premium", maker: "Scribd", category: "work", monogram: "SC", etaMinutes: 5, warranty: "گارانتی تا پایان اشتراک",
+    description: "میلیون‌ها کتاب، کتاب صوتی و سند", use: "کتابخانه بی‌انتها",
+    plans: { "1": { code: 0 } }, usdt: { "1": 2.9 }, qd: { "1": { id: "P_10166", cost: 1.66 } },
+    deliver: "ایمیل و رمز یک اکانت Premium " + QD_INSTANT,
+    howTo: "با ایمیل و رمز مستقیم وارد scribd.com شو. تعداد دانلود سند در این اکانت‌ها محدود است؛ خواندن آنلاین آزاد است.",
+    includes: ["کتاب و کتاب صوتی", "خواندن اسناد Scribd", "دانلود محدود"] },
+  { id: "zoom", name: "Zoom Pro", maker: "Zoom", category: "work", monogram: "ZM", etaMinutes: 5, warranty: "۲۵ روز گارانتی",
+    description: "جلسه آنلاین بدون محدودیت ۴۰ دقیقه", use: "جلسه و کلاس آنلاین طولانی",
+    plans: { "1": { code: 0 } }, usdt: { "1": 4.5 }, qd: { "1": { id: "P_10168", cost: 2.81 } },
+    deliver: "اطلاعات ورود یک اکانت آماده Zoom Pro " + QD_INSTANT,
+    howTo: "با اطلاعات تحویلی وارد Zoom شو. رمز را عوض نکن تا گارانتی برقرار بماند؛ اگر کد دومرحله‌ای خواست، Skip را بزن.",
+    includes: ["جلسه تا ۳۰ ساعت", "ضبط ابری", "۲۵ روز گارانتی"] },
+  { id: "microsoft-365", name: "Microsoft 365 Family", maker: "Microsoft", category: "work", monogram: "MS", etaMinutes: 5, warranty: "گارانتی تا پایان اشتراک",
+    description: "Word، Excel، PowerPoint و یک ترابایت OneDrive، یک سال", use: "آفیس کامل، برای خودت و خانواده",
+    plans: { "12": { code: 0 } }, usdt: { "12": 15.5 }, qd: { "12": { id: "P_10325", cost: 11.8 } },
+    deliver: "ایمیل، رمز و ایمیل بازیابی اکانت مدیر Family " + QD_INSTANT,
+    howTo: "با ایمیل و رمز وارد اپ‌های آفیس شو و تا ۵ نفر را به Family اضافه کن. رمز و ایمیل بازیابی را عوض نکن؛ تمدید ماهانه خودکار با همین اطلاعات انجام می‌شود.",
+    includes: ["Word، Excel، PowerPoint و Outlook", "۱ ترابایت OneDrive", "تا ۵ عضو خانواده"] },
+  { id: "figma", name: "Figma Education", maker: "Figma", category: "create", monogram: "FG", etaMinutes: 5, warranty: "گارانتی تا پایان اشتراک",
+    description: "طراحی رابط کاربری و نمونه‌سازی تیمی، یک سال (نسخه آموزشی)", use: "طراحی UI، حرفه‌ای",
+    plans: { "12": { code: 0 } }, usdt: { "12": 16.5 }, qd: { "12": { id: "P_10161", cost: 12.62 } },
+    deliver: "اطلاعات اکانت Figma آموزشی یک‌ساله " + QD_INSTANT,
+    howTo: "با اطلاعات تحویلی وارد figma.com شو.",
+    includes: ["پروژه و فایل نامحدود", "Dev Mode و کتابخانه تیمی", "گارانتی تا پایان اشتراک"] },
+  { id: "autocad", name: "AutoCAD (آموزشی)", maker: "Autodesk", category: "create", monogram: "AC", etaMinutes: 5, warranty: "گارانتی تا پایان اشتراک",
+    description: "اکانت آموزشی Autodesk با دسترسی به AutoCAD، یک سال", use: "نقشه‌کشی و طراحی مهندسی",
+    plans: { "12": { code: 0 } }, usdt: { "12": 9.9 }, qd: { "12": { id: "P_10368", cost: 7.24 } },
+    deliver: "اطلاعات ورود اکانت Autodesk (آموزشی تأییدشده) و رمز ایمیل آن " + QD_INSTANT,
+    howTo: "با اطلاعات تحویلی وارد autodesk.com شو و AutoCAD را از بخش Education دانلود کن.",
+    includes: ["AutoCAD و نرم‌افزارهای آموزشی Autodesk", "اعتبار یک‌ساله", "گارانتی تا پایان اشتراک"] },
+  { id: "coursera", name: "Coursera Business", maker: "Coursera", category: "work", monogram: "CO", etaMinutes: 5, warranty: "گارانتی تا پایان اشتراک",
+    description: "دوره‌های دانشگاه‌ها و شرکت‌های معتبر با گواهی، شش ماه", use: "یاد بگیر، گواهی بگیر",
+    plans: { "6": { code: 0 } }, usdt: { "6": 15.9 }, qd: { "6": { id: "P_10212", cost: 12.24 } },
+    deliver: "اطلاعات ورود یک اکانت آماده Coursera Business " + QD_INSTANT,
+    howTo: "با اطلاعات تحویلی وارد coursera.org شو و دوره‌ها را شروع کن.",
+    includes: ["هزاران دوره با گواهی", "دوره‌های گوگل، IBM و دانشگاه‌ها", "گارانتی تا پایان اشتراک"] },
+];
+REAL.push(...QD_PRODUCTS);
+
 for (const p of REAL) for (const [k, v] of Object.entries(p.usdt ?? {})) p.plans[k] = { ...p.plans[k], code: tomanAt(v, BASE_RATE) };
 
 /** Limited-price weekly drops, shown as a slider on the home page. Empty until real offers are set. */
