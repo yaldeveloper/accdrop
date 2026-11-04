@@ -148,8 +148,9 @@ const SAMPLES: Product[] = [
   { id: "appleid", name: "Apple ID", maker: "Apple", category: "apple", kind: "account", monogram: "AP", etaMinutes: 0, badge: "عمده",
     axis: "کشور اکانت", labels: { us: "آمریکا", tr: "ترکیه", uk: "انگلیس" },
     description: "اپل آیدی آماده و اختصاصی، تکی یا عمده برای موبایل‌فروشی‌ها", use: "ورود به App Store",
-    plans: { us: { code: 390000 }, tr: { code: 390000 }, uk: { code: 450000 } },
-    bulk: [[5, 5], [10, 10], [25, 15], [50, 20]],
+    // Priced under Iranian competitors (Nov 2026: single US ~330–485k, 50-pack ~12.2–13.4M toman).
+    plans: { us: { code: 319000 }, tr: { code: 319000 }, uk: { code: 379000 } },
+    bulk: [[5, 8], [10, 12], [25, 18], [50, 25]],
     deliver: "بلافاصله بعد از پرداخت، ایمیل و رمز اپل آیدی، رمز ایمیل، سؤال‌های امنیتی و تاریخ تولد در حساب کاربری‌ات نمایش داده و پیامک می‌شود. در خرید عمده هر اکانت در یک خط جداست.",
     howTo: "در گوشی به Settings › Media & Purchases (یا App Store) برو و فقط همان‌جا وارد شو، نه در iCloud بالای تنظیمات؛ این‌طوری گوشی به اکانت قفل نمی‌شود. بعد از ورود، رمز را عوض کن.",
     includes: ["اکانت تازه با ایمیل جدید، فقط برای تو", "سؤال‌های امنیتی و تاریخ تولد", "تحویل خودکار، تکی یا عمده تا ۱۰۰ عدد"] },
