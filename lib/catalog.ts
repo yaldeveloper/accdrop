@@ -3,7 +3,7 @@ import { duration, fa } from "./format";
 
 /** How a purchase reaches the customer. */
 export type DeliveryType = "own" | "ready" | "username" | "code" | "number";
-export type Category = "ai" | "code" | "create" | "work" | "apple" | "telegram" | "number";
+export type Category = "ai" | "code" | "create" | "work" | "apple" | "game" | "telegram" | "number";
 /** What the customer picks: a subscription length, a gift-card amount, a region, a quantity or a country. */
 export type ProductKind = "sub" | "gift" | "account" | "qty" | "number";
 /** Key of one purchasable option: months ("1", "12"), dollars ("10"), a region ("us"), a quantity ("500"). */
@@ -50,6 +50,8 @@ export type Product = {
   howTo?: string;
   /** Short warranty line when it differs from the default promise, e.g. «۲۵ روز گارانتی». */
   warranty?: string;
+  /** Cryptorefills gift card per option: brand name, fixed denomination («10 USD») or a range value, and our cost in USDT. */
+  cr?: Record<string, { brand: string; denom?: string; value?: number; cost: number }>;
   /** Selling price in USDT per code option. When set, the Toman price follows the live Tether rate. */
   usdt?: Record<string, number>;
 };
@@ -72,6 +74,7 @@ export const CATEGORIES: Record<"all" | Category, string> = {
   create: "طراحی و ویدئو",
   work: "کار و آموزش",
   apple: "اپل و گیفت‌کارت",
+  game: "گیم",
   telegram: "تلگرام",
   number: "شماره مجازی",
 };
@@ -141,11 +144,6 @@ const SAMPLES: Product[] = [
     description: "اپل آیدی آماده و اختصاصی", use: "ورود به App Store",
     plans: { us: { ready: 390000 }, tr: { ready: 390000 }, uk: { ready: 450000 } },
     includes: ["اکانت تازه با ایمیل جدید، فقط برای تو", "سؤال‌های امنیتی و تاریخ تولد", "مناسب App Store و iCloud همان کشور"] },
-  { id: "applegift", hidden: true, name: "Apple Gift Card", maker: "Apple", category: "apple", kind: "gift", monogram: "GC", etaMinutes: 0,
-    axis: "مبلغ کارت (آمریکا)", labels: { "5": "۵ دلار", "10": "۱۰ دلار", "25": "۲۵ دلار", "50": "۵۰ دلار" },
-    description: "گیفت‌کارت اپل آمریکا از منبع رسمی", use: "شارژ اپل آیدی",
-    plans: { "5": { code: 520000 }, "10": { code: 1020000 }, "25": { code: 2520000 }, "50": { code: 4990000 } },
-    includes: ["کد قانونی از منبع رسمی", "تحویل خودکار در حساب کاربری", "برای اپ، بازی، iCloud و اشتراک‌ها"] },
   { id: "vnumber", hidden: true, name: "Virtual Number", maker: "AccDrop", category: "number", kind: "number", monogram: "VN", etaMinutes: 0,
     axis: "کشور شماره", labels: { us: "آمریکا", uk: "انگلیس", ca: "کانادا", nl: "هلند" },
     description: "شماره مجازی برای تلگرام و واتس‌اپ", use: "ثبت‌نام بدون سیم‌کارت",
@@ -250,6 +248,81 @@ const REAL: Product[] = [
 export const BASE_RATE = 270_000;
 /** Toman price of a USDT amount at `rate`, rounded up to 10,000 Toman. */
 export const tomanAt = (usdt: number, rate: number) => Math.ceil((usdt * rate) / 10_000) * 10_000;
+
+// ----- Gift cards (Cryptorefills, US region). Bought on-chain per order and delivered automatically. -----
+type G = { id: string; name: string; maker: string; category: Category; monogram: string; brand: string; axis?: string;
+  description: string; use: string; howTo: string; includes: string[];
+  /** option key → [label, denomination or range value, Cryptorefills cost in USDT] */
+  opts: [string, string, string | number, number][] };
+const usd = (n: number) => `${fa(n)} دلار`;
+const GIFTS: G[] = [
+  { id: "applegift", name: "Apple Gift Card", maker: "Apple", category: "apple", monogram: "GC", brand: "Everything Apple",
+    description: "گیفت‌کارت اپل آمریکا، تحویل فوری", use: "شارژ اپل آیدی",
+    howTo: "در App Store روی عکس پروفایل بزن، Redeem Gift Card or Code را انتخاب کن و کد را وارد کن.",
+    includes: ["کد رسمی آمریکا", "تحویل خودکار در حساب کاربری", "برای اپ، بازی، iCloud و Apple Music"],
+    opts: [["5", usd(5), 5, 5.37], ["10", usd(10), 10, 10.75], ["25", usd(25), 25, 26.87], ["50", usd(50), 50, 53.74]] },
+  { id: "googleplay", name: "Google Play Gift Card", maker: "Google", category: "apple", monogram: "GP", brand: "Google Play",
+    description: "گیفت‌کارت گوگل‌پلی آمریکا", use: "خرید اپ و بازی اندروید",
+    howTo: "در Google Play روی عکس پروفایل بزن، Payments & subscriptions و بعد Redeem code را بزن و کد را وارد کن. اکانت باید ریجن آمریکا باشد.",
+    includes: ["کد رسمی آمریکا", "تحویل خودکار", "برای اپ، بازی و اشتراک‌های اندروید"],
+    opts: [["5", usd(5), 5, 5.2], ["10", usd(10), 10, 10.4], ["25", usd(25), 25, 26.01], ["50", usd(50), 50, 52.02]] },
+  { id: "steam", name: "Steam Gift Card", maker: "Valve", category: "game", monogram: "ST", brand: "Steam",
+    description: "شارژ کیف پول استیم", use: "خرید بازی در استیم",
+    howTo: "در store.steampowered.com/account/redeemwalletcode وارد اکانت استیم شو و کد را وارد کن.",
+    includes: ["کد رسمی Steam Wallet", "تحویل خودکار", "شارژ مستقیم کیف پول استیم"],
+    opts: [["10", usd(10), "10 USD", 11.28], ["20", usd(20), "20 USD", 22.57], ["50", usd(50), "50 USD", 56.42]] },
+  { id: "playstation", name: "PlayStation Store", maker: "Sony", category: "game", monogram: "PS", brand: "PlayStation Store",
+    description: "گیفت‌کارت پلی‌استیشن آمریکا", use: "بازی و PS Plus",
+    howTo: "در PlayStation Store یا کنسول، Redeem Codes را بزن و کد را وارد کن. اکانت باید ریجن آمریکا باشد.",
+    includes: ["کد رسمی آمریکا", "تحویل خودکار", "برای بازی، PS Plus و آیتم‌ها"],
+    opts: [["25", usd(25), 25, 25.11], ["50", usd(50), 50, 50.22], ["100", usd(100), 100, 100.45]] },
+  { id: "xbox", name: "Xbox Gift Card", maker: "Microsoft", category: "game", monogram: "XB", brand: "Xbox",
+    description: "گیفت‌کارت ایکس‌باکس آمریکا", use: "بازی و Game Pass",
+    howTo: "در xbox.com/redeemcode یا Microsoft Store کد را وارد کن. اکانت باید ریجن آمریکا باشد.",
+    includes: ["کد رسمی آمریکا", "تحویل خودکار", "برای بازی و Game Pass"],
+    opts: [["10", usd(10), "10 USD", 10.84], ["25", usd(25), "25 USD", 27.1], ["50", usd(50), "50 USD", 54.2]] },
+  { id: "nintendo", name: "Nintendo eShop", maker: "Nintendo", category: "game", monogram: "NI", brand: "Nintendo eShop",
+    description: "شارژ اکانت نینتندو آمریکا", use: "بازی سوییچ",
+    howTo: "در eShop روی پروفایل بزن، Redeem Code را انتخاب کن و کد را وارد کن.",
+    includes: ["کد رسمی آمریکا", "تحویل خودکار", "برای بازی‌های Switch"],
+    opts: [["10", usd(10), "10 USD", 10.36], ["20", usd(20), "20 USD", 20.71], ["50", usd(50), "50 USD", 51.78]] },
+  { id: "razer", name: "Razer Gold", maker: "Razer", category: "game", monogram: "RZ", brand: "Razer Gold USD",
+    description: "شارژ Razer Gold برای صدها بازی", use: "آیتم و ارز بازی‌ها",
+    howTo: "در gold.razer.com وارد شو، Reload را بزن و کد را وارد کن.",
+    includes: ["کد رسمی Razer Gold", "تحویل خودکار", "برای ارز داخل صدها بازی"],
+    opts: [["5", usd(5), "5 USD", 5.29], ["10", usd(10), "10 USD", 10.44], ["20", usd(20), "20 USD", 20.75], ["50", usd(50), "50 USD", 51.65]] },
+  { id: "pubg", name: "PUBG Mobile UC", maker: "Krafton", category: "game", monogram: "UC", brand: "PUBG Mobile", axis: "تعداد یوسی",
+    description: "یوسی پابجی موبایل با کد رسمی", use: "یوسی برای پابجی",
+    howTo: "در midasbuy.com/midasbuy/ot/redeem/pubgm آیدی بازی را بزن و کد را وارد کن.",
+    includes: ["کد رسمی یوسی", "تحویل خودکار", "شارژ با آیدی بازی، بدون رمز"],
+    opts: [["60", "۶۰ یوسی", "60 UC", 1.08], ["325", "۳۲۵ یوسی", "300 + 25 UC", 5.01], ["660", "۶۶۰ یوسی", "600 + 60 UC", 10.03], ["1800", "۱۸۰۰ یوسی", "1500 + 300 UC", 25.1]] },
+  { id: "freefire", name: "Free Fire Diamonds", maker: "Garena", category: "game", monogram: "FF", brand: "Free Fire",
+    description: "الماس فری‌فایر با کد رسمی", use: "الماس برای فری‌فایر",
+    howTo: "در shop.garena.sg یا reward.ff.garena.com با آیدی بازی وارد شو و کد را وارد کن.",
+    includes: ["کد رسمی Garena", "تحویل خودکار", "شارژ با آیدی بازی"],
+    opts: [["2", usd(2), "2 USD", 2.13], ["5", usd(5), "5 USD", 5.16], ["10", usd(10), "10 USD", 10.2]] },
+  { id: "valorant", name: "Valorant Points", maker: "Riot Games", category: "game", monogram: "VP", brand: "Valorant Point (VP)",
+    description: "ولورانت پوینت با کد رسمی", use: "اسکین و بتل‌پس",
+    howTo: "در بازی روی آیکون VP بزن، Prepaid Cards & Codes را انتخاب کن و کد را وارد کن.",
+    includes: ["کد رسمی Riot", "تحویل خودکار", "برای اسکین و Battle Pass"],
+    opts: [["5", usd(5), "5 USD", 5.61], ["10", usd(10), "10 USD", 11.09], ["25", usd(25), "25 USD", 27.53]] },
+  { id: "roblox", name: "Roblox Gift Card", maker: "Roblox", category: "game", monogram: "RB", brand: "Roblox",
+    description: "گیفت‌کارت روبلاکس برای روباکس", use: "روباکس و پریمیوم",
+    howTo: "در roblox.com/redeem وارد اکانت شو و کد را وارد کن.",
+    includes: ["کد رسمی Roblox", "تحویل خودکار", "تبدیل به روباکس یا Premium"],
+    opts: [["10", usd(10), 10, 10.16], ["25", usd(25), 25, 25.39], ["50", usd(50), 50, 50.78]] },
+];
+/** Our margin on gift cards over the Cryptorefills cost. */
+const GIFT_MARKUP = 1.08;
+const GIFT_PRODUCTS: Product[] = GIFTS.map((g) => ({
+  id: g.id, name: g.name, maker: g.maker, category: g.category, kind: "gift", monogram: g.monogram, etaMinutes: 5,
+  axis: g.axis ?? "مبلغ کارت (آمریکا)", labels: Object.fromEntries(g.opts.map(([k, l]) => [k, l])),
+  description: g.description, use: g.use, howTo: g.howTo, includes: g.includes, warranty: "کد سالم یا بازگشت وجه",
+  deliver: "بعد از پرداخت، کد رسمی معمولاً ظرف چند دقیقه به‌صورت خودکار در حساب کاربری‌ات نمایش داده و پیامک می‌شود.",
+  plans: Object.fromEntries(g.opts.map(([k]) => [k, { code: 0 }])),
+  usdt: Object.fromEntries(g.opts.map(([k, , , c]) => [k, Math.ceil(c * GIFT_MARKUP * 20) / 20])),
+  cr: Object.fromEntries(g.opts.map(([k, , d, c]) => [k, typeof d === "number" ? { brand: g.brand, value: d, cost: c } : { brand: g.brand, denom: d, cost: c }])),
+}));
 /** Selling price in USDT per option. Supplier cost in the comment; roughly +25–35% on larger items, more on sub-$2 codes. */
 const USDT_PRICE: Record<string, Record<string, number>> = {
   chatgpt: { "1": 9.9 },            // 7.5
@@ -266,10 +339,9 @@ const USDT_PRICE: Record<string, Record<string, number>> = {
   airtable: { "12": 7.5 },          // 5
   duolingo: { "12": 2.2 },          // 0.5
 };
-for (const p of REAL) {
-  p.usdt = USDT_PRICE[p.id];
-  for (const [k, v] of Object.entries(p.usdt ?? {})) p.plans[k] = { ...p.plans[k], code: tomanAt(v, BASE_RATE) };
-}
+for (const p of REAL) p.usdt = USDT_PRICE[p.id];
+REAL.push(...GIFT_PRODUCTS);
+for (const p of REAL) for (const [k, v] of Object.entries(p.usdt ?? {})) p.plans[k] = { ...p.plans[k], code: tomanAt(v, BASE_RATE) };
 
 /** Limited-price weekly drops, shown as a slider on the home page. Empty until real offers are set. */
 const DROP_LIST: Drop[] = [];

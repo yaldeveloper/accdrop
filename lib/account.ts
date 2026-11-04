@@ -10,6 +10,8 @@ export type OrderLine = Selection & {
   members?: string[];
   /** Server fields: line id, and what was delivered (gift code, number or login) once it is ready. */
   lineId?: number; secret?: string; deliveredAt?: number | null;
+  /** Admin only: supplier order reference («IX-…», «CR-…», or an error). */
+  supplyRef?: string;
 };
 /** pending = waiting for payment, canceled = payment failed or abandoned. */
 export type OrderStatus = "pending" | "paid" | "activating" | "active" | "canceled" | "refunded";

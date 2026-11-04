@@ -87,7 +87,7 @@ export function ToolCard({ p }: { p: Product }) {
 }
 
 /** Preferred order of the hero chips and the orbit; anything hidden is skipped and the rest of the catalog fills in. */
-const PREFERRED = ["chatgpt", "manus", "lovable", "capcut", "elevenlabs", "linkedin", "framer", "duolingo", "warp", "adobe-express", "airtable"];
+const PREFERRED = ["chatgpt", "manus", "lovable", "capcut", "applegift", "pubg", "elevenlabs", "linkedin", "steam", "playstation", "googleplay", "framer", "duolingo", "valorant", "warp", "adobe-express", "airtable", "roblox"];
 const CHIP: Record<string, string> = { "adobe-express": "Adobe Express", linkedin: "LinkedIn", elevenlabs: "ElevenLabs" };
 function orbitIds() {
   const shown = listed().map((p) => p.id);

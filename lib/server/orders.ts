@@ -223,7 +223,7 @@ export async function loadOrders(where: { mobile?: string; code?: string; status
     lines: lines.filter((l) => l.order_code === o.code).map((l) => ({
       lineId: l.id, id: l.product_id, plan: l.plan, type: l.delivery as DeliveryType, price: Number(l.price),
       email: l.email ?? undefined, username: l.username ?? undefined,
-      seats: Number(l.seats ?? 1), ip: l.ip ?? undefined, members: l.members ? String(l.members).split(",") : undefined, secret: l.secret ?? undefined, deliveredAt: ms(l.delivered_at),
+      seats: Number(l.seats ?? 1), ip: l.ip ?? undefined, members: l.members ? String(l.members).split(",") : undefined, secret: l.secret ?? undefined, deliveredAt: ms(l.delivered_at), supplyRef: l.supply_ref ?? undefined,
     })),
   }));
 }
@@ -231,7 +231,7 @@ export async function loadOrders(where: { mobile?: string; code?: string; status
 /** Customers only see a line's secret (gift code, number, login) once it has been delivered and paid for. */
 export const forCustomer = (o: Order): Order => ({
   ...o, adminNote: undefined,
-  lines: o.lines.map((l) => ({ ...l, secret: o.status === "paid" || o.status === "activating" || o.status === "active" ? l.secret : undefined })),
+  lines: o.lines.map((l) => ({ ...l, supplyRef: undefined, secret: o.status === "paid" || o.status === "activating" || o.status === "active" ? l.secret : undefined })),
 });
 
 // ----- Admin actions -----

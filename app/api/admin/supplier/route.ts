@@ -1,6 +1,7 @@
 import { ALL_PRODUCTS, optionLabel } from "@/lib/catalog";
 import { loadCatalog } from "@/lib/server/catalog";
 import { usdtRate } from "@/lib/server/crypto";
+import { crConfigured, crWallet } from "@/lib/server/cryptorefills";
 import { body, fail, json, route, withAdmin } from "@/lib/server/http";
 import { setSupplierMap, supplierBalance, supplierConfigured, supplierMap, supplierProducts } from "@/lib/server/supplier";
 
@@ -8,14 +9,15 @@ import { setSupplierMap, supplierBalance, supplierConfigured, supplierMap, suppl
 export const GET = route(async () => withAdmin(async () => {
   await loadCatalog();
   const ours = ALL_PRODUCTS.flatMap((p) => Object.entries(p.plans).filter(([, o]) => o?.code).map(([plan, o]) => ({ productId: p.id, plan, name: p.name, label: optionLabel(p, plan), price: o!.code! })));
-  const [rate, map] = await Promise.all([usdtRate(), supplierMap()]);
-  if (!supplierConfigured()) return json({ configured: false, rate, ours, map, products: [], balance: null });
+  const [rate, map, cr] = await Promise.all([usdtRate(), supplierMap(), crWallet().catch((e) => ({ error: String((e as Error).message).slice(0, 160) }))]);
+  const crInfo = { configured: crConfigured(), wallet: cr };
+  if (!supplierConfigured()) return json({ configured: false, rate, ours, map, products: [], balance: null, cr: crInfo });
   try {
     const [products, balance] = await Promise.all([supplierProducts(), supplierBalance()]);
-    return json({ configured: true, rate, ours, map, products, balance, test: process.env.INSIGHT_TEST_MODE === "1" });
+    return json({ configured: true, rate, ours, map, products, balance, test: process.env.INSIGHT_TEST_MODE === "1", cr: crInfo });
   } catch (e) {
     console.error(e);
-    return json({ configured: true, rate, ours, map, products: [], balance: null, error: String((e as Error).message).slice(0, 200) });
+    return json({ configured: true, rate, ours, map, products: [], balance: null, error: String((e as Error).message).slice(0, 200), cr: crInfo });
   }
 }));
 

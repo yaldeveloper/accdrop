@@ -5,6 +5,14 @@ import { productById } from "@/lib/catalog";
 import { fa } from "@/lib/format";
 import { BrandLogo } from "./brand";
 
+/** Face value shown on the gift scene: the product's second option («$10», «300 + 25 UC»). */
+function giftFace(p: ReturnType<typeof productById>) {
+  const k = Object.keys(p.plans)[1] ?? Object.keys(p.plans)[0];
+  const o = p.cr?.[k];
+  if (o?.denom) return o.denom.endsWith(" USD") ? `$${o.denom.slice(0, -4)}` : o.denom;
+  return o?.value ? `$${o.value}` : "$25";
+}
+
 export function Scene({ id }: { id: string }) {
   const t = themeOf(id), p = productById(id);
   const style = { "--b": t.c, "--b2": t.c2 } as CSSProperties;
@@ -91,7 +99,7 @@ export function Scene({ id }: { id: string }) {
       break;
     case "gift":
       body = (
-        <div className="sc-gift"><div className="card"><BrandLogo id="applegift" size={30} /><b className="en">$25</b><small className="en">App Store &amp; iTunes</small>
+        <div className="sc-gift"><div className="card"><BrandLogo id={id} size={30} /><b className="en">{giftFace(p)}</b><small className="en">{id === "applegift" ? "App Store & iTunes" : p.name}</small>
           <span className="code en">XXXX-XXXX-XXXX-XXXX</span></div></div>
       );
       break;

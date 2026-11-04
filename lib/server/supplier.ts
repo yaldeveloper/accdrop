@@ -2,7 +2,9 @@
 // Set INSIGHT_API_KEY in the environment (never in code). INSIGHT_TEST_MODE=1 sends test orders (TEST- codes, nothing charged).
 // Docs: https://api.insightxpro.store/docs
 import { ALL_PRODUCTS } from "@/lib/catalog";
+import { crSupplyLine } from "./cryptorefills";
 import { db, dbUrl } from "./db";
+import { siteUrl } from "./pay";
 
 const BASE = (process.env.INSIGHT_API_BASE || "https://api.insightxpro.store").replace(/\/$/, "");
 export const supplierConfigured = () => !!process.env.INSIGHT_API_KEY;
@@ -123,6 +125,8 @@ export async function firstOutOfStock(lines: { id: string; plan: string; type: s
 
 /** Fetches codes for one paid order line from the supplier, if that product/plan is mapped. Returns null when not mapped. */
 export async function supplyLine(lineId: number, productId: string, plan: string, quantity: number): Promise<string[] | null> {
+  const p = ALL_PRODUCTS.find((x) => x.id === productId);
+  if (p?.cr?.[plan]) return crSupplyLine(lineId, p, plan, quantity, siteUrl());
   if (!supplierConfigured()) return null;
   const sid = await supplierIdOf(productId, plan);
   if (!sid) return null;
