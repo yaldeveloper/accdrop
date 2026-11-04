@@ -112,9 +112,6 @@ export const CONTENT: Record<string, ProductContent> = {
   airtable: { slug: "airtable-team", faName: "ایرتیبل",
     intro: "Airtable دیتابیس و اتوماسیون بدون کد برای تیم‌هاست. کد رسمی پلن Team یک‌ساله روی اکانت خودت، همراه ۱۵ هزار اعتبار هوش مصنوعی در ماه.",
     forWho: ["مدیر پروژه‌ها", "تیم‌های عملیات و مارکتینگ", "استارتاپ‌ها"] },
-  nordvpn: { slug: "nordvpn", faName: "نورد وی پی ان", prefix: "خرید", keyword: "خرید اشتراک NordVPN",
-    intro: "کد رسمی NordVPN سه‌ماهه روی اکانت خودت: سرور در بیش از ۶۰ کشور، سرعت بالا و استفاده همزمان روی ۱۰ دستگاه، با گارانتی کامل.",
-    forWho: ["دورکارها و فریلنسرها", "گیمرها", "هر کسی که اینترنت امن می‌خواهد"] },
 };
 
 export const contentOf = (p: Product) => CONTENT[p.id];

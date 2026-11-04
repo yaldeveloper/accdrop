@@ -36,7 +36,6 @@ const ALIASES: Record<string, string[]> = {
   framer: ["فریمر", "فرامر", "سایت ساز", "طراحی سایت"],
   "adobe-express": ["ادوبی اکسپرس", "ادوبی", "adobe", "firefly", "فایرفلای", "پوستر"],
   airtable: ["ایرتیبل", "ایرتیبل", "دیتابیس", "اکسل آنلاین"],
-  nordvpn: ["نورد", "نورد وی پی ان", "وی پی ان", "فیلترشکن", "vpn"],
   vnumber: ["شماره مجازی", "شماره خارجی", "virtual number", "sms", "کد تایید", "شماره آمریکا"],
 };
 
@@ -49,7 +48,6 @@ export const NEEDS: { label: string; ids: string[] }[] = [
   { label: "تحقیق و گزارش", ids: ["manus", "chatgpt"] },
   { label: "یادگیری زبان", ids: ["duolingo"] },
   { label: "کار و رزومه", ids: ["linkedin", "airtable"] },
-  { label: "اینترنت امن", ids: ["nordvpn"] },
 ];
 
 type Ix = { key: string; name: string; alias: string[]; text: string };

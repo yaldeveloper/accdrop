@@ -15,7 +15,7 @@ export const revalidate = 60;
 export const metadata: Metadata = {
   metadataBase: new URL("https://accdrop.ir"),
   title: { default: "اک‌دراپ | خرید اکانت ChatGPT، هوش مصنوعی و نرم‌افزارهای حرفه‌ای", template: "%s | اک‌دراپ" },
-  description: "خرید ChatGPT Plus، Manus، Lovable، CapCut، ElevenLabs، LinkedIn Premium، NordVPN و سرویس‌های دیجیتال دیگر با تومان؛ کد رسمی یا اکانت آماده با تحویل فوری و ضمانت بازگشت وجه.",
+  description: "خرید ChatGPT Plus، Manus، Lovable، CapCut، ElevenLabs، LinkedIn Premium و سرویس‌های دیجیتال دیگر با تومان؛ کد رسمی یا اکانت آماده با تحویل فوری و ضمانت بازگشت وجه.",
   alternates: { canonical: "/" },
   openGraph: { title: "اک‌دراپ", description: "اشتراک و سرویس‌های دیجیتال، به ساده‌ترین شکل", locale: "fa_IR", siteName: "AccDrop" },
 };

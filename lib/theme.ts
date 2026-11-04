@@ -30,7 +30,6 @@ export const THEME: Record<string, Theme> = {
   framer: { c: "#3D7BFF", c2: "#B2C8FF", motif: "canvas" },
   "adobe-express": { c: "#FF3B30", c2: "#B57BFF", motif: "canvas" },
   airtable: { c: "#18BFFF", c2: "#FFB400", motif: "doc" },
-  nordvpn: { c: "#4687FF", c2: "#A9C6FF", motif: "work" },
 };
 
 export function themeOf(id: string): Theme {

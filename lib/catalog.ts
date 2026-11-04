@@ -215,7 +215,7 @@ const REAL: Product[] = [
   { id: "adobe-express", name: "Adobe Express Premium", maker: "Adobe", category: "create", monogram: "AE", group: [[2, 5], [3, 8], [5, 12]], etaMinutes: 0, warranty: "کد سالم یا بازگشت وجه",
     description: "طراحی سریع پست، پوستر و ویدئو کوتاه", use: "طراحی سریع با Firefly",
     plans: { "12": { code: 390000 } }, ix: { "12": 78 },
-    howTo: "با اکانت Adobe خودت (جدید یا قدیمی) کد را فعال کن. اگر خطای منطقه دیدی با VPN هند امتحان کن.",
+    howTo: "با اکانت Adobe خودت (جدید یا قدیمی) کد را فعال کن. اگر خطای منطقه دیدی، به پشتیبانی پیام بده.",
     includes: ["همه قالب‌ها و فونت‌های Premium", "اعتبار Firefly", "بدون نیاز به کارت بانکی"] },
   { id: "linkedin", tier: "Career", name: "LinkedIn Premium", maker: "LinkedIn", category: "work", monogram: "IN", group: [[2, 5], [3, 8], [5, 12]], etaMinutes: 0, warranty: "کد سالم یا بازگشت وجه",
     description: "دیده‌شدن بیشتر و پیام به استخدام‌کننده‌ها", use: "برای پیدا کردن کار بهتر",
@@ -241,13 +241,8 @@ const REAL: Product[] = [
     description: "یادگیری زبان بدون تبلیغ و محدودیت", use: "زبان یاد بگیر، بی‌وقفه",
     plans: { "12": { code: 490000 } }, ix: { "12": 75 },
     deliver: "بلافاصله بعد از پرداخت، لینک فعال‌سازی یک‌ساله در حساب کاربری‌ات نمایش داده و پیامک می‌شود. بدون کارت بانکی، با یک کلیک روی اکانت خودت.",
-    howTo: "در مرورگر وارد اکانت Duolingo شو، لینک را باز کن و Claim Offer را بزن. اگر خطای منطقه دیدی با VPN هند امتحان کن.",
+    howTo: "در مرورگر وارد اکانت Duolingo شو، لینک را باز کن و Claim Offer را بزن. اگر خطای منطقه دیدی، به پشتیبانی پیام بده.",
     includes: ["بدون تبلیغ", "قلب نامحدود", "روی اکانت خودت، بدون کارت بانکی"] },
-  { id: "nordvpn", name: "NordVPN", maker: "Nord Security", category: "work", monogram: "NV", group: [[2, 5], [3, 8], [5, 12]], etaMinutes: 0, warranty: "۳ ماه گارانتی کامل",
-    description: "وی‌پی‌ان سریع و امن روی اکانت خودت", use: "اینترنت امن و آزاد",
-    plans: { "3": { code: 590000 } }, ix: { "3": 36 },
-    howTo: "کد را روی اکانت NordVPN خودت فعال کن.",
-    includes: ["سرور در بیش از ۶۰ کشور", "روی ۱۰ دستگاه همزمان", "گارانتی کامل ۳ ماهه"] },
 ];
 
 
@@ -270,7 +265,6 @@ const USDT_PRICE: Record<string, Record<string, number>> = {
   "linkedin-sales": { "2": 4.5 },   // 1.5
   airtable: { "12": 7.5 },          // 5
   duolingo: { "12": 2.2 },          // 0.5
-  nordvpn: { "3": 4.5 },            // 2.5
 };
 for (const p of REAL) {
   p.usdt = USDT_PRICE[p.id];
