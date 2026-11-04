@@ -1,7 +1,7 @@
 // Admin-edited products are stored as patches in the `products` table and layered over the built-in catalog.
 // The same patches are applied on the server (lib/server/catalog.ts) and in the browser (components/catalog-boot.tsx),
 // so every component that reads PRODUCTS sees the edited catalog.
-import { ALL_PRODUCTS, PRODUCTS, type Product } from "./catalog";
+import { ALL_PRODUCTS, PRODUCTS, tomanAt, type Product } from "./catalog";
 import { CONTENT, type ProductContent } from "./content";
 
 export type CatalogPatch = {
@@ -16,15 +16,23 @@ const BASE: Product[] = structuredClone(ALL_PRODUCTS);
 const BASE_CONTENT: Record<string, ProductContent> = structuredClone(CONTENT);
 let applied = "";
 
-/** Rebuilds PRODUCTS and CONTENT in place from the code defaults plus patches. Cheap to call repeatedly. */
-export function applyCatalog(patches: CatalogPatch[]) {
-  const key = JSON.stringify(patches);
+/** Code product with its USDT-priced options converted at `rate` (Toman per USDT). */
+function priced(p: Product, rate: number): Product {
+  const c = structuredClone(p);
+  if (rate > 0 && c.usdt) for (const [k, v] of Object.entries(c.usdt)) if (c.plans[k]?.code) c.plans[k] = { ...c.plans[k], code: tomanAt(v, rate) };
+  return c;
+}
+
+/** Rebuilds PRODUCTS and CONTENT in place from the code defaults plus patches. `rate` (live Toman per USDT) reprices
+ *  products that have `usdt` prices; an admin price edit (a patch with `plans`) still wins. Cheap to call repeatedly. */
+export function applyCatalog(patches: CatalogPatch[], rate = 0) {
+  const key = JSON.stringify(patches) + "|" + rate;
   if (key === applied) return;
   applied = key;
   const byId = new Map(patches.map((x) => [x.id, x]));
   const next: Product[] = BASE.map((p) => {
     const x = byId.get(p.id);
-    return x ? { ...structuredClone(p), ...x.product, id: p.id } : structuredClone(p);
+    return x ? { ...priced(p, rate), ...x.product, id: p.id } : priced(p, rate);
   });
   for (const x of patches) {
     if (!x.isNew || BASE.some((p) => p.id === x.id)) continue;

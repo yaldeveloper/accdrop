@@ -50,6 +50,8 @@ export type Product = {
   howTo?: string;
   /** Short warranty line when it differs from the default promise, e.g. «۲۵ روز گارانتی». */
   warranty?: string;
+  /** Selling price in USDT per code option. When set, the Toman price follows the live Tether rate. */
+  usdt?: Record<string, number>;
 };
 
 export type Drop = {
@@ -169,7 +171,8 @@ const SAMPLES: Product[] = [
 ];
 
 /** Real catalogue: official codes and ready accounts from Insight Store, bought and delivered automatically after payment.
- *  `ix` maps each option to its supplier product id. Prices in Toman, set from the supplier cost at ~105,000 Toman per USDT. */
+ *  `ix` maps each option to its supplier product id. Prices below are in Toman at BASE_RATE; on the site they follow the
+ *  live Tether rate (lib/server/catalog.ts → priceByRate), so the margin over the supplier's USDT cost stays the same. */
 const REAL: Product[] = [
   { id: "chatgpt", tier: "Plus", name: "ChatGPT Plus", maker: "OpenAI", category: "ai", monogram: "GPT", badge: "پرفروش", etaMinutes: 0, warranty: "۲۵ روز گارانتی",
     description: "اکانت آماده ChatGPT Plus، تحویل فوری", use: "برای نوشتن، فکر کردن و ساختن",
@@ -247,6 +250,12 @@ const REAL: Product[] = [
     includes: ["سرور در بیش از ۶۰ کشور", "روی ۱۰ دستگاه همزمان", "گارانتی کامل ۳ ماهه"] },
 ];
 
+
+/** Toman per USDT that the REAL prices above were written at. */
+export const BASE_RATE = 105_000;
+for (const p of REAL) p.usdt = Object.fromEntries(Object.entries(p.plans).filter(([, o]) => o?.code).map(([k, o]) => [k, Math.round((o!.code! / BASE_RATE) * 100) / 100]));
+/** Toman price of a USDT amount at `rate`, rounded up to 10,000 Toman. */
+export const tomanAt = (usdt: number, rate: number) => Math.ceil((usdt * rate) / 10_000) * 10_000;
 
 /** Limited-price weekly drops, shown as a slider on the home page. Empty until real offers are set. */
 const DROP_LIST: Drop[] = [];
