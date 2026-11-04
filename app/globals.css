@@ -2183,3 +2183,18 @@ footer.ft .legal{margin-top:18px}
 .sup-tbl .ok{color:var(--lime)}.sup-tbl .bad{color:#E06C6C}
 .od-secret b{white-space:pre-line}
 @media (max-width:760px){.sup-top{grid-template-columns:minmax(0,1fr)}}
+
+/* ===== v16: layout fixes ===== */
+/* Category rows: keep each horizontal rail inside the page width (a grid item's min-width:auto let long rails widen the page). */
+.cat-rows{grid-template-columns:minmax(0,1fr)}
+.cat-row,.cat-scroll{min-width:0}
+/* Closed drawer: no shadow bleeding onto the right edge, and out of the tab order. */
+.dr{box-shadow:none;visibility:hidden;transition:transform .28s var(--ease-out),visibility 0s linear .28s}
+.dr.on{box-shadow:-30px 0 60px -20px rgba(0,0,0,.8);visibility:visible;transition:transform .28s var(--ease-out)}
+/* Long product names («PlayStation Store», «Steam Gift Card») fit on one line in rail cards. */
+.cat-scroll .tile-tool{font-size:24px;text-wrap:balance}
+@media (max-width:760px){.cat-scroll .tile-tool{font-size:21px}}
+/* Mobile buy bar: the price was dark-on-dark; keep the chat button above the bar. */
+.buybar{color:var(--paper)}
+.buybar b small{display:inline;color:var(--gray-d);font-size:12px}
+@media (max-width:900px){body:has(.buybar.on) .chat-fab{bottom:calc(136px + env(safe-area-inset-bottom))}}
