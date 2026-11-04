@@ -164,7 +164,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           </nav>
           <div className="p2-g">
             <div className="p2-info p2-head">
-              <div className="p2-brand"><span className="p2-logo"><BrandLogo id={p.id} size={30} /></span><div><small>{c.prefix ?? "خرید اکانت"} • {isSub(p) ? "اشتراک رسمی" : "رسمی و قانونی"}</small><b className="en">{p.maker}</b></div></div>
+              <div className="p2-brand"><span className="p2-logo"><BrandLogo id={p.id} size={30} /></span><div><small>{c.prefix ?? "خرید اکانت"} • {p.source ?? (isSub(p) ? "اشتراک رسمی" : "رسمی و قانونی")}</small><b className="en">{p.maker}</b></div></div>
               <h1 className="p2-h1"><span className="en">{tool}{tier && <i> {tier}</i>}</span></h1>
               <p className="p2-use">{p.use}</p>
               <p className="p2-lead">{c.intro}</p>
@@ -210,7 +210,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                   <div><dt>سرویس</dt><dd className="en">{p.name}</dd></div>
                   <div><dt>سازنده</dt><dd className="en">{p.maker}</dd></div>
                   <div><dt>دسته</dt><dd>{CATEGORIES[p.category]}</dd></div>
-                  <div><dt>نوع</dt><dd>{isSub(p) ? "اشتراک رسمی" : `${nounOf(p)}، رسمی و قانونی`}</dd></div>
+                  <div><dt>نوع</dt><dd>{p.source ?? (isSub(p) ? "اشتراک رسمی" : `${nounOf(p)}، رسمی و قانونی`)}</dd></div>
                   <div><dt>{axisOf(p).replace(" (آمریکا)", "")}</dt><dd>{months.map((m) => optionLabel(p, m)).join("، ")}</dd></div>
                   <div><dt>روش تحویل</dt><dd>{types.map((t) => deliveryOf(p, t).title).join("، ")}</dd></div>
                   <div><dt>زمان تحویل</dt><dd>{etaText(p)}</dd></div>
