@@ -2135,3 +2135,34 @@ footer.ft .legal{margin-top:18px}
 .adm-inv{display:grid;gap:6px;padding:14px;border-radius:12px;border:1px solid var(--hair-2)}
 .adm-inv small{font-size:12px;color:var(--gray-d);line-height:1.8}
 .ord-tag{font-style:normal;font-size:11px;padding:1px 8px;border-radius:999px;background:rgba(185,255,99,.15);color:var(--lime);margin-inline-start:6px}
+
+/* ===== v17: cleaner buy box, perks, payment logos ===== */
+.bx-one{display:grid;gap:2px;padding:14px 16px;border-radius:14px;background:rgba(0,0,0,.04);font-size:14px;font-weight:600}
+.bx-one b{font-weight:600}
+.bx-one small{font-size:12px;font-weight:400;color:var(--gray-l)}
+.bx-inst{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;border:1px solid rgba(0,140,255,.25);background:rgba(0,140,255,.06)}
+.bx-inst img{width:34px;height:34px;flex:none;border-radius:10px}
+.bx-inst b{display:block;font-size:14px;font-weight:600;color:var(--ink)}
+.bx-inst small{display:block;font-size:12px;color:var(--gray-l)}
+.bx .bx-trust{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding-top:16px}
+.bx .bx-trust li{display:grid;justify-items:center;gap:6px;text-align:center;font-size:11.5px;line-height:1.6;color:var(--gray-l)}
+.bx .bx-trust svg.i{width:20px;height:20px;color:var(--ink)}
+.p2-perks{list-style:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:6px}
+.p2-perks li,.p2-perks .p2-pl{display:flex;align-items:center;gap:12px}
+.p2-perks li{padding:12px 14px;border-radius:16px;border:1px solid var(--hair-2);background:rgba(255,255,255,.02)}
+.p2-perks li:has(.p2-pl){border-color:color-mix(in srgb,var(--b,var(--lime)) 45%,transparent)}
+.p2-pi{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:none;background:color-mix(in srgb,var(--b,var(--lime)) 16%,transparent);color:var(--b,var(--lime))}
+.p2-pi svg.i{width:19px;height:19px}
+.p2-pi.sp{background:none}
+.p2-pi img{width:36px;height:36px;border-radius:11px}
+.p2-perks b{display:block;font-size:14px;font-weight:600;color:var(--paper)}
+.p2-perks small{display:block;font-size:12px;color:var(--gray-d);line-height:1.6}
+@media (max-width:560px){.p2-perks{grid-template-columns:minmax(0,1fr)}}
+.co-pay .opt{display:grid;grid-template-columns:38px minmax(0,1fr);column-gap:14px;align-items:center}
+.co-pay .opt>b,.co-pay .opt>small{grid-column:2}
+.co-pay .opt-logo{grid-row:1/3;grid-column:1;width:38px;height:38px;border-radius:11px}
+.co-pay .opt-logo.ic{display:grid;place-items:center;border:1px solid var(--hair-2)}
+.co-pay .opt.on .opt-logo.ic{border-color:var(--hair-l2)}
+.co-pay .opt-logo.ic svg.i{width:18px;height:18px}
+.co-pay .opt-logo.usdt{background:#26A17B;border-color:#26A17B;color:#fff;font-size:20px;font-weight:700}
+@media (max-width:700px){.p2-head .p2-lead{display:none}.p2-hl{margin-top:4px}}
