@@ -93,8 +93,16 @@ export async function qdSupplyLine(lineId: number, p: Product, plan: string, qua
     // Claim the line first so two concurrent calls can never buy twice.
     const claimed = await sql`update order_lines set supply_ref = 'QD-NEW' where id = ${lineId} and supply_ref is null returning id`;
     if (!claimed.length) return null;
+    let q: QdProduct;
     try {
-      const q = toProduct(await call<RawProduct>(`/products/${encodeURIComponent(opt.id)}`));
+      q = toProduct(await call<RawProduct>(`/products/${encodeURIComponent(opt.id)}`));
+    } catch (e) {
+      // QuickDigi is unreachable or down and nothing was ordered yet: release the claim so a later check tries again.
+      console.error(e);
+      await sql`update order_lines set supply_ref = null where id = ${lineId} and supply_ref = 'QD-NEW'`;
+      return null;
+    }
+    try {
       const total = q.price * quantity;
       if (!q.available || (q.stock !== null && q.stock < quantity)) return fail(`${opt.id} out of stock`);
       // Never pay far above the price list, nor at or above QuickDigi's automatic limit.
