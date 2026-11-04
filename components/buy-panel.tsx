@@ -50,8 +50,8 @@ export function BuyPanel({ product: p }: { product: Product }) {
     fetch(`/api/stock?id=${p.id}`).then((r) => r.json()).then((j) => setStock(j.stock ?? null)).catch(() => {});
   }, [bulk, p.id]);
   const left = stock ? stock[sel.plan] ?? 0 : MAX_QTY;
-  const soldOut = bulk && left < 1;
-  const tooMany = bulk && seats > left;
+  /** Not enough in stock right now: the order is still taken and delivered automatically once stock is uploaded. */
+  const later = bulk && seats > left;
 
   // Renewal links from the dashboard carry ?plan=&type=.
   useEffect(() => {
@@ -89,8 +89,8 @@ export function BuyPanel({ product: p }: { product: Product }) {
     notify("ساخت گروه انجام نشد. دوباره امتحان کن.");
   };
   const setQty = (n: number) => setSel((s) => ({ ...s, seats: Math.min(MAX_QTY, Math.max(1, Math.trunc(n) || 1)) }));
-  const buy = () => { if (soldOut || tooMany) return; if (group && dong) { startDong(); return; } addLine(sel); router.push("/checkout"); };
-  const add = () => (soldOut || tooMany) ? undefined : notify(addLine(sel) ? `${p.name} به سبد اضافه شد` : "این مورد از قبل در سبد هست");
+  const buy = () => { if (group && dong) { startDong(); return; } addLine(sel); router.push("/checkout"); };
+  const add = () => notify(addLine(sel) ? `${p.name} به سبد اضافه شد` : "این مورد از قبل در سبد هست");
 
   return (
     <div className="bx" id="buy">
@@ -175,7 +175,7 @@ export function BuyPanel({ product: p }: { product: Product }) {
               <p className="bx-note">هر عدد <b className="num">{money(share)}</b> تومان{off ? `، ${fa(off)}٪ کمتر از خرید تکی` : ""}. همه اکانت‌ها با هم و خودکار تحویل می‌شوند، هر کدام در یک خط.</p>
             </div>
           )}
-          {stock && <p className={`bx-stock ${soldOut || tooMany ? "bad" : ""}`}>{soldOut ? "این کشور فعلاً ناموجود است." : tooMany ? `فقط ${fa(left)} عدد برای تحویل فوری موجود است.` : left >= MAX_QTY ? "موجود برای تحویل فوری" : `${fa(left)} عدد موجود برای تحویل فوری`}</p>}
+          {stock && <p className="bx-stock">{later ? "تحویل معمولاً چند ساعت بعد از پرداخت، در حساب کاربری و با پیامک." : "موجود برای تحویل فوری"}</p>}
         </fieldset>
       ) : null}
 
@@ -231,7 +231,7 @@ export function BuyPanel({ product: p }: { product: Product }) {
         </div>
       )}
 
-      <button ref={cta} className="btn btn-paper btn-block bx-cta" onClick={buy} disabled={making || soldOut || tooMany}>{group && dong ? (making ? "در حال ساخت گروه…" : "ساخت گروه و گرفتن لینک") : soldOut ? "ناموجود" : "ادامه خرید"} <Icon id="arrow" className="arrow" /></button>
+      <button ref={cta} className="btn btn-paper btn-block bx-cta" onClick={buy} disabled={making}>{group && dong ? (making ? "در حال ساخت گروه…" : "ساخت گروه و گرفتن لینک") : "ادامه خرید"} <Icon id="arrow" className="arrow" /></button>
       {!(group && dong) && <button className="add-link" onClick={add}>افزودن به سبد خرید</button>}
 
       <ul className="bx-trust">
@@ -242,7 +242,7 @@ export function BuyPanel({ product: p }: { product: Product }) {
 
       <div className={`buybar ${ctaVisible ? "" : "on"}`} role="region" aria-label="خرید سریع">
         <div><small>{optionLabel(p, sel.plan)}{seats > 1 ? (bulk ? ` • ${fa(seats)} عدد` : ` • ${fa(seats)} نفر${dong ? " • دنگی" : ""}`) : ""}</small><b className="num">{money(group && dong ? share : price)} <small>تومان{group && dong ? " / نفر" : ""}</small></b></div>
-        <button className="btn btn-paper" onClick={buy} disabled={making || soldOut || tooMany}>{group && dong ? "ساخت گروه" : "ادامه خرید"}</button>
+        <button className="btn btn-paper" onClick={buy} disabled={making}>{group && dong ? "ساخت گروه" : "ادامه خرید"}</button>
       </div>
     </div>
   );
