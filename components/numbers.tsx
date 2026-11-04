@@ -87,7 +87,7 @@ export function NumberShop({ product: p }: { product: Product }) {
                     {o.iso ? <img src={`/flags/${o.iso}.svg`} alt="" width={28} height={21} loading="lazy" /> : <span className="vn-flag" />}
                     <b>{o.name}</b>
                   </span>
-                  <small className="vn-n num">{!live ? "موجود" : o.count > 999 ? "+۱۰۰۰" : `${fa(o.count)} عدد`}</small>
+                  <small className="vn-n num">{!live ? "موجود" : o.count > 999 ? "بیش از ۱۰۰۰ عدد" : `${fa(o.count)} عدد`}</small>
                   <b className="vn-p num">{money(o.price)} <small>تومان</small></b>
                   <button className="btn btn-paper vn-buy" onClick={() => buy(o)}>خرید</button>
                 </li>
