@@ -23,11 +23,28 @@ export const THEME: Record<string, Theme> = {
   appleid: { c: "#C9CDD2", c2: "#6E7378", motif: "appleid" },
   applegift: { c: "#FF5A8A", c2: "#7A6BFF", motif: "gift" },
   vnumber: { c: "#B9FF63", c2: "#63E6BE", motif: "sim" },
+  googleplay: { c: "#34A853", c2: "#FBBC04", motif: "gift" },
+  steam: { c: "#66C0F4", c2: "#C7D5E0", motif: "gift" },
+  playstation: { c: "#2E6DB4", c2: "#9CC2F0", motif: "gift" },
+  xbox: { c: "#3FB43F", c2: "#B5E8B5", motif: "gift" },
+  nintendo: { c: "#E60012", c2: "#FF8A8A", motif: "gift" },
+  razer: { c: "#44D62C", c2: "#B8F5AE", motif: "gift" },
+  pubg: { c: "#F2A900", c2: "#FFE08A", motif: "gift" },
+  freefire: { c: "#FF7A00", c2: "#FFC38A", motif: "gift" },
+  valorant: { c: "#FF4655", c2: "#FFB0B6", motif: "gift" },
+  roblox: { c: "#E2E2E2", c2: "#9A9A9A", motif: "gift" },
+  manus: { c: "#E8E6E1", c2: "#9A968E", motif: "chat", ask: "یک گزارش بازار از ۱۰ رقیب ما آماده کن", reply: "در حال جست‌وجو… گزارش با جدول مقایسه و منابع تا چند دقیقه دیگر آماده است." },
+  elevenlabs: { c: "#E9E9E9", c2: "#A7A7A7", motif: "video" },
+  lovable: { c: "#FF5A8A", c2: "#FF9A62", motif: "code" },
+  warp: { c: "#01A4FF", c2: "#9BDCFF", motif: "code" },
+  framer: { c: "#3D7BFF", c2: "#B2C8FF", motif: "canvas" },
+  "adobe-express": { c: "#FF3B30", c2: "#B57BFF", motif: "canvas" },
+  airtable: { c: "#18BFFF", c2: "#FFB400", motif: "doc" },
 };
 
 export function themeOf(id: string): Theme {
   const p = ALL_PRODUCTS.find((x) => x.id === id);
-  const byCat: Record<string, Motif> = { ai: "chat", code: "code", create: "canvas", work: "work", telegram: "tg", apple: "gift", number: "sim" };
+  const byCat: Record<string, Motif> = { ai: "chat", code: "code", create: "canvas", work: "work", telegram: "tg", apple: "gift", game: "gift", number: "sim" };
   const t = THEME[id] ?? (p?.family ? THEME[p.family] : undefined) ?? { c: "#B9FF63", c2: "#63E6BE", motif: byCat[p?.category ?? "ai"] ?? "chat",
     ask: "از کجا شروع کنم؟", reply: `با ${p?.name ?? "این سرویس"} چند دقیقه‌ای راه می‌افتی؛ قدم اول را با هم برداریم…` };
   const color = p?.color;

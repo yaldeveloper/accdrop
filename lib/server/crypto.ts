@@ -7,7 +7,7 @@ import { siteUrl } from "./pay";
 
 export const cryptoConfigured = () => !!process.env.NOWPAYMENTS_API_KEY;
 const g = globalThis as unknown as { __acc_usdt?: { at: number; rate: number; source: string } };
-const fallbackRate = () => Math.max(1000, Number(process.env.CRYPTO_RATE_TOMAN) || 105000);
+const fallbackRate = () => Math.max(1000, Number(process.env.CRYPTO_RATE_TOMAN) || 270000);
 const sane = (n: number) => Number.isFinite(n) && n > 10_000 && n < 10_000_000;
 
 async function getJson(url: string) {

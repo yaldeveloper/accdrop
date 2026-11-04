@@ -9,7 +9,7 @@ import { bnplConfigured, cancelBnpl, confirmBnpl, startBnpl } from "./bnpl";
 import { onSplitPaid } from "./splits";
 import { canInstall, type LegalInfo, type PayMethod } from "@/lib/billing";
 import { sendOrderSms } from "./sms";
-import { supplyLine } from "./supplier";
+import { firstOutOfStock, supplyLine } from "./supplier";
 
 type Sql = Awaited<ReturnType<typeof db>>;
 const ms = (d: Date | null) => (d ? new Date(d).getTime() : null);
@@ -58,6 +58,8 @@ export async function createOrder(mobile: string, input: LineInput[], discountCo
   await loadCatalog();
   const priced = priceLines(input);
   if ("error" in priced) return priced;
+  const out = await firstOutOfStock(priced.lines);
+  if (out >= 0) return { error: "out_of_stock", index: out };
   // A «دنگ» share is one seat at the group's locked per-person price.
   if (opts.split) priced.lines[0].price = opts.split.unit;
   const sql = await db();
@@ -221,7 +223,7 @@ export async function loadOrders(where: { mobile?: string; code?: string; status
     lines: lines.filter((l) => l.order_code === o.code).map((l) => ({
       lineId: l.id, id: l.product_id, plan: l.plan, type: l.delivery as DeliveryType, price: Number(l.price),
       email: l.email ?? undefined, username: l.username ?? undefined,
-      seats: Number(l.seats ?? 1), ip: l.ip ?? undefined, members: l.members ? String(l.members).split(",") : undefined, secret: l.secret ?? undefined, deliveredAt: ms(l.delivered_at),
+      seats: Number(l.seats ?? 1), ip: l.ip ?? undefined, members: l.members ? String(l.members).split(",") : undefined, secret: l.secret ?? undefined, deliveredAt: ms(l.delivered_at), supplyRef: l.supply_ref ?? undefined,
     })),
   }));
 }
@@ -229,7 +231,7 @@ export async function loadOrders(where: { mobile?: string; code?: string; status
 /** Customers only see a line's secret (gift code, number, login) once it has been delivered and paid for. */
 export const forCustomer = (o: Order): Order => ({
   ...o, adminNote: undefined,
-  lines: o.lines.map((l) => ({ ...l, secret: o.status === "paid" || o.status === "activating" || o.status === "active" ? l.secret : undefined })),
+  lines: o.lines.map((l) => ({ ...l, supplyRef: undefined, secret: o.status === "paid" || o.status === "activating" || o.status === "active" ? l.secret : undefined })),
 });
 
 // ----- Admin actions -----
