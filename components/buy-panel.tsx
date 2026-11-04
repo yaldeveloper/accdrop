@@ -42,7 +42,7 @@ export function BuyPanel({ product: p }: { product: Product }) {
   const [dong, setDong] = useState(true);
   const [making, setMaking] = useState(false);
   const share = Math.round(price / seats / 1000) * 1000;
-  const bulk = !!p.bulk?.length;
+  const bulk = !!p.bulk?.length && sel.type === "code";
   /** Wholesale: units ready for instant delivery per option (null = unknown or refilled by a supplier). */
   const [stock, setStock] = useState<Record<string, number> | null>(null);
   useEffect(() => {
@@ -78,6 +78,7 @@ export function BuyPanel({ product: p }: { product: Product }) {
     const next = { ...s, ...patch };
     const o = p.plans[next.plan] ?? {};
     if (!o[next.type]) next.type = Object.keys(o)[0] as DeliveryType;
+    if (p.bulk?.length && next.type !== "code") next.seats = 1;
     return next;
   });
   const startDong = async () => {

@@ -27,8 +27,8 @@ export function priceLines(input: LineInput[], live: Record<string, number> = {}
     const p = PRODUCTS.find((x) => x.id === l?.id);
     if (!p || p.hidden || !(l.type in DELIVERY) || !sellable(p, l)) return { error: "bad_item", index: i };
     if (livePlan(l.plan) && !live[l.plan]) return { error: "number_unavailable", index: i };
-    const seats = maxUnits(p) > 1 ? Math.trunc(Number(l.seats ?? 1)) : 1;
-    if (!(seats >= 1 && seats <= maxUnits(p))) return { error: "bad_item", index: i };
+    const seats = maxUnits(p, l.type) > 1 ? Math.trunc(Number(l.seats ?? 1)) : 1;
+    if (!(seats >= 1 && seats <= maxUnits(p, l.type))) return { error: "bad_item", index: i };
     const ip = l.ip ? String(l.ip) : undefined;
     if (ip && (!p.ip || !STATIC_IP.countries[ip])) return { error: "bad_item", index: i };
     let members: string[] | undefined;
