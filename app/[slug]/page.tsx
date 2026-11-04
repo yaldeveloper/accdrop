@@ -15,6 +15,7 @@ import { ToolCard } from "@/components/sections";
 import { BuyPanel } from "@/components/buy-panel";
 import { Reviews } from "@/components/reviews";
 import { splitName } from "@/components/pass";
+import { INSTALLMENTS, canInstall } from "@/lib/billing";
 
 export const dynamicParams = true;
 export const revalidate = 60;
@@ -151,11 +152,14 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               <p className="p2-use">{p.use}</p>
               <p className="p2-lead">{c.intro}</p>
               <ul className="p2-hl">{p.includes.slice(0, 3).map((x) => <li key={x}><Icon id="check" />{x}</li>)}</ul>
-              <div className="p2-chips">
-                <span><Icon id="shield" />{guaranteeOf(p)}</span>
-                <span><Icon id="clock" />{isSub(p) ? "روی اکانت خودت" : "در حساب کاربری"}</span>
-                {p.group?.length ? <a href="#buy"><Icon id="user" />خرید گروهی تا {fa(p.group[p.group.length - 1][1])}٪ ارزان‌تر</a> : null}
-              </div>
+              <ul className="p2-perks" aria-label="مزایای خرید از اک‌دراپ">
+                <li><span className="p2-pi"><Icon id="shield" /></span><span><b>{isSub(p) ? "ضمانت تا روز آخر" : guaranteeOf(p)}</b><small>{isSub(p) ? "اگر قطع شد، روزهای باقی‌مانده برمی‌گردد" : "جایگزینی یا بازگشت کامل وجه"}</small></span></li>
+                <li><span className="p2-pi"><Icon id="user" /></span><span><b>{isSub(p) ? "روی اکانت خودت" : "تحویل در حساب کاربری"}</b><small>{isSub(p) ? "فقط ایمیل؛ رمز نمی‌خواهیم" : "همراه با پیامک"}</small></span></li>
+                {canInstall(Math.max(...planKeys(p).map((m) => priceOf({ id: p.id, plan: m, type: Object.keys(p.plans[m] ?? {})[0] as DeliveryType }).price))) && (
+                  <li><span className="p2-pi sp"><img src="/pay/snapppay.svg" alt="" width={36} height={36} /></span><span><b>{fa(INSTALLMENTS.parts)} قسط بدون کارمزد</b><small>با اسنپ‌پی، بدون ضامن</small></span></li>
+                )}
+                {p.group?.length ? <li><a href="#buy" className="p2-pl"><span className="p2-pi"><Icon id="box" /></span><span><b>دنگی با دوستان</b><small>هر نفر تا {fa(p.group[p.group.length - 1][1])}٪ ارزان‌تر</small></span></a></li> : null}
+              </ul>
             </div>
             <BuyPanel product={p} />
             <div className="p2-info p2-more">

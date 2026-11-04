@@ -206,13 +206,14 @@ export default function CheckoutPage() {
           <section className={`co-step ${step1Done ? "on" : "off"}`}>
             <header><span className="co-n">{cart.some((l) => ipPrice(productById(l.id), l.plan) > 0) ? "۴" : "۳"}</span><h2>روش پرداخت</h2></header>
             <div className="opts v co-pay">
-              <button className={`opt ${method === "card" ? "on" : ""}`} type="button" aria-pressed={method === "card"} onClick={() => setMethod("card")}><b>درگاه بانکی</b><small>همه کارت‌های عضو شتاب، پرداخت امن</small></button>
+              <button className={`opt ${method === "card" ? "on" : ""}`} type="button" aria-pressed={method === "card"} onClick={() => setMethod("card")}><span className="opt-logo ic"><Icon id="lock" /></span><b>کارت بانکی</b><small>همه کارت‌های عضو شتاب</small></button>
               <button className={`opt ${method === "bnpl" ? "on" : ""} ${bnplOk ? "" : "dis"}`} type="button" aria-pressed={method === "bnpl"} disabled={!bnplOk} onClick={() => setMethod("bnpl")}>
-                <b>اقساطی با {INSTALLMENTS.provider}</b>
-                <small>{bnplOk ? <><span className="num">{fa(INSTALLMENTS.parts)}</span> قسط <span className="num">{money(installment(total))}</span> تومانی، بدون کارمزد و ضامن. قسط اول همین حالا</> : <>برای خریدهای بالای <span className="num">{money(INSTALLMENTS.min)}</span> تومان</>}</small>
+                <img className="opt-logo" src="/pay/snapppay.svg" alt="" width={36} height={36} />
+                <b>اقساطی با اسنپ‌پی</b>
+                <small>{bnplOk ? <><span className="num">{fa(INSTALLMENTS.parts)}</span> قسط <span className="num">{money(installment(total))}</span> تومانی • بدون کارمزد و ضامن</> : <>برای خریدهای بالای <span className="num">{money(INSTALLMENTS.min)}</span> تومان</>}</small>
               </button>
               <button className={`opt ${method === "crypto" ? "on" : ""}`} type="button" aria-pressed={method === "crypto"} onClick={() => setMethod("crypto")}>
-                <b>ارز دیجیتال</b><small>USDT (ترون، اتریوم، BSC)، بیت‌کوین و بیشتر{method === "crypto" && usdt ? <> • <span className="num">{fa(Math.ceil((total / usdt) * 100) / 100)}</span> تتر (هر تتر <span className="num">{money(usdt)}</span> تومان)</> : null}</small>
+                <span className="opt-logo ic usdt">₮</span><b>ارز دیجیتال</b><small>تتر، بیت‌کوین و بیشتر{method === "crypto" && usdt ? <> • <span className="num">{fa(Math.ceil((total / usdt) * 100) / 100)}</span> تتر (هر تتر <span className="num">{money(usdt)}</span> تومان)</> : null}</small>
               </button>
             </div>
           </section>
@@ -251,18 +252,13 @@ export default function CheckoutPage() {
           </dl>
           <label className="co-agree"><input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} /><span>قوانین و <a className="link" href="#">شرایط گارانتی</a> را می‌پذیرم.</span></label>
           <button className="btn btn-paper btn-block co-btn" onClick={pay} disabled={paying}>
-            {paying ? "در حال اتصال به درگاه…" : method === "crypto" ? <>پرداخت با ارز دیجیتال</> : method === "bnpl" ? <>ادامه با {INSTALLMENTS.provider} • قسط اول <span className="num">{money(installment(total))}</span></> : <>پرداخت <span className="num">{money(total)}</span> تومان</>}
+            {paying ? "در حال اتصال به درگاه…" : method === "crypto" ? <>پرداخت با ارز دیجیتال</> : method === "bnpl" ? <>ادامه با اسنپ‌پی • قسط اول <span className="num">{money(installment(total))}</span></> : <>پرداخت <span className="num">{money(total)}</span> تومان</>}
           </button>
-          <ul className="co-trust">
-            <li><Dots size={3} />پرداخت امن شاپرک</li>
-            <li><Dots size={3} />ضمانت بازگشت وجه</li>
-            <li><Dots size={3} />پشتیبانی ۹ تا ۲۴</li>
-          </ul>
           <div className="co-bar" aria-hidden="true">
             <div><small>قابل پرداخت</small><b className="num">{money(total)} <small>تومان</small></b></div>
             <button className="btn btn-paper" onClick={pay} disabled={paying} tabIndex={-1}>{paying ? "…" : "پرداخت"}</button>
           </div>
-          {demo.gateway && <small className="muted fine">نسخه آزمایشی: درگاه هنوز وصل نیست و پرداخت در درگاه آزمایشی انجام می‌شود. کد <span className="en">WELCOME</span> ده درصد تخفیف می‌دهد.</small>}
+          {demo.gateway && <small className="muted fine">درگاه آزمایشی فعال است؛ پولی کم نمی‌شود.</small>}
         </aside>
       </div>
     </div>

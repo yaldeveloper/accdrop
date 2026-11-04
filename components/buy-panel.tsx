@@ -97,7 +97,7 @@ export function BuyPanel({ product: p }: { product: Product }) {
         </fieldset>
       )}
 
-      <fieldset className="bx-g">
+      {months.length > 1 && <fieldset className="bx-g">
         <legend>{axisOf(p)}</legend>
         <div className={`bx-seg ${months.length > 3 ? "bx-seg4" : ""}`} style={{ "--n": Math.min(months.length, 4) } as CSSProperties}>
           {months.map((m, i) => {
@@ -115,9 +115,9 @@ export function BuyPanel({ product: p }: { product: Product }) {
             );
           })}
         </div>
-      </fieldset>
+      </fieldset>}
 
-      <fieldset className="bx-g">
+      {types.length > 1 ? <fieldset className="bx-g">
         <legend>نحوه تحویل {types.length > 1 && <a href="#delivery" className="bx-help">فرقشان چیست؟</a>}</legend>
         {types.map((t) => {
           const amount = offers[t];
@@ -131,7 +131,9 @@ export function BuyPanel({ product: p }: { product: Product }) {
             </label>
           );
         })}
-      </fieldset>
+      </fieldset> : (
+        <p className="bx-one"><span>{months.length === 1 ? <>{optionLabel(p, sel.plan)} • </> : null}{DELIVERY[sel.type].title}</span><small>{DELIVERY[sel.type].detail}</small></p>
+      )}
 
       {p.group?.length ? (
         <fieldset className="bx-g">
@@ -177,16 +179,21 @@ export function BuyPanel({ product: p }: { product: Product }) {
         {group && dong
           ? <div className="bx-row"><span>سهم هر نفر</span><span>{unit.price > share ? <s className="num">{money(unit.price)}</s> : null}<b className="num">{money(share)}</b> <small>تومان</small></span></div>
           : <div className="bx-row"><span>مبلغ قابل پرداخت</span><span>{was ? <s className="num">{money(was)}</s> : null}<b className="num">{money(price)}</b> <small>تومان</small></span></div>}
-        {!(group && dong) && canInstall(price) && <div className="bx-row sub bx-inst"><span>یا اقساطی</span><span><b className="num">{fa(INSTALLMENTS.parts)}</b> قسط <b className="num">{money(installment(price))}</b> تومانی با {INSTALLMENTS.provider}، بدون کارمزد</span></div>}
-        <div className="bx-row sub"><span>تحویل</span><span>{isSub(p) ? "روی اکانت خودت، بعد از پرداخت" : "در حساب کاربری و پیامک، بعد از پرداخت"}</span></div>
       </div>
+      {!(group && dong) && canInstall(price) && (
+        <div className="bx-inst">
+          <img src="/pay/snapppay.svg" alt="اسنپ‌پی" width={34} height={34} />
+          <span><b>یا <span className="num">{fa(INSTALLMENTS.parts)}</span> قسط <span className="num">{money(installment(price))}</span> تومانی</b><small>با اسنپ‌پی، بدون کارمزد و ضامن</small></span>
+        </div>
+      )}
 
       <button ref={cta} className="btn btn-paper btn-block bx-cta" onClick={buy} disabled={making}>{group && dong ? (making ? "در حال ساخت گروه…" : "ساخت گروه و گرفتن لینک") : "ادامه خرید"} <Icon id="arrow" className="arrow" /></button>
       {!(group && dong) && <button className="add-link" onClick={add}>افزودن به سبد خرید</button>}
 
       <ul className="bx-trust">
-        <li><Icon id="lock" />پرداخت از درگاه بانکی رسمی؛ بدون کارت ارزی</li>
-        <li><Icon id="shield" />اگر فعال نشد، کل مبلغ برمی‌گردد</li>
+        <li><Icon id="shield" /><span>ضمانت<br />بازگشت وجه</span></li>
+        <li><Icon id="user" /><span>{isSub(p) ? <>روی اکانت<br />خودت</> : <>تحویل در<br />حساب کاربری</>}</span></li>
+        <li><Icon id="chat" /><span>پشتیبانی<br />تا ۱۲ شب</span></li>
       </ul>
 
       <div className={`buybar ${ctaVisible ? "" : "on"}`} role="region" aria-label="خرید سریع">
