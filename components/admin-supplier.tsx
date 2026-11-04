@@ -7,7 +7,8 @@ import { useStore } from "./store";
 
 type SP = { id: number; name: string; description: string; howToUse: string; cost: number; stock: number; available: boolean; unlimited: boolean };
 type Ours = { productId: string; plan: string; name: string; label: string; price: number };
-type Data = { configured: boolean; rate: { rate: number; source: string }; ours: Ours[]; map: { productId: string; plan: string; supplierId: number }[]; products: SP[]; balance: number | null; test?: boolean; error?: string;
+type Fivesim = { configured: boolean; currency: string; perUsd: number; markup: number; min: number; balance?: number | null; error?: string; sample?: { country: string; name: string; price: number; count: number }[] };
+type Data = { fivesim?: Fivesim; configured: boolean; rate: { rate: number; source: string }; ours: Ours[]; map: { productId: string; plan: string; supplierId: number }[]; products: SP[]; balance: number | null; test?: boolean; error?: string;
   cr?: { configured: boolean; wallet: { address: string; usdt: number; bnb: number } | { error: string } | null };
   qd?: { configured: boolean; balance: { available: number; reserved: number } | { error: string } | null } };
 
@@ -38,6 +39,7 @@ export function AdminSupplier() {
   return (
     <>
       <header className="dash-h"><h1>تأمین‌کننده</h1><p className="muted">کاتالوگ اینسایت استور با قیمت تمام‌شده به تومان (تتر امروز {money(rate)} تومان). محصولی که وصل شود، بعد از پرداخت مشتری خودکار از کیف پول تأمین‌کننده خریده و کدش تحویل می‌شود؛ اول از انبار کدهای خودمان برداشته می‌شود.</p></header>
+      <FivesimCard f={d.fivesim} rate={rate} />
       <div className="dash-sec">
         <b>Cryptorefills (گیفت‌کارت‌ها)</b>
         {!d.cr?.configured ? (
@@ -99,5 +101,30 @@ export function AdminSupplier() {
         </>
       )}
     </>
+  );
+}
+
+/** 5sim virtual numbers: whether the key is set, wallet balance and today's sample prices. */
+function FivesimCard({ f, rate }: { f?: Fivesim; rate: number }) {
+  if (!f) return null;
+  const toman = (n: number) => round((n / f.perUsd) * rate);
+  return (
+    <div className="dash-sec">
+      <b>شماره مجازی (5sim)</b>
+      {!f.configured ? (
+        <p className="muted">کلید API را در Vercel با نام <span className="en sel">FIVESIM_API_KEY</span> بگذار و دوباره دیپلوی کن. تا وقتی کلید نیست، صفحه شماره مجازی همان قیمت‌های ثابت قبلی را نشان می‌دهد.</p>
+      ) : (
+        <>
+          <p className="muted">
+            موجودی: <b className="num">{f.balance === null || f.balance === undefined ? "؟" : `${fa(f.balance)} ${f.currency === "USD" ? "دلار" : "روبل"}`}</b>
+            {typeof f.balance === "number" && <> ≈ <span className="num">{money(toman(f.balance))}</span> تومان</>}
+            {" "}• سود <span className="num">{fa(f.markup)}</span>٪ • حداقل قیمت <span className="num">{money(f.min)}</span>
+            {f.currency === "RUB" && <> • هر دلار <span className="num">{fa(f.perUsd)}</span> روبل</>}
+          </p>
+          {f.error && <p className="adm-split warn">خطا از 5sim: <span className="en">{f.error}</span></p>}
+          {f.sample?.length ? <p className="muted">ارزان‌ترین تلگرام امروز: {f.sample.map((o) => `${o.name} ${money(o.price)}`).join("، ")}</p> : null}
+        </>
+      )}
+    </div>
   );
 }

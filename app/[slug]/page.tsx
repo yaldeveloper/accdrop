@@ -13,6 +13,7 @@ import { fa, money } from "@/lib/format";
 import { BrandLogo, Icon } from "@/components/brand";
 import { ToolCard } from "@/components/sections";
 import { BuyPanel } from "@/components/buy-panel";
+import { NumberShop } from "@/components/numbers";
 import { Reviews } from "@/components/reviews";
 import { splitName } from "@/components/pass";
 import { INSTALLMENTS, canInstall } from "@/lib/billing";
@@ -65,7 +66,7 @@ function promisesFor(p: Product): [string, string][] {
     case "gift": return [["کد کار نکرد؟", "کد جایگزین یا بازگشت کامل وجه."], ["از منبع رسمی.", "کدها قانونی‌اند، نه کارت‌های دست‌دوم."], ["تحویل در حساب کاربری.", "کد در صفحه سفارش و پیامک."], tail];
     case "account": return [["ورود نشد؟", "اکانت جایگزین یا بازگشت وجه."], ["فقط مال توست.", "اکانت با کسی به اشتراک گذاشته نمی‌شود و رمز را عوض می‌کنی."], ["اطلاعات کامل.", "ایمیل، رمز و سؤال‌های امنیتی را تحویل می‌گیری."], tail];
     case "qty": return [["کامل نرسید؟", "باقی‌مانده را می‌فرستیم یا مبلغش را برمی‌گردانیم."], ["امن.", "فقط یوزرنیم؛ هرگز کد ورود تلگرام نمی‌خواهیم."], ["هدیه هم می‌شود.", "روی آیدی هر کسی که بخواهی."], tail];
-    case "number": return [["کد نیامد؟", "کل مبلغ خودکار به حسابت برمی‌گردد."], ["کد تأیید در پنل.", "کد پیامکی همان‌جا نمایش داده می‌شود."], ["کشور به انتخاب تو.", "آمریکا، انگلیس، کانادا یا هلند."], tail];
+    case "number": return [["کد نیامد؟", "شماره جدید می‌گیری یا کل مبلغ برمی‌گردد."], ["کد تأیید در پنل.", "کد پیامکی همان‌جا نمایش داده می‌شود."], ["کشور به انتخاب تو.", "آمریکا، انگلیس، کانادا یا هلند."], tail];
   }
 }
 
@@ -145,7 +146,18 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     <main className={`pdp2 pt-${themeOf(p.id).motif}`} style={{ "--b": themeOf(p.id).c, "--b2": themeOf(p.id).c2 } as React.CSSProperties}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
-      <section className="p2-top">
+      {kindOf(p) === "number" ? (
+        <section className="p2-top vn-top-s">
+          <div className="wrap">
+            <nav className="crumbs" aria-label="مسیر">
+              <Link href="/">اک‌دراپ</Link><span>/</span><span>{CATEGORIES[p.category]}</span>
+            </nav>
+            <h1 className="vn-h1">خرید شماره مجازی</h1>
+            <p className="vn-lead">سرویس و کشور را انتخاب کن، پرداخت کن، شماره و کد تأیید را همین‌جا بگیر. کد نیامد؟ پولت برمی‌گردد.</p>
+            <NumberShop product={p} />
+          </div>
+        </section>
+      ) : <section className="p2-top">
         <div className="wrap">
           <nav className="crumbs" aria-label="مسیر">
             <Link href="/">اک‌دراپ</Link><span>/</span><Link href={`/services?c=${p.category}`}>{CATEGORIES[p.category]}</Link><span>/</span><span className="en">{p.name}</span>
@@ -172,7 +184,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             </div>
           </div>
         </div>
-      </section>
+      </section>}
 
       <Toc items={[
         ...(seo ? [["about", "معرفی"], ["features", "امکانات"]] as [string, string][] : []),

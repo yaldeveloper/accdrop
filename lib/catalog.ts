@@ -1,5 +1,6 @@
 // Product catalogue (prices in Toman). Admin edits are layered on top by lib/catalog-sync.ts.
 import { duration, fa } from "./format";
+import { livePlan, livePlanLabel } from "./numbers";
 
 /** How a purchase reaches the customer. */
 export type DeliveryType = "own" | "ready" | "username" | "code" | "number";
@@ -146,11 +147,13 @@ const SAMPLES: Product[] = [
     description: "اپل آیدی آماده و اختصاصی", use: "ورود به App Store",
     plans: { us: { ready: 390000 }, tr: { ready: 390000 }, uk: { ready: 450000 } },
     includes: ["اکانت تازه با ایمیل جدید، فقط برای تو", "سؤال‌های امنیتی و تاریخ تولد", "مناسب App Store و iCloud همان کشور"] },
-  { id: "vnumber", hidden: true, name: "Virtual Number", maker: "AccDrop", category: "number", kind: "number", monogram: "VN", etaMinutes: 0,
-    axis: "کشور شماره", labels: { us: "آمریکا", uk: "انگلیس", ca: "کانادا", nl: "هلند" },
-    description: "شماره مجازی برای تلگرام و واتس‌اپ", use: "ثبت‌نام بدون سیم‌کارت",
-    plans: { ca: { number: 250000 }, us: { number: 290000 }, uk: { number: 390000 }, nl: { number: 450000 } },
-    includes: ["شماره اختصاصی برای ثبت‌نام", "کد تأیید در حساب کاربری", "اگر کد نیامد، کل مبلغ برمی‌گردد"] },
+  // Live 5sim numbers (lib/server/fivesim.ts): countries and prices come from 5sim; the plan below is only the
+  // «از …» price shown in listings and is never sold (see priceLines).
+  { id: "vnumber", name: "Virtual Number", maker: "AccDrop", category: "number", kind: "number", monogram: "VN", etaMinutes: 0,
+    axis: "کشور شماره", labels: { from: "بیش از ۱۰۰ کشور" },
+    description: "شماره مجازی برای تلگرام، واتس‌اپ و بیش از ۱۰ سرویس دیگر", use: "ثبت‌نام بدون سیم‌کارت",
+    plans: { from: { number: 40000 } },
+    includes: ["شماره اختصاصی از بیش از ۱۰۰ کشور", "کد تأیید در همان صفحه سفارش", "کد نیامد؟ شماره جدید یا بازگشت وجه"] },
   // ----- Variants (one page each, grouped on the product page by `family`) -----
   { id: "chatgpt-go", hidden: true, family: "chatgpt", tier: "Go", name: "ChatGPT Go", maker: "OpenAI", category: "ai", monogram: "GO", etaMinutes: 10,
     description: "نسخه اقتصادی ChatGPT با سقف بالاتر از رایگان", use: "برای استفاده روزمره، ارزان",
@@ -436,7 +439,7 @@ export const dropOf = (id: string) => liveDrops().find((d) => d.productId === id
 export const kindOf = (p: Product): ProductKind => p.kind ?? "sub";
 export const isSub = (p: Product) => kindOf(p) === "sub";
 /** Display name of an option key: «یک ماهه», «۱۰ دلار», «آمریکا». */
-export const optionLabel = (p: Product, key: string) => p.labels?.[key] ?? duration(key);
+export const optionLabel = (p: Product, key: string) => (livePlan(key) ? livePlanLabel(key) : p.labels?.[key] ?? duration(key));
 export const axisOf = (p: Product) => p.axis ?? "مدت اشتراک";
 /** «فوری» or «حدود ۱۰ دقیقه». */
 export const etaText = (p: Product) => (p.etaMinutes === 0 ? "خودکار" : `حدود ${fa(p.etaMinutes)} دقیقه`);
@@ -454,7 +457,14 @@ export const deliveryTypes = (p: Product) =>
   [...new Set(planKeys(p).flatMap((m) => Object.keys(p.plans[m] ?? {})))] as DeliveryType[];
 
 /** seats: group buy size (1 = just me). ip: country of the static IP add-on. */
-export type Selection = { id: string; plan: Months; type: DeliveryType; seats?: number; ip?: string };
+export type Selection = {
+  id: string; plan: Months; type: DeliveryType; seats?: number; ip?: string;
+  /** Live virtual number (plan `5s:…`): the Toman price shown when it was picked. The server re-prices it from 5sim. */
+  unit?: number;
+};
+/** A cart line whose option exists: a plan of the product, or a live 5sim number. */
+export const sellable = (p: Product, sel: Selection) =>
+  kindOf(p) === "number" ? sel.type === "number" && !!livePlan(sel.plan) : !!p.plans[sel.plan]?.[sel.type];
 
 /** Dedicated foreign static IP, sold as an add-on to some subscriptions. Price per month of the plan. */
 export const STATIC_IP = {
@@ -491,6 +501,7 @@ export function extrasLabel(sel: Selection) {
 }
 
 export function priceOf(sel: Selection): { price: number; was?: number } {
+  if (livePlan(sel.plan)) return { price: Math.max(0, Math.round(Number(sel.unit) || 0)) };
   const base = productById(sel.id).plans[sel.plan]?.[sel.type] ?? 0;
   const d = liveDrops().find((x) => x.productId === sel.id && x.plan === sel.plan && x.type === sel.type);
   if (d) return { price: d.price, was: base };
