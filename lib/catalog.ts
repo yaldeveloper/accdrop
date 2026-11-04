@@ -4,7 +4,7 @@ import { livePlan, livePlanLabel } from "./numbers";
 
 /** How a purchase reaches the customer. */
 export type DeliveryType = "own" | "ready" | "username" | "code" | "number";
-export type Category = "ai" | "code" | "create" | "work" | "apple" | "game" | "telegram" | "number";
+export type Category = "ai" | "code" | "create" | "work" | "apple" | "music" | "game" | "telegram" | "number";
 /** What the customer picks: a subscription length, a gift-card amount, a region, a quantity or a country. */
 export type ProductKind = "sub" | "gift" | "account" | "qty" | "number";
 /** Key of one purchasable option: months ("1", "12"), dollars ("10"), a region ("us"), a quantity ("500"). */
@@ -79,6 +79,7 @@ export const CATEGORIES: Record<"all" | Category, string> = {
   create: "طراحی و ویدئو",
   work: "کار و آموزش",
   apple: "اپل و گیفت‌کارت",
+  music: "موزیک",
   game: "گیم",
   telegram: "تلگرام",
   number: "شماره مجازی",
@@ -273,6 +274,16 @@ const GIFTS: G[] = [
     howTo: "در Google Play روی عکس پروفایل بزن، Payments & subscriptions و بعد Redeem code را بزن و کد را وارد کن. اکانت باید ریجن آمریکا باشد.",
     includes: ["کد رسمی آمریکا", "تحویل خودکار", "برای اپ، بازی و اشتراک‌های اندروید"],
     opts: [["5", usd(5), 5, 5.2], ["10", usd(10), 10, 10.4], ["25", usd(25), 25, 26.01], ["50", usd(50), 50, 52.02]] },
+  { id: "tidal", name: "Tidal Gift Card", maker: "Tidal", category: "music", monogram: "TI", brand: "Tidal",
+    description: "گیفت‌کارت تایدال آمریکا برای پخش موسیقی با کیفیت Hi-Res", use: "موسیقی با بالاترین کیفیت",
+    howTo: "با VPN آمریکا به tidal.com/redeem برو، یک اکانت Tidal بساز یا وارد شو (ریجن آمریکا) و کد را وارد کن؛ اعتبار کارت صرف اشتراک ماهانه می‌شود.",
+    includes: ["کد رسمی آمریکا", "تحویل خودکار", "پخش Hi-Res و Dolby Atmos، بدون تبلیغ"],
+    opts: [["20", usd(20), "20 USD", 20.44], ["60", usd(60), "60 USD", 61.4], ["120", usd(120), "120 USD", 122.8]] },
+  { id: "deezer", name: "Deezer Premium", maker: "Deezer", category: "music", monogram: "DZ", brand: "Deezer", axis: "مدت اشتراک (آمریکا)",
+    description: "گیفت‌کارت Deezer Premium آمریکا، یک یا سه ماه", use: "موسیقی بدون تبلیغ و آفلاین",
+    howTo: "با VPN آمریکا به deezer.com/redeem برو، با اکانت Deezer خودت (یا یک اکانت تازه) وارد شو و کد را وارد کن تا Premium فعال شود.",
+    includes: ["کد رسمی آمریکا", "تحویل خودکار", "بدون تبلیغ، دانلود آفلاین و پخش با کیفیت بالا"],
+    opts: [["1", "۱ ماه", "10.99 USD", 11.05], ["3", "۳ ماه", "32.97 USD", 33.16]] },
   { id: "steam", name: "Steam Gift Card", maker: "Valve", category: "game", monogram: "ST", brand: "Steam",
     description: "شارژ کیف پول استیم", use: "خرید بازی در استیم",
     howTo: "در store.steampowered.com/account/redeemwalletcode وارد اکانت استیم شو و کد را وارد کن.",
