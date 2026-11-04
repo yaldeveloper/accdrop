@@ -2166,3 +2166,20 @@ footer.ft .legal{margin-top:18px}
 .co-pay .opt-logo.ic svg.i{width:18px;height:18px}
 .co-pay .opt-logo.usdt{background:#26A17B;border-color:#26A17B;color:#fff;font-size:20px;font-weight:700}
 @media (max-width:700px){.p2-head .p2-lead{display:none}.p2-hl{margin-top:4px}}
+
+/* ===== v18: supplier page ===== */
+.sup-top{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.sup-stat{display:grid;gap:4px}
+.sup-stat b{font-size:20px;font-weight:600;display:flex;align-items:center;gap:6px}
+.sup-mk{width:80px;height:36px}
+.sup-q{width:100%;margin:6px 0 14px}
+.sup-tbl-w{overflow-x:auto}
+.sup-tbl{width:100%;border-collapse:collapse;font-size:13px;min-width:860px}
+.sup-tbl th{text-align:start;font-weight:500;color:var(--gray-d);padding:10px;border-bottom:1px solid var(--hair-2)}
+.sup-tbl td{padding:12px 10px;border-bottom:1px solid var(--hair);vertical-align:middle}
+.sup-tbl td small{display:block;font-size:11.5px;line-height:1.7}
+.sup-tbl tr.off{opacity:.5}
+.sup-tbl select{max-width:240px}
+.sup-tbl .ok{color:var(--lime)}.sup-tbl .bad{color:#E06C6C}
+.od-secret b{white-space:pre-line}
+@media (max-width:760px){.sup-top{grid-template-columns:minmax(0,1fr)}}

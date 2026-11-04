@@ -200,6 +200,14 @@ create table if not exists legal_profiles (
   data jsonb not null,
   updated_at timestamptz not null default now()
 );
+create table if not exists supplier_map (
+  product_id text not null,
+  plan text not null,
+  supplier_id int not null,
+  primary key (product_id, plan)
+);
+alter table order_lines add column if not exists supply_ref text;
+alter table order_lines add column if not exists supply_cost numeric;
 insert into discounts (code, rate) values ('WELCOME', 0.1) on conflict do nothing;
 `;
 
