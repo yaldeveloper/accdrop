@@ -48,6 +48,8 @@ export type Product = {
   tier?: string;
   /** Supplier (Insight Store) product id per option; paid code lines are bought and delivered automatically. */
   ix?: Record<string, number>;
+  /** Per-product names of delivery methods, e.g. «آماده ۲۰۱۸» and «سفارشی» for Apple ID. `explain` replaces the long text. */
+  types?: Partial<Record<DeliveryType, { title: string; detail: string; explain?: string }>>;
   /** What the customer receives, replacing the generic text of the delivery method. */
   deliver?: string;
   /** The last step after delivery: how to redeem or use what was delivered. */
@@ -145,16 +147,27 @@ const SAMPLES: Product[] = [
     description: "استارز برای ربات‌ها، کانال‌ها و هدیه", use: "پرداخت داخل تلگرام",
     plans: { "100": { username: 190000 }, "250": { username: 450000 }, "500": { username: 890000 }, "1000": { username: 1750000 } },
     includes: ["خرید در ربات‌ها و مینی‌اپ‌ها", "حمایت از کانال‌ها و پست‌های پولی", "هدیه دادن به دوستان"] },
+  // Sold the way Iranian shops offer it: what it is for and how long the warranty lasts, ready (made in 2018, instant
+  // from our stock, single or wholesale) or made to order with a new personal email. Priced just under competitors
+  // (Nov 2026: ready 380–440k, made to order 420–480k).
   { id: "appleid", name: "Apple ID", maker: "Apple", category: "apple", kind: "account", monogram: "AP", etaMinutes: 0, badge: "عمده",
-    axis: "کشور اکانت", labels: { us: "آمریکا", ca: "کانادا", uk: "انگلیس", de: "آلمان", tr: "ترکیه", ae: "امارات", jp: "ژاپن", au: "استرالیا" },
-    description: "اپل آیدی آماده و اختصاصی، تکی یا عمده برای موبایل‌فروشی‌ها", use: "ورود به App Store",
-    // Priced under Iranian competitors (Nov 2026: single US ~330–485k, 50-pack ~12.2–13.4M toman).
-    plans: { us: { code: 319000 }, ca: { code: 349000 }, uk: { code: 379000 }, de: { code: 379000 },
-      tr: { code: 319000 }, ae: { code: 379000 }, jp: { code: 399000 }, au: { code: 379000 } },
+    axis: "نوع و گارانتی", labels: { life: "iCloud مادام‌العمر", icloud: "iCloud ۳۰ روزه", store: "App Store ۳۰ روزه" },
+    description: "اپل آیدی آماده یا سفارشی با گارانتی، تکی یا عمده برای موبایل‌فروشی‌ها", use: "App Store و iCloud",
+    plans: {
+      life: { code: 429000, ready: 469000 },
+      icloud: { code: 409000, ready: 429000 },
+      store: { code: 369000, ready: 409000 },
+    },
+    types: {
+      code: { title: "آماده (ساخت ۲۰۱۸)", detail: "تحویل فوری و خودکار؛ تکی یا عمده" },
+      ready: { title: "سفارشی", detail: "با ایمیل شخصی تازه، معمولاً تا چند ساعت",
+        explain: "یک اپل آیدی تازه با ایمیل شخصی جدید فقط برای تو می‌سازیم. ایمیل، رمزها، سؤال‌های امنیتی و تاریخ تولد را در حساب کاربری‌ات تحویل می‌گیری و اکانت کاملاً مال خودت است." },
+    },
     bulk: [[5, 8], [10, 12], [25, 18], [50, 25]],
     deliver: "بلافاصله بعد از پرداخت، ایمیل و رمز اپل آیدی، رمز ایمیل، سؤال‌های امنیتی و تاریخ تولد در حساب کاربری‌ات نمایش داده و پیامک می‌شود. در خرید عمده هر اکانت در یک خط جداست.",
-    howTo: "در گوشی به Settings › Media & Purchases (یا App Store) برو و فقط همان‌جا وارد شو، نه در iCloud بالای تنظیمات؛ این‌طوری گوشی به اکانت قفل نمی‌شود. بعد از ورود، رمز را عوض کن.",
-    includes: ["اکانت تازه با ایمیل جدید، فقط برای تو", "سؤال‌های امنیتی و تاریخ تولد", "تحویل خودکار، تکی یا عمده تا ۱۰۰ عدد"] },
+    howTo: "اکانت‌های App Store را فقط در Settings › Media & Purchases وارد کن، نه در iCloud بالای تنظیمات. اکانت‌های iCloud را می‌توانی در iCloud هم وارد کنی. بعد از ورود، رمز را عوض کن.",
+    warranty: "گارانتی ۳۰ روزه یا مادام‌العمر",
+    includes: ["آماده ۲۰۱۸ یا سفارشی با ایمیل شخصی", "سؤال‌های امنیتی و تاریخ تولد", "اکانت آماده: تکی یا عمده تا ۱۰۰ عدد"] },
   // Live 5sim numbers (lib/server/fivesim.ts): countries and prices come from 5sim; the plan below is only the
   // «از …» price shown in listings and is never sold (see priceLines).
   { id: "vnumber", name: "Virtual Number", maker: "AccDrop", category: "number", kind: "number", monogram: "VN", etaMinutes: 0,
@@ -520,8 +533,13 @@ export function priceOf(sel: Selection): { price: number; was?: number } {
   return { price: base };
 }
 
+/** Title and one-line detail of a delivery method, as this product names it. */
+export const deliveryOf = (p: Product | undefined, t: DeliveryType) => ({ ...DELIVERY[t], ...p?.types?.[t] });
+
 /** What each delivery method means, in plain words, for this product. */
 export function deliveryExplain(p: Product, t: DeliveryType) {
+  const own = p.types?.[t]?.explain;
+  if (own) return own;
   switch (t) {
     case "own": return `ایمیل اکانت ${p.maker} خودت را می‌دهی و اشتراک روی همان فعال می‌شود. رمز نمی‌خواهیم و تاریخچه‌ات می‌ماند.`;
     case "ready": return isSub(p) ? "یک اکانت تازه با ایمیل و رمز تحویل می‌گیری که فقط مال توست. ارزان‌تر و سریع‌تر است." : "یک اکانت تازه با ایمیل، رمز و اطلاعات امنیتی تحویل می‌گیری که فقط مال توست و می‌توانی رمزش را عوض کنی.";

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { DELIVERY, STATIC_IP, extrasLabel, ipPrice, linePrice, optionLabel, productById } from "@/lib/catalog";
+import { DELIVERY, STATIC_IP, extrasLabel, ipPrice, linePrice, optionLabel, productById, deliveryOf } from "@/lib/catalog";
 import { normalizeUsername, validEmail, validUsername } from "@/lib/account";
 import { fa, money } from "@/lib/format";
 import { BrandLogo, Dots, Icon } from "@/components/brand";
@@ -136,7 +136,7 @@ export default function CheckoutPage() {
                 const p = productById(l.id);
                 return (
                   <div className="co-act" key={i}>
-                    <div className="co-act-h"><span className="mono"><BrandLogo id={p.id} size={22} /></span><b className="en">{p.name}</b><small className="muted">{DELIVERY[l.type].title}</small></div>
+                    <div className="co-act-h"><span className="mono"><BrandLogo id={p.id} size={22} /></span><b className="en">{p.name}</b><small className="muted">{deliveryOf(p, l.type).title}</small></div>
                     {l.type === "own" ? (
                       <div className="fld">
                         <label htmlFor={`co-em-${i}`}>ایمیل اکانت {p.maker} تو</label>
@@ -235,7 +235,7 @@ export default function CheckoutPage() {
               return (
                 <li key={i}>
                   <span className="mono"><BrandLogo id={p.id} size={20} /></span>
-                  <div><b className="en">{p.name}</b><small>{optionLabel(p, l.plan)} • {DELIVERY[l.type].title}</small>{extrasLabel(l) && <small className="co-x">{extrasLabel(l)}</small>}</div>
+                  <div><b className="en">{p.name}</b><small>{optionLabel(p, l.plan)} • {deliveryOf(p, l.type).title}</small>{extrasLabel(l) && <small className="co-x">{extrasLabel(l)}</small>}</div>
                   <div className="r"><span className="num">{money(linePrice(l))}</span><button className="rm" onClick={() => removeLine(i)} aria-label={`حذف ${p.name}`}>حذف</button></div>
                 </li>
               );
