@@ -50,4 +50,6 @@ export const LOGOS: Record<string, string> = {
 LOGOS["google-ai-pro"] = LOGOS.gemini;
 LOGOS["grok-cursor"] = LOGOS.cursor;
 LOGOS["claude-api"] = LOGOS.claude;
+LOGOS["grok-api"] = LOGOS.grok;
+LOGOS["elevenlabs-credits"] = LOGOS.elevenlabs;
 LOGOS["notion-business"] = LOGOS.notion;

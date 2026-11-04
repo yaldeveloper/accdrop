@@ -5,7 +5,7 @@ import { Scene } from "@/components/scene";
 import { themeOf } from "@/lib/theme";
 import { notFound } from "next/navigation";
 import { loadCatalog } from "@/lib/server/catalog";
-import { CATEGORIES, DELIVERY, PRICES_UPDATED, PRODUCTS, axisOf, deliveryExplain, deliveryTypes, etaText, guaranteeOf, isSub, kindOf, minPrice, nounOf, optionLabel, planKeys, priceOf, type DeliveryType, type Product } from "@/lib/catalog";
+import { CATEGORIES, DELIVERY, PRICES_UPDATED, PRODUCTS, axisOf, deliveryExplain, deliveryTypes, etaText, guaranteeOf, isSub, kindOf, minPrice, nounOf, optionLabel, planKeys, priceOf, type DeliveryType, type Product, typeName } from "@/lib/catalog";
 import { seoOf } from "@/lib/seo";
 import { Toc } from "@/components/toc";
 import { CONTENT, contentOf } from "@/lib/content";
@@ -49,7 +49,10 @@ const keywordOf = (p: Product) => contentOf(p).keyword ?? `خرید اکانت $
 function stepsFor(p: Product, t: DeliveryType): [string, string][] {
   const pay: [string, string] = ["پرداخت", `${axisOf(p)} را انتخاب کن و با کارت بانکی بپرداز.`];
   switch (t) {
-    case "own": return [pay, ["ایمیل اکانت", `ایمیل اکانت ${p.maker} خودت را وارد کن. رمز لازم نیست.`], [`فعال‌سازی، ${etaText(p)}`, "اشتراک روی همان اکانت فعال می‌شود و پیامک می‌گیری."]];
+    case "own": return p.ask
+      ? [pay, [p.ask.short, `${p.ask.short} اکانت ${p.maker} خودت را وارد کن. رمز لازم نیست.`], [`فعال‌سازی، ${etaText(p)}`, "اشتراک روی همان اکانت فعال می‌شود و پیامک می‌گیری."]]
+      : [pay, ["ایمیل اکانت", `ایمیل اکانت ${p.maker} خودت را وارد کن. رمز لازم نیست.`], [`فعال‌سازی، ${etaText(p)}`, "اشتراک روی همان اکانت فعال می‌شود و پیامک می‌گیری."]];
+    case "shared": return [pay, ["آماده‌سازی", "اطلاعات ورود یک اکانت مشترک برایت آماده می‌شود."], [`تحویل، ${etaText(p)}`, "اطلاعات ورود را در حساب کاربری و پیامک می‌بینی. رمز را عوض نکن."]];
     case "ready": return [pay, ["ساخت اکانت", "یک اکانت تازه فقط برای تو ساخته می‌شود."], [`تحویل، ${etaText(p)}`, "اطلاعات ورود را در حساب کاربری و پیامک می‌بینی."]];
     case "username": return [pay, ["یوزرنیم تلگرام", "آیدی خودت یا کسی که می‌خواهی هدیه بگیرد را وارد کن."], [`ارسال، ${etaText(p)}`, "روی همان آیدی فعال می‌شود و پیامک می‌گیری."]];
     case "code": return [pay, ["دریافت فوری", "کد یا اطلاعات ورود در صفحه سفارش و پیامک نمایش داده می‌شود."],
@@ -116,7 +119,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         offerCount: prices.length, availability: "https://schema.org/InStock", url: `https://accdrop.ir/${c.slug}`,
         seller: { "@type": "Organization", name: "AccDrop" },
         offers: months.flatMap((m) => deliveryTypes(p).filter((t) => p.plans[m]?.[t]).map((t) => ({
-          "@type": "Offer", name: `${p.name}، ${optionLabel(p, m)}، ${DELIVERY[t].title}`, priceCurrency: "IRR",
+          "@type": "Offer", name: `${p.name}، ${optionLabel(p, m)}، ${typeName(p, t).title}`, priceCurrency: "IRR",
           price: priceOf({ id: p.id, plan: m, type: t }).price * 10, availability: "https://schema.org/InStock",
           url: `https://accdrop.ir/${c.slug}?plan=${m}&type=${t}`,
         }))),
@@ -172,7 +175,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               <ul className="p2-hl">{p.includes.slice(0, 3).map((x) => <li key={x}><Icon id="check" />{x}</li>)}</ul>
               <ul className="p2-perks" aria-label="مزایای خرید از اک‌دراپ">
                 <li><span className="p2-pi"><Icon id="shield" /></span><span><b>{isSub(p) && !p.warranty ? "ضمانت تا روز آخر" : guaranteeOf(p)}</b><small>{isSub(p) && !p.warranty ? "اگر قطع شد، روزهای باقی‌مانده برمی‌گردد" : "جایگزینی یا بازگشت کامل وجه"}</small></span></li>
-                <li><span className="p2-pi"><Icon id="user" /></span><span><b>{instant ? "تحویل فوری و خودکار" : auto ? "تحویل خودکار" : isSub(p) && deliveryTypes(p).includes("own") ? "روی اکانت خودت" : deliveryTypes(p).includes("ready") ? "اکانت آماده، فقط برای تو" : "تحویل در حساب کاربری"}</b><small>{instant ? "همان لحظه، در حساب کاربری و پیامک" : auto ? "معمولاً چند دقیقه بعد از پرداخت، با پیامک" : isSub(p) && deliveryTypes(p).includes("own") ? "فقط ایمیل؛ رمز نمی‌خواهیم" : `تحویل ${etaText(p)}، در حساب کاربری و پیامک`}</small></span></li>
+                <li><span className="p2-pi"><Icon id="user" /></span><span><b>{instant ? "تحویل فوری و خودکار" : auto ? "تحویل خودکار" : isSub(p) && deliveryTypes(p).includes("own") ? "روی اکانت خودت" : deliveryTypes(p).includes("ready") ? "اکانت آماده، فقط برای تو" : "تحویل در حساب کاربری"}</b><small>{instant ? "همان لحظه، در حساب کاربری و پیامک" : auto ? "معمولاً چند دقیقه بعد از پرداخت، با پیامک" : isSub(p) && deliveryTypes(p).includes("own") ? `فقط ${p.ask?.short ?? "ایمیل"}؛ رمز نمی‌خواهیم` : `تحویل ${etaText(p)}، در حساب کاربری و پیامک`}</small></span></li>
                 {canInstall(Math.max(...planKeys(p).map((m) => priceOf({ id: p.id, plan: m, type: Object.keys(p.plans[m] ?? {})[0] as DeliveryType }).price))) && (
                   <li><span className="p2-pi sp"><img src="/pay/snapppay.svg" alt="" width={36} height={36} /></span><span><b>{fa(INSTALLMENTS.parts)} قسط بدون کارمزد</b><small>با اسنپ‌پی، بدون ضامن</small></span></li>
                 )}
@@ -213,7 +216,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                   <div><dt>دسته</dt><dd>{CATEGORIES[p.category]}</dd></div>
                   <div><dt>نوع</dt><dd>{isSub(p) ? "اشتراک رسمی" : `${nounOf(p)}، رسمی و قانونی`}</dd></div>
                   <div><dt>{axisOf(p).replace(" (آمریکا)", "")}</dt><dd>{months.map((m) => optionLabel(p, m)).join("، ")}</dd></div>
-                  <div><dt>روش تحویل</dt><dd>{types.map((t) => DELIVERY[t].title).join("، ")}</dd></div>
+                  <div><dt>روش تحویل</dt><dd>{types.map((t) => typeName(p, t).title).join("، ")}</dd></div>
                   <div><dt>زمان تحویل</dt><dd>{etaText(p)}</dd></div>
                   <div><dt>پلتفرم‌ها</dt><dd>{seo.platforms.join("، ")}</dd></div>
                   <div><dt>شروع قیمت</dt><dd><b>{money(minPrice(p))}</b> تومان</dd></div>
@@ -252,7 +255,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             <div className="p2-tbl-w">
               <table className="p2-tbl">
                 <caption className="sr">جدول قیمت {p.name}</caption>
-                <thead><tr><th scope="col">{axisOf(p)}</th>{types.map((t) => <th scope="col" key={t}>{DELIVERY[t].title}</th>)}</tr></thead>
+                <thead><tr><th scope="col">{axisOf(p)}</th>{types.map((t) => <th scope="col" key={t}>{typeName(p, t).title}</th>)}</tr></thead>
                 <tbody>
                   {months.map((m) => (
                     <tr key={m}>
@@ -282,7 +285,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             <div className="p2-ways">
               {types.map((t) => (
                 <div className="p2-way" key={t}>
-                  <h3>{DELIVERY[t].title}{t === "own" && types.length > 1 && <span className="p2-rec">پیشنهاد ما</span>}</h3>
+                  <h3>{typeName(p, t).title}{t === "own" && types.length > 1 && <span className="p2-rec">پیشنهاد ما</span>}</h3>
                   <p>{deliveryExplain(p, t)}</p>
                   <ol>{stepsFor(p, t).map(([b, d]) => <li key={b}><b>{b}</b><span>{d}</span></li>)}</ol>
                 </div>

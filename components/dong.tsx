@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { DELIVERY, optionLabel, priceOf, productById, type DeliveryType } from "@/lib/catalog";
+import { DELIVERY, optionLabel, priceOf, productById, type DeliveryType, typeName } from "@/lib/catalog";
 import { productHref } from "@/lib/content";
 import { normalizeUsername, validEmail, validUsername } from "@/lib/account";
 import type { SplitView } from "@/lib/billing";
@@ -99,7 +99,7 @@ export function Dong({ code }: { code: string }) {
             <div>
               <small className="muted">{v.isOwner ? "گروه تو" : <>{v.owner} دعوتت کرده</>}</small>
               <h1>دنگ <Link href={productHref(p)} className="en">{p.name}</Link></h1>
-              <small className="muted">{optionLabel(p, v.plan)} • {DELIVERY[type].title} • گروه {fa(v.seats)} نفره</small>
+              <small className="muted">{optionLabel(p, v.plan)} • {typeName(p, type).title} • گروه {fa(v.seats)} نفره</small>
             </div>
           </div>
 

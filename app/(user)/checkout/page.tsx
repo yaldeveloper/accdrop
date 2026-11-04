@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { DELIVERY, STATIC_IP, extrasLabel, ipPrice, linePrice, optionLabel, productById } from "@/lib/catalog";
+import { DELIVERY, STATIC_IP, extrasLabel, ipPrice, linePrice, optionLabel, productById, typeName, ownAsk, validOwn } from "@/lib/catalog";
 import { normalizeUsername, validEmail, validUsername } from "@/lib/account";
 import { fa, money } from "@/lib/format";
 import { BrandLogo, Dots, Icon } from "@/components/brand";
@@ -42,7 +42,7 @@ export default function CheckoutPage() {
   // Prefill activation emails from the profile.
   useEffect(() => {
     if (!user?.email) return;
-    setEmails((e) => Object.fromEntries(cart.map((l, i) => [i, e[i] ?? (l.type === "own" ? user.email : "")])));
+    setEmails((e) => Object.fromEntries(cart.map((l, i) => [i, e[i] ?? (l.type === "own" && !productById(l.id).ask ? user.email : "")])));
   }, [user?.email, cart]);
 
   const subtotal = cart.reduce((s, l) => s + linePrice(l), 0);
@@ -60,8 +60,8 @@ export default function CheckoutPage() {
 
   const pay = async () => {
     if (!user || inFlow) { notify("اول وارد حسابت شو"); document.getElementById("co-account")?.scrollIntoView({ behavior: "smooth", block: "center" }); return; }
-    const ok = (t: string, v: string) => (t === "own" ? validEmail(v) : t === "username" ? validUsername(v) : true);
-    const missing = cart.map((l, i) => (!ok(l.type, emails[i] ?? "") ? i : -1)).filter((i) => i >= 0);
+    const ok = (id: string, t: string, v: string) => (t === "own" ? validOwn(productById(id), v) : t === "username" ? validUsername(v) : true);
+    const missing = cart.map((l, i) => (!ok(l.id, l.type, emails[i] ?? "") ? i : -1)).filter((i) => i >= 0);
     const team = cart.map((l, i) => (l.type === "own" && (l.seats ?? 1) > 1 && !Array.from({ length: l.seats! - 1 }, (_, k) => members[i]?.[k] ?? "").every(validEmail) ? i : -1)).filter((i) => i >= 0);
     if (!missing.length && team.length) {
       setBad(team.map((i) => 100 + i));
@@ -136,13 +136,13 @@ export default function CheckoutPage() {
                 const p = productById(l.id);
                 return (
                   <div className="co-act" key={i}>
-                    <div className="co-act-h"><span className="mono"><BrandLogo id={p.id} size={22} /></span><b className="en">{p.name}</b><small className="muted">{DELIVERY[l.type].title}</small></div>
+                    <div className="co-act-h"><span className="mono"><BrandLogo id={p.id} size={22} /></span><b className="en">{p.name}</b><small className="muted">{typeName(p, l.type).title}</small></div>
                     {l.type === "own" ? (
                       <div className="fld">
-                        <label htmlFor={`co-em-${i}`}>ایمیل اکانت {p.maker} تو</label>
-                        <input id={`co-em-${i}`} type="email" className={`ltr ${bad.includes(i) ? "bad" : ""}`} placeholder="you@gmail.com" disabled={!step1Done}
+                        <label htmlFor={`co-em-${i}`}>{ownAsk(p).label}</label>
+                        <input id={`co-em-${i}`} type={p.ask ? "text" : "email"} className={`ltr ${bad.includes(i) ? "bad" : ""}`} placeholder={ownAsk(p).placeholder} disabled={!step1Done}
                           value={emails[i] ?? ""} onChange={(e) => { setEmails({ ...emails, [i]: e.target.value }); setBad(bad.filter((x) => x !== i)); }} />
-                        <small className="muted">فقط ایمیل. هیچ‌وقت رمز عبورت را نمی‌خواهیم.</small>
+                        <small className="muted">{ownAsk(p).hint}</small>
                         {(l.seats ?? 1) > 1 && (
                           <div className={`co-team ${bad.includes(100 + i) ? "bad" : ""}`} id={`co-mb-${i}`}>
                             <b>ایمیل بقیه اعضای گروه</b>
@@ -235,7 +235,7 @@ export default function CheckoutPage() {
               return (
                 <li key={i}>
                   <span className="mono"><BrandLogo id={p.id} size={20} /></span>
-                  <div><b className="en">{p.name}</b><small>{optionLabel(p, l.plan)} • {DELIVERY[l.type].title}</small>{extrasLabel(l) && <small className="co-x">{extrasLabel(l)}</small>}</div>
+                  <div><b className="en">{p.name}</b><small>{optionLabel(p, l.plan)} • {typeName(p, l.type).title}</small>{extrasLabel(l) && <small className="co-x">{extrasLabel(l)}</small>}</div>
                   <div className="r"><span className="num">{money(linePrice(l))}</span><button className="rm" onClick={() => removeLine(i)} aria-label={`حذف ${p.name}`}>حذف</button></div>
                 </li>
               );

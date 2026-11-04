@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { DELIVERY, extrasLabel, isSub, optionLabel, productById } from "@/lib/catalog";
+import { DELIVERY, extrasLabel, isSub, optionLabel, productById, typeName } from "@/lib/catalog";
 import { STAGES, STATUS_TITLE, isPaid, passWindow, stageOf, type Order } from "@/lib/account";
 import { fa, faDate, money } from "@/lib/format";
 import { INSTALLMENTS } from "@/lib/billing";
@@ -96,10 +96,10 @@ export function OrderDetail({ order, now, onPay, paying }: { order: Order; now: 
                   <span className="mono"><BrandLogo id={p.id} size={22} /></span>
                   <div className="od-l">
                     <b className="en">{p.name}</b>
-                    <small>{optionLabel(p, l.plan)} • {DELIVERY[l.type].title}</small>
+                    <small>{optionLabel(p, l.plan)} • {typeName(p, l.type).title}</small>
                     {extrasLabel(l) && <small className="od-x">{extrasLabel(l)}</small>}
                     {l.members?.length ? <small className="ltr-i">بقیه اعضا: <span className="en">{l.members.join("، ")}</span></small> : null}
-                    {l.type === "own" && l.email && <small className="ltr-i">فعال‌سازی روی <span className="en">{l.email}</span></small>}
+                    {l.type === "own" && l.email && <small className="ltr-i">فعال‌سازی روی {p.ask ? `${p.ask.short} ` : ""}<span className="en">{l.email}</span></small>}
                     {l.type === "username" && l.username && <small className="ltr-i">ارسال به <span className="en">{l.username}</span></small>}
                     {s === 2 && isSub(p) && <small className="ok">فعال تا {faDate(w.end, false)}</small>}
                     {paid && l.number && l.lineId ? <NumberBox code={order.code} lineId={l.lineId} initial={l.number} /> : <>

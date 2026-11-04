@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { DELIVERY, MAX_SEATS, axisOf, deliveryTypes, dropOf, etaText, groupOff, isSub, linePrice, minPrice, nounOf, optionLabel, planKeys, priceOf, variantsOf, type DeliveryType, type Months, type Product, type Selection } from "@/lib/catalog";
+import { DELIVERY, MAX_SEATS, axisOf, deliveryTypes, dropOf, etaText, groupOff, isSub, linePrice, minPrice, nounOf, optionLabel, planKeys, priceOf, variantsOf, type DeliveryType, type Months, type Product, type Selection, typeName } from "@/lib/catalog";
 import { productHref } from "@/lib/content";
 import { INSTALLMENTS, canInstall, installment } from "@/lib/billing";
 import { api } from "./account";
@@ -128,13 +128,13 @@ export function BuyPanel({ product: p }: { product: Product }) {
             <label key={t} className={`bx-o bx-o2 ${on ? "on" : ""} ${amount ? "" : "dis"}`}>
               <input type="radio" name="type" checked={on} disabled={!amount} onChange={() => choose({ type: t })} />
               <span className="bx-r" aria-hidden="true" />
-              <span className="bx-l"><b>{DELIVERY[t].title}</b><small>{amount ? DELIVERY[t].detail : "برای این گزینه موجود نیست"}</small></span>
+              <span className="bx-l"><b>{typeName(p, t).title}</b><small>{amount ? typeName(p, t).detail : "برای این گزینه موجود نیست"}</small></span>
               {types.length > 1 && amount ? <span className="bx-p num">{money(priceOf({ id: p.id, plan: sel.plan, type: t }).price)}</span> : null}
             </label>
           );
         })}
       </fieldset> : (
-        <p className="bx-one"><span>{months.length === 1 ? <>{optionLabel(p, sel.plan)} • </> : null}{DELIVERY[sel.type].title}</span><small>{DELIVERY[sel.type].detail}</small></p>
+        <p className="bx-one"><span>{months.length === 1 ? <>{optionLabel(p, sel.plan)} • </> : null}{typeName(p, sel.type).title}</span><small>{typeName(p, sel.type).detail}</small></p>
       )}
 
       {p.group?.length ? (
