@@ -3,6 +3,7 @@ import { loadCatalog } from "@/lib/server/catalog";
 import { usdtRate } from "@/lib/server/crypto";
 import { crConfigured, crWallet } from "@/lib/server/cryptorefills";
 import { body, fail, json, route, withAdmin } from "@/lib/server/http";
+import { fivesimBalance, fivesimConfigured, fivesimSettings, liveOffers } from "@/lib/server/fivesim";
 import { qdBalance, qdConfigured } from "@/lib/server/quickdigi";
 import { setSupplierMap, supplierBalance, supplierConfigured, supplierMap, supplierProducts } from "@/lib/server/supplier";
 
@@ -10,16 +11,16 @@ import { setSupplierMap, supplierBalance, supplierConfigured, supplierMap, suppl
 export const GET = route(async () => withAdmin(async () => {
   await loadCatalog();
   const ours = ALL_PRODUCTS.flatMap((p) => Object.entries(p.plans).filter(([, o]) => o?.code).map(([plan, o]) => ({ productId: p.id, plan, name: p.name, label: optionLabel(p, plan), price: o!.code! })));
-  const [rate, map, cr] = await Promise.all([usdtRate(), supplierMap(), crWallet().catch((e) => ({ error: String((e as Error).message).slice(0, 160) }))]);
+  const [rate, map, cr, fivesim] = await Promise.all([usdtRate(), supplierMap(), crWallet().catch((e) => ({ error: String((e as Error).message).slice(0, 160) })), fivesimInfo()]);
   const crInfo = { configured: crConfigured(), wallet: cr };
   const qd = { configured: qdConfigured(), balance: qdConfigured() ? await qdBalance().catch((e) => ({ error: String((e as Error).message).slice(0, 160) })) : null };
-  if (!supplierConfigured()) return json({ configured: false, rate, ours, map, products: [], balance: null, cr: crInfo, qd });
+  if (!supplierConfigured()) return json({ configured: false, rate, ours, map, products: [], balance: null, cr: crInfo, qd, fivesim });
   try {
     const [products, balance] = await Promise.all([supplierProducts(), supplierBalance()]);
-    return json({ configured: true, rate, ours, map, products, balance, test: process.env.INSIGHT_TEST_MODE === "1", cr: crInfo, qd });
+    return json({ configured: true, rate, ours, map, products, balance, test: process.env.INSIGHT_TEST_MODE === "1", cr: crInfo, qd, fivesim });
   } catch (e) {
     console.error(e);
-    return json({ configured: true, rate, ours, map, products: [], balance: null, error: String((e as Error).message).slice(0, 200), cr: crInfo, qd });
+    return json({ configured: true, rate, ours, map, products: [], balance: null, error: String((e as Error).message).slice(0, 200), cr: crInfo, qd, fivesim });
   }
 }));
 
@@ -31,3 +32,14 @@ export const POST = route(async (req: Request) => withAdmin(async () => {
   await setSupplierMap(p.id, b.plan, b.supplierId ? Math.trunc(Number(b.supplierId)) : null);
   return json({ map: await supplierMap() });
 }));
+
+/** 5sim (virtual numbers): balance, pricing settings and a sample of today's Telegram prices. */
+async function fivesimInfo() {
+  const settings = fivesimSettings();
+  if (!fivesimConfigured()) return { configured: false, ...settings };
+  const [balance, sample] = await Promise.all([
+    fivesimBalance().catch((e) => String((e as Error).message).slice(0, 200)),
+    liveOffers("telegram").then((o) => o.slice(0, 6)).catch(() => []),
+  ]);
+  return { configured: true, ...settings, balance: typeof balance === "number" ? balance : null, error: typeof balance === "string" ? balance : undefined, sample };
+}

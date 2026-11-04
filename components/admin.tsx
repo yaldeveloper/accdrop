@@ -185,6 +185,7 @@ export function AdminOrder({ code }: { code: string }) {
                 {l.email && <p>ایمیل مشتری: <b className="en sel">{l.email}</b></p>}
                 {l.username && <p>آیدی تلگرام: <b className="en sel">{l.username}</b></p>}
                 {l.members?.length ? <p>اعضای گروه: {l.members.map((m) => <b key={m} className="en sel" style={{ marginInlineEnd: 8 }}>{m}</b>)}</p> : null}
+                {l.number && <p>شماره ۵سیم: <b>{l.number.status}</b> • تلاش <span className="num">{fa(l.number.tries)}</span>{l.number.codes.length ? <> • کد: <b className="en sel">{l.number.codes.map((c) => c.code).join("، ")}</b></> : null}{l.supplyRef ? <> • <span className="en sel">{l.supplyRef}</span></> : null}</p>}
                 {l.ip && <p>آی‌پی ثابت: <b>{extrasLabel({ ...l, seats: 1 })}</b> (مشخصات اتصال را در «اطلاعات تحویل» بنویس)</p>}
                 {l.supplyRef && <p className={l.supplyRef.includes("ERR") ? "bad" : "muted"}>تأمین‌کننده: <span className="en sel">{l.supplyRef}</span></p>}
                 {(l.type === "code" || l.type === "number" || l.type === "ready" || l.secret) && (

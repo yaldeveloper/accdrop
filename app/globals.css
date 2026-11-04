@@ -2184,6 +2184,73 @@ footer.ft .legal{margin-top:18px}
 .od-secret b{white-space:pre-line}
 @media (max-width:760px){.sup-top{grid-template-columns:minmax(0,1fr)}}
 
+/* ----- Live virtual numbers (5sim) ----- */
+.vn-top-s{padding-bottom:56px}
+.vn-h1{font-size:clamp(28px,4vw,44px);font-weight:500;margin:18px 0 8px}
+.vn-lead{color:var(--gray-d);max-width:640px;margin:0 0 28px;line-height:1.9}
+.vn{display:grid;grid-template-columns:minmax(0,1fr);gap:28px}
+.vn-step{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;min-width:0}
+.vn-step h2{font-size:17px;font-weight:500;display:flex;align-items:center;gap:10px;margin:0}
+.vn-step h2 .num{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--lime);color:var(--ink);font-size:13px}
+.vn-svc{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.vn-svc button{display:flex;align-items:center;gap:10px;height:48px;padding:0 12px;border-radius:12px;border:1px solid var(--hair-2);background:var(--ink-1);color:var(--gray-d);font-size:14px;text-align:right;transition:border-color .2s,color .2s}
+.vn-logo{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:8px;flex:none}
+.vn-logo svg{width:16px;height:16px}
+.vn-logo.sm{width:22px;height:22px;border-radius:6px}
+.vn-logo.sm svg{width:13px;height:13px}
+.vn-svc button:hover{color:var(--paper);border-color:var(--hair-2)}
+.vn-svc button.on{border-color:var(--lime);color:var(--paper);background:var(--ink-2)}
+.vn-bar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px}
+.vn-tools{display:flex;gap:8px;flex:1;justify-content:flex-end;min-width:260px}
+.vn-q,.vn-sort{height:42px;border-radius:10px;border:1px solid var(--hair-2);background:var(--ink-1);color:var(--paper);font:inherit;font-size:14px;padding:0 12px}
+.vn-q{flex:1;max-width:320px}
+.vn-rows{list-style:none;margin:0;padding:0;border:1px solid var(--hair-2);border-radius:14px;overflow:hidden}
+.vn-rows li{display:grid;grid-template-columns:minmax(0,1fr) 90px 150px 96px;align-items:center;gap:12px;padding:10px 14px;border-top:1px solid var(--hair)}
+.vn-rows li:first-child{border-top:0}
+.vn-rows li:hover{background:var(--ink-1)}
+.vn-c{display:flex;align-items:center;gap:12px;min-width:0}
+.vn-c img,.vn-flag{width:28px;height:21px;border-radius:4px;object-fit:cover;background:var(--ink-2);flex:none;box-shadow:0 0 0 1px var(--hair)}
+.vn-c b{font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vn-n{color:var(--gray-d);font-size:12px}
+.vn-p{font-weight:500;text-align:left}
+.vn-p small{font-weight:400;font-size:11px;color:var(--gray-d)}
+.vn-buy{height:38px;padding:0 18px;font-size:14px;justify-content:center}
+.vn-wait{font-size:14px;color:var(--gray-d);padding:18px 4px}
+.vn-how{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;counter-reset:vn}
+.vn-how li{display:grid;gap:4px;padding:14px;border-radius:12px;background:var(--ink-1);font-size:13px;color:var(--gray-d)}
+.vn-how b{color:var(--paper);font-weight:500}
+@media (max-width:640px){
+  .vn-top-s{padding-bottom:32px}
+  .vn-lead{margin-bottom:20px}
+  .vn{gap:22px}
+  .vn-svc{display:flex;overflow-x:auto;scrollbar-width:none;margin-inline:-16px;padding-inline:16px;scroll-padding-inline:16px}
+  .vn-svc::-webkit-scrollbar{display:none}
+  .vn-svc button{flex:none;height:42px}
+  .vn-tools{min-width:0;flex:1 1 100%}
+  .vn-q{min-width:0}
+  .vn-q{max-width:none}
+  .vn-rows li{grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"c p b" "n p b";row-gap:2px;column-gap:10px;padding:10px 12px}
+  .vn-c{grid-area:c}.vn-p{grid-area:p}.vn-n{grid-area:n;padding-inline-start:40px}.vn-buy{grid-area:b;height:36px;padding:0 14px}
+  .vn-p small{display:none}
+  .vn-how{grid-template-columns:1fr}
+}
+.vn-box{display:grid;gap:10px;margin-top:8px;padding:14px;border:1px solid var(--hair-2);border-radius:14px;background:var(--ink-2)}
+.vn-top{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px}
+.vn-st{display:inline-flex;align-items:center;gap:8px}
+.vn-st i{width:7px;height:7px;border-radius:50%;background:#E8C26A}
+.vn-pending .vn-st i,.vn-buying .vn-st i{animation:pulse 1.4s infinite}
+.vn-received .vn-st,.vn-finished .vn-st{color:var(--lime)}
+.vn-received .vn-st i,.vn-finished .vn-st i{background:var(--lime)}
+.vn-canceled .vn-st i,.vn-timeout .vn-st i,.vn-banned .vn-st i,.vn-failed .vn-st i{background:var(--gray-d)}
+.vn-phone{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:22px;letter-spacing:.02em;color:var(--paper);text-align:left;direction:ltr}
+.vn-phone small,.vn-code+small{font-size:11px;color:var(--gray-d)}
+.vn-codes{display:grid;gap:8px;list-style:none;padding:0;margin:0}
+.vn-codes li{display:grid;gap:4px}
+.vn-code{font-size:26px;letter-spacing:.18em;color:var(--lime);text-align:left;direction:ltr}
+.vn-act{display:flex;flex-wrap:wrap;gap:8px}
+.vn-act:empty{display:none}
+.vn-act .btn{height:38px;font-size:13px}
+
 /* ===== v16: layout fixes ===== */
 /* Category rows: keep each horizontal rail inside the page width (a grid item's min-width:auto let long rails widen the page). */
 .cat-rows{grid-template-columns:minmax(0,1fr)}

@@ -95,7 +95,7 @@ export default function CheckoutPage() {
       notify(r.error === "crypto_unavailable" ? "پرداخت با ارز دیجیتال فعلاً فعال نیست؛ از درگاه بانکی استفاده کن."
         : r.error === "bnpl_unavailable" || r.error === "bnpl_failed" ? "پرداخت اقساطی فعلاً در دسترس نیست؛ از درگاه بانکی استفاده کن."
         : r.error === "bnpl_not_eligible" ? `${INSTALLMENTS.provider} این خرید را قسطی تأیید نکرد؛ از درگاه بانکی استفاده کن.`
-        : r.error === "bnpl_min" ? `خرید اقساطی از ${money(INSTALLMENTS.min)} تومان به بالاست.` : r.error === "bad_item" ? "یکی از اقلام سبد دیگر موجود نیست. حذفش کن و دوباره امتحان کن." : r.error === "out_of_stock" ? "موجودی یکی از اقلام سبد همین الان تمام شد. حذفش کن یا کمی بعد دوباره امتحان کن." : r.error === "unauthorized" ? "اول وارد حسابت شو" : "ثبت سفارش انجام نشد. دوباره امتحان کن.");
+        : r.error === "bnpl_min" ? `خرید اقساطی از ${money(INSTALLMENTS.min)} تومان به بالاست.` : r.error === "bad_item" ? "یکی از اقلام سبد دیگر موجود نیست. حذفش کن و دوباره امتحان کن." : r.error === "number_unavailable" ? "شماره این کشور همین الان تمام شد. از صفحه شماره مجازی کشور دیگری انتخاب کن." : r.error === "out_of_stock" ? "موجودی یکی از اقلام سبد همین الان تمام شد. حذفش کن یا کمی بعد دوباره امتحان کن." : r.error === "unauthorized" ? "اول وارد حسابت شو" : "ثبت سفارش انجام نشد. دوباره امتحان کن.");
       return;
     }
     clearCart();

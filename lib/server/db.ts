@@ -208,6 +208,7 @@ create table if not exists supplier_map (
 );
 alter table order_lines add column if not exists supply_ref text;
 alter table order_lines add column if not exists supply_cost numeric;
+alter table order_lines add column if not exists num jsonb;
 insert into discounts (code, rate) values ('WELCOME', 0.1) on conflict do nothing;
 `;
 
