@@ -68,6 +68,8 @@ export type Product = {
   ask?: { label: string; placeholder: string; hint: string; pattern: string; short: string };
   /** Selling price in USDT per option (every delivery type of that option, or per type). When set, the Toman price follows the live Tether rate. */
   usdt?: Record<string, number | Partial<Record<DeliveryType, number>>>;
+  /** Options the supplier can't deliver right now, as «plan|type» (set by the automatic supplier sync, never in code). */
+  out?: string[];
 };
 
 export type Drop = {
@@ -715,8 +717,16 @@ export const ALL_PRODUCTS: Product[] = [...REAL, ...SAMPLES];
 export const PRODUCTS: Product[] = ALL_PRODUCTS.filter((p) => !p.hidden);
 export const productById = (id: string) => ALL_PRODUCTS.find((p) => p.id === id) ?? PRODUCTS.find((p) => p.id === id)!;
 export const planKeys = (p: Product) => Object.keys(p.plans) as Months[];
-export const minPrice = (p: Product) =>
-  Math.min(...Object.values(p.plans).flatMap((o) => Object.values(o ?? {}) as number[]));
+/** Whether an option is out of stock at its supplier right now (lib/server/sync.ts). */
+export const isOut = (p: Product, plan: string, type: string) => !!p.out?.includes(`${plan}|${type}`);
+/** Every option of the product is out of stock. */
+export const soldOut = (p: Product) => !!p.out?.length && planKeys(p).every((m) => Object.keys(p.plans[m] ?? {}).every((t) => isOut(p, m, t)));
+/** Lowest price among options in stock (among all options when everything is out). */
+export const minPrice = (p: Product) => {
+  const all = Object.entries(p.plans).flatMap(([m, o]) => Object.entries(o ?? {}).map(([t, v]) => ({ v: v as number, out: isOut(p, m, t) })));
+  const open = all.filter((x) => !x.out);
+  return Math.min(...(open.length ? open : all).map((x) => x.v));
+};
 export const deliveryTypes = (p: Product) =>
   [...new Set(planKeys(p).flatMap((m) => Object.keys(p.plans[m] ?? {})))] as DeliveryType[];
 
@@ -728,7 +738,7 @@ export type Selection = {
 };
 /** A cart line whose option exists: a plan of the product, or a live 5sim number. */
 export const sellable = (p: Product, sel: Selection) =>
-  kindOf(p) === "number" ? sel.type === "number" && !!livePlan(sel.plan) : !!p.plans[sel.plan]?.[sel.type];
+  kindOf(p) === "number" ? sel.type === "number" && !!livePlan(sel.plan) : !!p.plans[sel.plan]?.[sel.type] && !isOut(p, sel.plan, sel.type);
 
 /** Dedicated foreign static IP, sold as an add-on to some subscriptions. Price per month of the plan. */
 export const STATIC_IP = {

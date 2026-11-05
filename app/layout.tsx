@@ -7,7 +7,7 @@ import { StoreProvider } from "@/components/store";
 import { AccountProvider } from "@/components/account";
 import { SiteChrome } from "@/components/chrome";
 import { CatalogBoot } from "@/components/catalog-boot";
-import { catalogRate, loadCatalog } from "@/lib/server/catalog";
+import { catalogRate, catalogSupply, loadCatalog } from "@/lib/server/catalog";
 
 /** Product edits from the admin panel reach static pages within a minute (and instantly via revalidatePath). */
 export const revalidate = 60;
@@ -28,7 +28,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="fa" dir="rtl">
       <body>
         <Sprites />
-        <CatalogBoot data={catalog} rate={catalogRate()}><AccountProvider><StoreProvider><SiteChrome>{children}</SiteChrome></StoreProvider></AccountProvider></CatalogBoot>
+        <CatalogBoot data={catalog} rate={catalogRate()} supply={catalogSupply()}><AccountProvider><StoreProvider><SiteChrome>{children}</SiteChrome></StoreProvider></AccountProvider></CatalogBoot>
       </body>
     </html>
   );

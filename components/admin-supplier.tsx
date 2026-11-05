@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { fa, money } from "@/lib/format";
+import { ALL_PRODUCTS, optionLabel } from "@/lib/catalog";
 import { api } from "./account";
 import { useStore } from "./store";
 
@@ -40,6 +41,7 @@ export function AdminSupplier() {
   return (
     <>
       <header className="dash-h"><h1>تأمین‌کننده</h1><p className="muted">کاتالوگ اینسایت استور با قیمت تمام‌شده به تومان (تتر امروز {money(rate)} تومان). محصولی که وصل شود، بعد از پرداخت مشتری خودکار از کیف پول تأمین‌کننده خریده و کدش تحویل می‌شود؛ اول از انبار کدهای خودمان برداشته می‌شود.</p></header>
+      <SyncCard />
       <FivesimCard f={d.fivesim} rate={rate} />
       <div className="dash-sec">
         <b>Cryptorefills (گیفت‌کارت‌ها)</b>
@@ -133,6 +135,64 @@ function FivesimCard({ f, rate }: { f?: Fivesim; rate: number }) {
           {f.error && <p className="adm-split warn">خطا از 5sim: <span className="en">{f.error}</span></p>}
           {f.sample?.length ? <p className="muted">ارزان‌ترین تلگرام امروز: {f.sample.map((o) => `${o.name} ${money(o.price)}`).join("، ")}</p> : null}
         </>
+      )}
+    </div>
+  );
+}
+
+type SyncChange = { productId: string; plan: string; kind: "price" | "out" | "back" | "jump"; from?: number; to?: number };
+type SyncRun = { id: number; trigger: string; startedAt: string; finishedAt: string | null; summary: { checked: number; out: number; changes: SyncChange[]; errors: string[]; newAtSuppliers: number } | null };
+type SyncOption = { productId: string; plan: string; name: string; src: string; extId: string; cost: number | null; available: boolean; stock: number | null; note: string | null; out: boolean; ratio: number; held: boolean };
+type SyncData = { every: number; runs: SyncRun[]; options: SyncOption[]; fresh: { src: string; id: string; name: string; cost: number | null; available: boolean; since: string }[] };
+
+const SRC: Record<string, string> = { ix: "اینسایت", qd: "QuickDigi", cb: "Canboso" };
+const ago = (iso: string) => {
+  const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  return m < 1 ? "همین الان" : m < 60 ? `${fa(m)} دقیقه پیش` : m < 1440 ? `${fa(Math.round(m / 60))} ساعت پیش` : `${fa(Math.round(m / 1440))} روز پیش`;
+};
+const optName = (productId: string, plan: string) => {
+  const p = ALL_PRODUCTS.find((x) => x.id === productId);
+  return p ? `${p.name} • ${optionLabel(p, plan)}` : productId;
+};
+
+/** Automatic sync: when it last ran, what changed, options closed for stock or a big price move, and new supplier products. */
+function SyncCard() {
+  const { notify } = useStore();
+  const [s, setS] = useState<SyncData | null>(null);
+  const [busy, setBusy] = useState(false);
+  const load = useCallback(async () => { const r = await api<SyncData>("/api/admin/sync"); if (r.runs) setS(r); }, []);
+  useEffect(() => { load(); }, [load]);
+  const now = async () => {
+    setBusy(true);
+    const r = await api<SyncData & { ran: boolean }>("/api/admin/sync", { body: {} });
+    setBusy(false);
+    if (r.runs) setS(r);
+    notify(r.error ? "همگام‌سازی انجام نشد" : r.ran ? "قیمت‌ها و موجودی به‌روز شد" : "همین الان یک همگام‌سازی در جریان است");
+  };
+  if (!s) return null;
+  const last = s.runs.find((r) => r.finishedAt);
+  const changes = s.runs.flatMap((r) => r.summary?.changes ?? []).slice(0, 12);
+  const errors = last?.summary?.errors ?? [];
+  const closed = s.options.filter((o) => o.out);
+  const held = s.options.filter((o) => o.held);
+  return (
+    <div className="dash-sec">
+      <b>همگام‌سازی خودکار قیمت و موجودی</b>
+      <p className="muted">
+        هر {fa(s.every)} دقیقه (با اولین بازدید سایت) و هر شب، قیمت و موجودی {fa(s.options.length)} گزینه‌ای که خودکار خریده می‌شوند از تأمین‌کننده‌ها خوانده می‌شود.
+        اگر قیمت تأمین‌کننده عوض شود، قیمت ما با همان درصد سود تغییر می‌کند؛ اگر ناموجود شود، آن گزینه در سایت «ناموجود» می‌شود تا دوباره بیاید.
+        {last ? <> آخرین اجرا: <b>{ago(last.finishedAt!)}</b>.</> : " هنوز اجرا نشده."}
+        {" "}<button type="button" className="link" disabled={busy} onClick={now}>{busy ? "در حال همگام‌سازی…" : "همگام‌سازی الان"}</button>
+      </p>
+      {errors.length > 0 && <p className="adm-split warn">خطا در آخرین اجرا: <span className="en">{errors.join(" • ")}</span></p>}
+      {held.length > 0 && <p className="adm-split warn">تغییر قیمت خیلی بزرگ (بیش از ۶۰٪ گران‌تر یا نصف شده) و خودکار اعمال نشد؛ گران‌شده‌ها تا بررسی تو ناموجودند: {held.map((o) => `${optName(o.productId, o.plan)} (×${fa(o.ratio.toFixed(2))})`).join("، ")}. قیمت جدید را در کد یا پنل محصول بگذار.</p>}
+      {closed.length > 0 && <p className="muted">ناموجود در سایت ({fa(closed.length)}): {closed.map((o) => `${optName(o.productId, o.plan)} از ${SRC[o.src] ?? o.src}${o.note === "missing" ? " (در لیست تأمین‌کننده نیست)" : o.note === "over_15" ? " (بالای ۱۵ تتر)" : ""}`).join("، ")}</p>}
+      {changes.length > 0 && <p className="muted">تغییرات اخیر: {changes.map((c) => `${optName(c.productId, c.plan)}: ${c.kind === "out" ? "ناموجود شد" : c.kind === "back" ? "دوباره موجود شد" : `هزینه ${fa(c.from ?? 0)} ← ${fa(c.to ?? 0)} تتر${c.kind === "jump" ? " (اعمال نشد)" : ""}`}`).join("، ")}</p>}
+      {s.fresh.length > 0 && (
+        <details>
+          <summary>{fa(s.fresh.length)} محصول تازه نزد تأمین‌کننده‌ها که هنوز در سایت نیست</summary>
+          <ul className="muted">{s.fresh.map((f) => <li key={`${f.src}|${f.id}`}><span className="en">{f.name}</span> • {SRC[f.src] ?? f.src} <span className="en">{f.id}</span>{f.cost !== null && <> • <span className="num">{fa(f.cost)}</span> تتر</>}{!f.available && " • ناموجود"} • {ago(f.since)}</li>)}</ul>
+        </details>
       )}
     </div>
   );
