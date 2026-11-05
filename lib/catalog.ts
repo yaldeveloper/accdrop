@@ -816,10 +816,19 @@ export const PRICES_UPDATED = { fa: "آبان ۱۴۰۵", iso: "2026-11-01" };
 
 /** The id that owns a product's brand (logo, colours, page copy fallbacks). */
 export const brandOf = (p: Pick<Product, "id" | "family">) => p.family ?? p.id;
-/** All variants of a product's family, cheapest first (just the product when it has none). */
+/** A variant's cheapest starting option: its key, price, and the price per month for subscriptions (so a 3-month Go compares fairly with a 1-month Plus). */
+export const entryOf = (p: Product) => {
+  const all = planKeys(p).flatMap((m) => Object.values(p.plans[m] ?? {}).map((v) => ({ plan: m, price: v as number })));
+  const min = Math.min(...all.map((x) => x.price));
+  const plan = all.find((x) => x.price === min)?.plan ?? planKeys(p)[0];
+  const months = isSub(p) && Number(plan) > 0 ? Number(plan) : 1;
+  const monthly = isSub(p) ? Math.min(...all.map((x) => x.price / (Number(x.plan) || 1))) : min;
+  return { plan, price: minPrice(p), months, monthly };
+};
+/** All variants of a product's family, from the entry tier up (cheapest per month first; just the product when it has none). */
 export const variantsOf = (p: Product) => {
   const fam = brandOf(p);
-  return PRODUCTS.filter((x) => brandOf(x) === fam).sort((a, b) => minPrice(a) - minPrice(b));
+  return PRODUCTS.filter((x) => brandOf(x) === fam).sort((a, b) => entryOf(a).monthly - entryOf(b).monthly || minPrice(a) - minPrice(b));
 };
 /** Products shown in listings: one card per family. */
 export const listed = () => PRODUCTS.filter((p) => !p.family || !PRODUCTS.some((x) => x.id === p.family));
