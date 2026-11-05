@@ -27,6 +27,8 @@ const ALIASES: Record<string, string[]> = {
   tgstars: ["استارز", "ستاره تلگرام", "stars"],
   appleid: ["اپل آیدی", "اپل ایدی", "apple id", "آیکلود", "icloud", "اپ استور", "appstore"],
   applegift: ["گیفت کارت", "گیفت اپل", "آیتونز", "ایتونز", "itunes", "اپل گیفت", "giftcard"],
+  tidal: ["تایدال", "تیدال", "tidal", "موزیک", "موسیقی", "آهنگ", "music"],
+  deezer: ["دیزر", "دیزیر", "deezer", "موزیک", "موسیقی", "آهنگ", "music"],
   linkedin: ["لینکدین", "لینکداین", "کاریابی"],
   duolingo: ["دولینگو", "دوولینگو", "زبان انگلیسی", "یادگیری زبان"],
   googleplay: ["گوگل پلی", "گوگل‌پلی", "google play", "گیفت کارت گوگل", "اندروید"],
@@ -58,6 +60,7 @@ export const NEEDS: { label: string; ids: string[] }[] = [
   { label: "تحقیق و گزارش", ids: ["manus", "chatgpt"] },
   { label: "گیم", ids: ["pubg", "steam", "playstation", "xbox", "valorant", "roblox"] },
   { label: "اپ‌استور و گوگل‌پلی", ids: ["applegift", "googleplay"] },
+  { label: "موزیک و آهنگ", ids: ["deezer", "tidal"] },
   { label: "یادگیری زبان", ids: ["duolingo"] },
   { label: "کار و رزومه", ids: ["linkedin", "airtable"] },
 ];
