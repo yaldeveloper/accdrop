@@ -2,14 +2,13 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { DELIVERY, MAX_QTY, MAX_SEATS, axisOf, deliveryTypes, dropOf, etaText, groupOff, isSub, linePrice, minPrice, nounOf, optionLabel, planKeys, priceOf, variantsOf, type DeliveryType, type Months, type Product, type Selection, deliveryOf } from "@/lib/catalog";
-import { productHref } from "@/lib/content";
+import { DELIVERY, MAX_QTY, MAX_SEATS, axisOf, deliveryTypes, dropOf, groupOff, isSub, linePrice, nounOf, optionLabel, planKeys, priceOf, variantsOf, type DeliveryType, type Months, type Product, type Selection, deliveryOf } from "@/lib/catalog";
 import { api } from "./account";
 import { fa, money } from "@/lib/format";
 import { Icon } from "./brand";
 import { useStore } from "./store";
 import { openChat } from "./chat";
+import { VersionPicker } from "./version-picker";
 import { receiveOf, warrantyOf, whenOf } from "@/lib/facts";
 
 function initial(p: Product): Selection {
@@ -99,20 +98,7 @@ export function BuyPanel({ product: p }: { product: Product }) {
     <div className="bx" id="buy">
       <h2 className="bx-t">انتخاب {nounOf(p)}</h2>
 
-      {variants.length > 1 && (
-        <fieldset className="bx-g">
-          <legend>نسخه</legend>
-          <div className="bx-var bx-vlist">
-            {variants.map((v) => (
-              <Link key={v.id} href={productHref(v)} className={v.id === p.id ? "on" : ""} aria-current={v.id === p.id ? "page" : undefined} scroll={false}>
-                <span className="bx-r" aria-hidden="true" />
-                <span className="bx-vl"><b className="en">{v.tier ?? v.name}</b><small>{v.use}</small></span>
-                <span className="bx-vp"><small className="num">از {money(minPrice(v))}</small><small className={v.etaMinutes <= 10 ? "fast" : ""}>{v.etaMinutes <= 10 ? "تحویل فوری" : `تحویل ${etaText(v)}`}</small></span>
-              </Link>
-            ))}
-          </div>
-        </fieldset>
-      )}
+      {variants.length > 1 && <VersionPicker product={p} variants={variants} />}
 
       {months.length > 1 && <fieldset className="bx-g">
         <legend>{axisOf(p)}</legend>

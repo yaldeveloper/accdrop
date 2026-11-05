@@ -1757,22 +1757,6 @@ footer h5.fa{font-family:inherit;letter-spacing:0;font-size:13px;direction:rtl}
 .p2-chips svg.i{width:16px;height:16px;color:var(--b,var(--lime))}
 .p2-chips a{border-color:color-mix(in srgb,var(--b,var(--lime)) 50%,transparent);color:var(--paper)}
 .p2-more{margin-top:36px}
-.bx-var{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:6px;padding:4px;border-radius:14px;background:rgba(0,0,0,.05)}
-.bx-var a{display:grid;gap:0;text-align:center;padding:9px 4px;border-radius:10px;transition:background-color .15s,box-shadow .15s}
-.bx-var a b{font-size:15px;font-weight:600}
-.bx-var a small{font-size:10px;color:var(--gray-l)}
-.bx-var a.on{background:#fff;box-shadow:0 1px 0 rgba(0,0,0,.06),0 0 0 1px var(--ink)}
-@media (hover:hover){.bx-var a:not(.on):hover{background:rgba(255,255,255,.6)}}
-.bx-vlist{grid-template-columns:1fr;gap:4px}
-.bx-vlist a{grid-template-columns:auto 1fr auto;align-items:center;gap:10px;text-align:start;padding:10px 12px}
-.bx-vlist a .bx-r{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--gray-l);flex:none}
-.bx-vlist a.on .bx-r{border:5px solid var(--ink)}
-.bx-vl{display:grid;gap:1px;min-width:0}
-.bx-vl b{text-align:right}
-.bx-vl small,.bx-vp small{font-size:11px;color:var(--gray-l)}
-.bx-vp{display:grid;gap:1px;text-align:end;white-space:nowrap}
-.bx-vp small:first-child{font-size:12px;color:var(--ink);font-weight:600}
-.bx-vp small.fast{color:#1a7f4b}
 .bx-who{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .bx-who button{display:grid;gap:2px;text-align:start;padding:12px 14px;border-radius:14px;border:1px solid var(--hair-l2);background:transparent;color:inherit;cursor:pointer;transition:border-color .15s,background-color .15s,transform .16s var(--ease-out)}
 .bx-who button b{font-size:14px;font-weight:600}
@@ -2343,7 +2327,31 @@ footer.ft .legal{margin-top:18px}
 .gw section h3{margin-top:0}
 .bx-facts{overflow:hidden}
 @media (max-width:560px){.bx-facts li{padding:9px 12px}.bx-facts em{font-size:11.5px}}
-/* Many versions (API keys: Claude, Codex, Grok, Gemini, DeepSeek) wrap into rows instead of spilling out of the box. */
-.bx-var{display:flex;flex-wrap:wrap}
-.bx-var a{flex:1 1 28%;min-width:0}
-.bx-var a b{overflow-wrap:anywhere}
+
+/* Version picker (components/version-picker.tsx): one comparable card per version, the chosen one opens up. */
+.vp legend .vp-n{font-size:12px;color:var(--gray)}
+.vp-list{list-style:none;display:grid;gap:8px}
+.vp-c{display:grid;grid-template-columns:18px minmax(0,1fr) auto;grid-template-areas:"r t p" ". u d" ". x x";column-gap:12px;row-gap:2px;align-items:center;padding:13px 16px;border:1px solid var(--hair-l2);border-radius:14px;transition:border-color .2s,background-color .2s,box-shadow .2s}
+@media (hover:hover){.vp-c:not(.on):hover{border-color:var(--ink);background:rgba(255,255,255,.55)}}
+.vp-c.on{border-color:var(--ink);background:#fff;box-shadow:0 0 0 1px var(--ink)}
+.vp-c:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.vp-r{grid-area:r;width:18px;height:18px;border-radius:50%;border:1.5px solid var(--hair-l2);transition:border-width .15s,border-color .15s}
+.vp-c.on .vp-r{border:5.5px solid var(--ink)}
+.vp-c.wait .vp-r{border:2px solid var(--hair-l2);border-top-color:var(--ink);animation:vp-spin .7s linear infinite}
+@keyframes vp-spin{to{transform:rotate(360deg)}}
+.vp-t{grid-area:t;display:flex;align-items:center;flex-wrap:wrap;gap:6px;min-width:0}
+.vp-t b{font-size:16px;font-weight:600;letter-spacing:-.01em;overflow-wrap:anywhere}
+.vp-t em{font-style:normal;font-size:10.5px;font-weight:600;line-height:1;padding:4px 7px;border-radius:999px;white-space:nowrap}
+.vp-b{background:var(--lime);color:var(--ink)}
+.vp-fast{background:rgba(26,127,75,.1);color:#1a7f4b}
+.vp-p{grid-area:p;white-space:nowrap;text-align:end}
+.vp-p small{font-size:11px;color:var(--gray-l)}
+.vp-p b{font-size:15px;font-weight:600}
+.vp-u{grid-area:u;font-size:12px;color:var(--gray-l);line-height:1.6}
+.vp-d{grid-area:d;font-size:11px;color:var(--gray-l);white-space:nowrap;text-align:end;align-self:start}
+.vp-x{grid-area:x;display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--hair-l2);font-size:12px;color:var(--ink)}
+.vp-x>span{display:inline-flex;align-items:center;gap:5px}
+.vp-x svg.i{width:15px;height:15px;color:var(--gray-l)}
+.vp-x .fast,.vp-x .fast svg.i{color:#1a7f4b}
+@media (max-width:560px){.vp-c{padding:12px 14px;column-gap:10px}.vp-t b{font-size:15px}.vp-d{white-space:normal;max-width:120px}}
+@media (prefers-reduced-motion:reduce){.vp-c.wait .vp-r{animation:none}}
