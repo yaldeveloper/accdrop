@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ALL_PRODUCTS, currentDrop, linePrice, planKeys, priceOf, productById, sellable, type Selection } from "@/lib/catalog";
+import { ALL_PRODUCTS, currentDrop, planKeys, productById, sellable, type Selection } from "@/lib/catalog";
+import { comboById, comboLines, pricedLines } from "@/lib/combos";
 
 export type CartLine = Selection & { price: number };
 export type SheetView = "product" | "cart" | "checkout" | "done" | null;
@@ -20,6 +21,9 @@ type Store = {
   /** Add an explicit selection (used by product pages). */
   /** Returns false when the same line is already in the cart. */
   addLine: (sel: Selection) => boolean;
+  /** Adds every item of a combo pack (lib/combos.ts). Returns false when the pack is already in the cart. */
+  addCombo: (id: string) => boolean;
+  /** Removes a line; a line of a combo pack removes the whole pack. */
   removeLine: (i: number) => void;
   /** Changes one cart line (e.g. adds an add-on at checkout) and re-prices it. */
   updateLine: (i: number, patch: Partial<Selection>) => void;
@@ -47,10 +51,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try {
       const saved = JSON.parse(localStorage.getItem(KEY) || "[]") as CartLine[];
       // Drop lines whose product or option no longer exists, and re-price the rest.
-      setCart(saved.filter((l) => ALL_PRODUCTS.some((p) => p.id === l.id && !p.hidden && sellable(p, l))).map((l) => ({ ...l, price: linePrice(l) })));
+      setCart(pricedLines(saved.filter((l) => ALL_PRODUCTS.some((p) => p.id === l.id && !p.hidden && sellable(p, l)))));
     } catch { /* storage unavailable */ }
   }, []);
-  const persist = (next: CartLine[]) => {
+  // Every change re-prices the cart: a combo pack is discounted only while all of its items are in it.
+  const persist = (lines: Selection[]) => {
+    const next = pricedLines(lines);
     setCart(next);
     try { localStorage.setItem(KEY, JSON.stringify(next)); } catch { /* ignore */ }
   };
@@ -98,15 +104,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (!offers[next.type]) next.type = Object.keys(offers)[0] as Selection["type"];
       return next;
     }),
-    addSelection: () => { if (selection) persist([...cart, { ...selection, price: priceOf(selection).price }]); },
+    addSelection: () => { if (selection) persist([...cart, selection]); },
     addLine: (sel) => {
       const same = (l: Selection) => l.id === sel.id && l.plan === sel.plan && l.type === sel.type && (l.seats ?? 1) === (sel.seats ?? 1) && (l.ip ?? "") === (sel.ip ?? "");
       if (cart.some(same)) return false;
-      persist([...cart, { ...sel, price: linePrice(sel) }]);
+      persist([...cart, sel]);
       return true;
     },
-    removeLine: (i) => persist(cart.filter((_, j) => j !== i)),
-    updateLine: (i, patch) => persist(cart.map((l, j) => (j === i ? { ...l, ...patch, price: linePrice({ ...l, ...patch }) } : l))),
+    addCombo: (id) => {
+      const c = comboById(id);
+      if (!c || cart.some((l) => l.combo === id)) return false;
+      // A pack item already in the cart on its own joins the pack instead of being bought twice.
+      const rest = cart.filter((l) => !(!l.combo && c.items.some((it) => it.id === l.id && it.plan === l.plan && it.type === l.type && (l.seats ?? 1) === 1)));
+      persist([...rest, ...comboLines(c)]);
+      return true;
+    },
+    removeLine: (i) => {
+      const pack = cart[i]?.combo;
+      persist(cart.filter((l, j) => j !== i && !(pack && l.combo === pack)));
+    },
+    updateLine: (i, patch) => persist(cart.map((l, j) => (j === i ? { ...l, ...patch } : l))),
     clearCart: () => persist([]),
     setView: (v) => setViewState(v),
     completeOrder: () => {

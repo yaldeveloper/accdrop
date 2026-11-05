@@ -735,6 +735,8 @@ export type Selection = {
   id: string; plan: Months; type: DeliveryType; seats?: number; ip?: string;
   /** Live virtual number (plan `5s:…`): the Toman price shown when it was picked. The server re-prices it from 5sim. */
   unit?: number;
+  /** Combo pack this line was added with (lib/combos.ts); priced with the pack discount while the whole pack is in the cart. */
+  combo?: string;
 };
 /** A cart line whose option exists: a plan of the product, or a live 5sim number. */
 export const sellable = (p: Product, sel: Selection) =>

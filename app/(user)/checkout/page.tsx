@@ -13,6 +13,7 @@ import { useStore } from "@/components/store";
 import { EMPTY_LEGAL, LegalForm, useLegal } from "@/components/legal";
 import { type LegalInfo, type PayMethod } from "@/lib/billing";
 import { receiveOf, warrantyOf, whenOf } from "@/lib/facts";
+import { comboById } from "@/lib/combos";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -46,8 +47,10 @@ export default function CheckoutPage() {
     setEmails((e) => Object.fromEntries(cart.map((l, i) => [i, e[i] ?? (l.type === "own" && !productById(l.id).ask ? user.email : "")])));
   }, [user?.email, cart]);
 
-  const subtotal = cart.reduce((s, l) => s + linePrice(l), 0);
-  const discount = Math.round((subtotal * rate) / 1000) * 1000;
+  // Line prices already carry the combo pack discount; discount codes apply only to lines outside a pack.
+  const subtotal = cart.reduce((s, l) => s + l.price, 0);
+  const packSave = cart.reduce((s, l) => s + (l.combo ? linePrice(l) - l.price : 0), 0);
+  const discount = Math.round((cart.reduce((s, l) => s + (l.combo ? 0 : l.price), 0) * rate) / 1000) * 1000;
   const total = subtotal - discount;
 
   const apply = async () => {
@@ -79,7 +82,7 @@ export default function CheckoutPage() {
     const r = await placeOrder(cart.map((l, i) => ({ id: l.id, plan: l.plan, type: l.type,
       email: l.type === "own" ? emails[i]?.trim() : undefined,
       username: l.type === "username" ? normalizeUsername(emails[i] ?? "") : undefined,
-      seats: l.seats, ip: l.ip,
+      seats: l.seats, ip: l.ip, combo: l.combo,
       members: l.type === "own" && (l.seats ?? 1) > 1 ? Array.from({ length: l.seats! - 1 }, (_, k) => members[i]?.[k]?.trim() ?? "") : undefined })), applied, method, wantInvoice ? legal : null);
     if ("error" in r) {
       setPaying(false);
@@ -224,8 +227,8 @@ export default function CheckoutPage() {
               return (
                 <li key={i}>
                   <span className="mono"><BrandLogo id={p.id} size={20} /></span>
-                  <div><b className="en">{p.name}</b><small>{optionLabel(p, l.plan)} • {deliveryOf(p, l.type).title}</small>{extrasLabel(l) && <small className="co-x">{extrasLabel(l)}</small>}</div>
-                  <div className="r"><span className="num">{money(linePrice(l))}</span><button className="rm" onClick={() => removeLine(i)} aria-label={`حذف ${p.name}`}>حذف</button></div>
+                  <div><b className="en">{p.name}</b><small>{optionLabel(p, l.plan)} • {deliveryOf(p, l.type).title}</small>{extrasLabel(l) && <small className="co-x">{extrasLabel(l)}</small>}{l.combo && <small className="co-x co-pack">{comboById(l.combo)?.name}</small>}</div>
+                  <div className="r"><span className="num">{money(l.price)}</span><button className="rm" onClick={() => removeLine(i)} aria-label={`حذف ${p.name}`}>حذف</button></div>
                 </li>
               );
             })}
@@ -235,7 +238,8 @@ export default function CheckoutPage() {
             <button onClick={apply} type="button">اعمال</button>
           </div>
           <dl className="co-totals">
-            <div><dt>جمع</dt><dd className="num">{money(subtotal)}</dd></div>
+            <div><dt>جمع</dt><dd className="num">{money(subtotal + packSave)}</dd></div>
+            {packSave > 0 && <div className="disc"><dt>تخفیف پک</dt><dd className="num">−{money(packSave)}</dd></div>}
             {discount > 0 && <div className="disc"><dt>تخفیف ({applied})</dt><dd className="num">−{money(discount)}</dd></div>}
             <div className="tot"><dt>قابل پرداخت</dt><dd><b className="num">{money(total)}</b> <small>تومان</small></dd></div>
           </dl>

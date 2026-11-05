@@ -2,10 +2,11 @@
 
 import { type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
-import { DELIVERY, extrasLabel, linePrice, axisOf, deliveryTypes, etaText, guaranteeOf, isSub, optionLabel, planKeys, priceOf, productById, type Months, deliveryOf } from "@/lib/catalog";
+import { DELIVERY, extrasLabel, axisOf, deliveryTypes, etaText, guaranteeOf, isSub, optionLabel, planKeys, priceOf, productById, type Months, deliveryOf } from "@/lib/catalog";
 import { fa, money } from "@/lib/format";
 import { BrandLogo, Dots, Icon } from "./brand";
 import { useStore } from "./store";
+import { comboById } from "@/lib/combos";
 
 const Arrow = () => <Icon id="arrow" className="arrow" />;
 
@@ -95,8 +96,8 @@ function CartView() {
                 return (
                   <div className="ln" key={i}>
                     <span className="mono"><BrandLogo id={p.id} size={22} /></span>
-                    <div className="t"><b>{p.name}</b><small>{optionLabel(p, l.plan)} · {deliveryOf(p, l.type).title}{extrasLabel(l) ? ` · ${extrasLabel(l)}` : ""}</small></div>
-                    <div style={{ textAlign: "left" }}><span className="num">{money(linePrice(l))}</span><button className="rm" onClick={() => removeLine(i)}>حذف</button></div>
+                    <div className="t"><b>{p.name}</b><small>{optionLabel(p, l.plan)} · {deliveryOf(p, l.type).title}{extrasLabel(l) ? ` · ${extrasLabel(l)}` : ""}{l.combo ? ` · ${comboById(l.combo)?.name}` : ""}</small></div>
+                    <div style={{ textAlign: "left" }}><span className="num">{money(l.price)}</span><button className="rm" onClick={() => removeLine(i)}>حذف</button></div>
                   </div>
                 );
               })}
