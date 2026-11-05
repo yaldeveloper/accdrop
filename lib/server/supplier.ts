@@ -2,6 +2,7 @@
 // Set INSIGHT_API_KEY in the environment (never in code). INSIGHT_TEST_MODE=1 sends test orders (TEST- codes, nothing charged).
 // Docs: https://api.insightxpro.store/docs
 import { ALL_PRODUCTS } from "@/lib/catalog";
+import { GIFT_ID } from "@/lib/gift";
 import { crSupplyLine } from "./cryptorefills";
 import { qdCanSupply, qdSupplyLine } from "./quickdigi";
 import { cbCanSupply, cbSupplyLine } from "./canboso";
@@ -131,6 +132,8 @@ export async function firstOutOfStock(lines: { id: string; plan: string; type: s
 
 /** Fetches codes for one paid order line from the supplier, if that product/plan is mapped. Returns null when not mapped. */
 export async function supplyLine(lineId: number, productId: string, plan: string, quantity: number): Promise<string[] | null> {
+  // AccDrop gift cards: the "code" is our own gift code (lib/server/gifts.ts).
+  if (productId === GIFT_ID) return (await import("./gifts")).issueGift(lineId);
   const p = ALL_PRODUCTS.find((x) => x.id === productId);
   if (p?.cr?.[plan]) return crSupplyLine(lineId, p, plan, quantity, siteUrl());
   if (p?.qd?.[plan]) return qdSupplyLine(lineId, p, plan, quantity);

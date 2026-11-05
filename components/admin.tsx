@@ -205,6 +205,7 @@ export function AdminOrder({ code }: { code: string }) {
           <dl className="co-totals">
             <div><dt>جمع</dt><dd className="num">{money(o.subtotal)}</dd></div>
             {o.discount > 0 && <div className="disc"><dt>تخفیف</dt><dd className="num">−{money(o.discount)}</dd></div>}
+            {o.subtotal - o.discount > o.total && <div className="disc"><dt>اعتبار اک‌دراپ</dt><dd className="num">−{money(o.subtotal - o.discount - o.total)}</dd></div>}
             <div className="tot"><dt>مبلغ</dt><dd><b className="num">{money(o.total)}</b> <small>تومان</small></dd></div>
           </dl>
           {o.payMethod && o.payMethod !== "card" && <p className="muted">روش پرداخت: {o.payMethod === "bnpl" ? "اقساطی (اسنپ‌پی)" : "ارز دیجیتال"}</p>}

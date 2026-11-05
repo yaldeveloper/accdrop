@@ -13,6 +13,7 @@ import { useStore } from "@/components/store";
 import { EMPTY_LEGAL, LegalForm, useLegal } from "@/components/legal";
 import { type LegalInfo, type PayMethod } from "@/lib/billing";
 import { receiveOf, warrantyOf, whenOf } from "@/lib/facts";
+import { useCreditBalance } from "@/components/gift";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -33,6 +34,9 @@ export default function CheckoutPage() {
   const [legal, setLegal] = useState<LegalInfo>(EMPTY_LEGAL);
   const [badLegal, setBadLegal] = useState<keyof LegalInfo | "">("");
   useEffect(() => { if (saved) setLegal(saved); }, [saved]);
+  /** AccDrop credit (redeemed gift cards): used first, the gateway gets the rest. */
+  const balance = useCreditBalance(!!user);
+  const [useCredit, setUseCredit] = useState(true);
   const [usdt, setUsdt] = useState(0);
   useEffect(() => { if (method === "crypto" && !usdt) api<{ rate: number }>("/api/rate").then((r) => r.rate && setUsdt(r.rate)); }, [method, usdt]);
   const [bad, setBad] = useState<number[]>([]);
@@ -49,6 +53,8 @@ export default function CheckoutPage() {
   const subtotal = cart.reduce((s, l) => s + linePrice(l), 0);
   const discount = Math.round((subtotal * rate) / 1000) * 1000;
   const total = subtotal - discount;
+  const credit = useCredit ? Math.min(balance, total) : 0;
+  const due = total - credit;
 
   const apply = async () => {
     const c = code.trim().toUpperCase();
@@ -80,7 +86,7 @@ export default function CheckoutPage() {
       email: l.type === "own" ? emails[i]?.trim() : undefined,
       username: l.type === "username" ? normalizeUsername(emails[i] ?? "") : undefined,
       seats: l.seats, ip: l.ip,
-      members: l.type === "own" && (l.seats ?? 1) > 1 ? Array.from({ length: l.seats! - 1 }, (_, k) => members[i]?.[k]?.trim() ?? "") : undefined })), applied, method, wantInvoice ? legal : null);
+      members: l.type === "own" && (l.seats ?? 1) > 1 ? Array.from({ length: l.seats! - 1 }, (_, k) => members[i]?.[k]?.trim() ?? "") : undefined })), applied, method, wantInvoice ? legal : null, credit > 0);
     if ("error" in r) {
       setPaying(false);
       if (r.error === "bad_legal") {
@@ -202,7 +208,7 @@ export default function CheckoutPage() {
             <div className="opts v co-pay">
               <button className={`opt ${method === "card" ? "on" : ""}`} type="button" aria-pressed={method === "card"} onClick={() => setMethod("card")}><span className="opt-logo ic"><Icon id="lock" /></span><b>کارت بانکی</b><small>همه کارت‌های عضو شتاب</small></button>
               <button className={`opt ${method === "crypto" ? "on" : ""}`} type="button" aria-pressed={method === "crypto"} onClick={() => setMethod("crypto")}>
-                <span className="opt-logo ic usdt">₮</span><b>ارز دیجیتال</b><small>تتر، بیت‌کوین و بیشتر{method === "crypto" && usdt ? <> • <span className="num">{fa(Math.ceil((total / usdt) * 100) / 100)}</span> تتر (هر تتر <span className="num">{money(usdt)}</span> تومان)</> : null}</small>
+                <span className="opt-logo ic usdt">₮</span><b>ارز دیجیتال</b><small>تتر، بیت‌کوین و بیشتر{method === "crypto" && usdt ? <> • <span className="num">{fa(Math.ceil((due / usdt) * 100) / 100)}</span> تتر (هر تتر <span className="num">{money(usdt)}</span> تومان)</> : null}</small>
               </button>
             </div>
           </section>
@@ -237,14 +243,17 @@ export default function CheckoutPage() {
           <dl className="co-totals">
             <div><dt>جمع</dt><dd className="num">{money(subtotal)}</dd></div>
             {discount > 0 && <div className="disc"><dt>تخفیف ({applied})</dt><dd className="num">−{money(discount)}</dd></div>}
-            <div className="tot"><dt>قابل پرداخت</dt><dd><b className="num">{money(total)}</b> <small>تومان</small></dd></div>
+            {balance > 0 && (
+              <div className="disc co-credit"><dt><label><input type="checkbox" checked={useCredit} onChange={(e) => setUseCredit(e.target.checked)} /> اعتبار اک‌دراپ <small className="muted">(<span className="num">{money(balance)}</span>)</small></label></dt><dd className="num">{credit > 0 ? `−${money(credit)}` : "—"}</dd></div>
+            )}
+            <div className="tot"><dt>قابل پرداخت</dt><dd><b className="num">{money(due)}</b> <small>تومان</small></dd></div>
           </dl>
           <label className="co-agree"><input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} /><span><Link className="link" href="/terms">قوانین</Link> و <Link className="link" href="/guarantee">گارانتی هر محصول</Link> را خواندم و می‌پذیرم.</span></label>
           <button className="btn btn-paper btn-block co-btn" onClick={pay} disabled={paying}>
-            {paying ? "در حال اتصال به درگاه…" : method === "crypto" ? <>پرداخت با ارز دیجیتال</> : <>پرداخت <span className="num">{money(total)}</span> تومان</>}
+            {paying ? "در حال اتصال به درگاه…" : due === 0 && credit > 0 ? <>پرداخت با اعتبار اک‌دراپ</> : method === "crypto" ? <>پرداخت با ارز دیجیتال</> : <>پرداخت <span className="num">{money(due)}</span> تومان</>}
           </button>
           <div className="co-bar" aria-hidden="true">
-            <div><small>قابل پرداخت</small><b className="num">{money(total)} <small>تومان</small></b></div>
+            <div><small>قابل پرداخت</small><b className="num">{money(due)} <small>تومان</small></b></div>
             <button className="btn btn-paper" onClick={pay} disabled={paying} tabIndex={-1}>{paying ? "…" : "پرداخت"}</button>
           </div>
           {demo.gateway && <small className="muted fine">درگاه آزمایشی فعال است؛ پولی کم نمی‌شود.</small>}

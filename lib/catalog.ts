@@ -1,6 +1,7 @@
 // Product catalogue (prices in Toman). Admin edits are layered on top by lib/catalog-sync.ts.
 import { duration, fa } from "./format";
 import { livePlan, livePlanLabel } from "./numbers";
+import { GIFT_PRODUCT } from "./gift";
 
 /** How a purchase reaches the customer. */
 export type DeliveryType = "own" | "ready" | "shared" | "username" | "code" | "number";
@@ -713,7 +714,7 @@ export const etaText = (p: Product) => (p.etaMinutes === 0 ? "خودکار" : p.
 export const nounOf = (p: Product) => ({ sub: "اشتراک", gift: "گیفت‌کارت", account: "اکانت", qty: "استارز", number: "شماره" })[kindOf(p)];
 
 /** Every product including hidden ones (old orders still need to show them). PRODUCTS holds only the visible ones. */
-export const ALL_PRODUCTS: Product[] = [...REAL, ...SAMPLES];
+export const ALL_PRODUCTS: Product[] = [...REAL, ...SAMPLES, GIFT_PRODUCT];
 export const PRODUCTS: Product[] = ALL_PRODUCTS.filter((p) => !p.hidden);
 export const productById = (id: string) => ALL_PRODUCTS.find((p) => p.id === id) ?? PRODUCTS.find((p) => p.id === id)!;
 export const planKeys = (p: Product) => Object.keys(p.plans) as Months[];
