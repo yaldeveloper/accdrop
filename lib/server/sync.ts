@@ -163,6 +163,9 @@ export async function runSync(trigger: string, minGap = syncEvery()): Promise<Sy
   }
   const { dropCatalogCache } = await import("./catalog");
   dropCatalogCache();
+  // Unpaid checkouts get their one reminder on the same schedule.
+  const { remindUnpaid } = await import("./reminders");
+  await remindUnpaid().catch((e) => console.error("[remind]", e));
   return summary;
 }
 

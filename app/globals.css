@@ -651,6 +651,11 @@ button.link{background:none;padding:0 0 2px;cursor:pointer}
 .co-act-h .mono{width:40px;height:40px}
 .co-act-h small{margin-inline-start:auto}
 .co-note{font-size:13px}
+.co-only{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:14px;color:var(--gray-d);padding:12px 16px;border:1px dashed var(--hair-2);border-radius:14px}
+.co-why{font-size:13px;margin:-10px 0 14px}
+.co-typo{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;font-size:13px;margin-top:8px;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--lime) 14%,transparent)}
+.co-typo b{font-weight:600}
+.co-step.co-ask{border-color:var(--lime);box-shadow:0 0 0 3px color-mix(in srgb,var(--lime) 25%,transparent)}
 .co-pay .opt{display:block}
 .co-sum{position:sticky;top:100px;border:1px solid var(--hair-2);border-radius:20px;padding:28px;background:var(--ink-1);display:grid;gap:20px}
 .co-sum h2{font-size:18px;font-weight:500}

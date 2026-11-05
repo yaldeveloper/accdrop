@@ -96,3 +96,41 @@ export const RESELLER_TIERS = [
 
 export const RESELLER_KINDS = ["کانال تلگرام یا پیج اینستاگرام", "فروشگاه اینترنتی", "فروشگاه حضوری یا کافی‌نت", "فریلنسر یا آژانس", "سایر"];
 export const RESELLER_VOLUMES = ["کمتر از ۱۰ سفارش در ماه", "۱۰ تا ۵۰ سفارش در ماه", "بیشتر از ۵۰ سفارش در ماه"];
+
+// ----- Activation email typos -----
+/** Providers we suggest when a domain is one typo away from them. */
+const TYPO_TARGETS = ["gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "icloud.com", "live.com", "protonmail.com", "yandex.com"];
+/** Real domains that look like a typo of one above. */
+const KNOWN_OTHER = ["proton.me", "ymail.com", "mail.com", "email.com", "gmx.com", "me.com", "mac.com", "msn.com", "aol.com", "mail.ru", "yahoo.co.uk", "hotmail.co.uk", "outlook.fr", "hotmail.fr", "live.fr", "googlemail.com", "pm.me", "zoho.com"];
+
+function editDistance(a: string, b: string) {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) {
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+  }
+  return d[a.length][b.length];
+}
+
+/**
+ * The address the customer most likely meant when the domain is one typo away from a common mail provider
+ * («ali@gmial.com» → «ali@gmail.com»), or null. A subscription activated on a mistyped email is lost.
+ */
+export function emailTypo(email: string): string | null {
+  const e = email.trim().toLowerCase();
+  const at = e.lastIndexOf("@");
+  if (at < 1) return null;
+  const domain = e.slice(at + 1);
+  if (!domain || TYPO_TARGETS.includes(domain)) return null;
+  if (KNOWN_OTHER.includes(domain)) return null;
+  // Short domains are easy to confuse with each other, so they only get a suggestion one letter away.
+  let best: string | null = null, dist = domain.length < 9 ? 2 : 3;
+  for (const d of TYPO_TARGETS) {
+    const x = editDistance(domain, d);
+    if (x < dist) { dist = x; best = d; }
+  }
+  // «gmail», «gmail.co», «gmail.con»: the right name with a missing or wrong ending.
+  best ??= TYPO_TARGETS.find((d) => domain === d.split(".")[0] || domain.startsWith(d.split(".")[0] + ".")) ?? null;
+  return best ? `${e.slice(0, at)}@${best}` : null;
+}
