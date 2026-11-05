@@ -5,7 +5,7 @@ import { Scene } from "@/components/scene";
 import { themeOf } from "@/lib/theme";
 import { notFound } from "next/navigation";
 import { loadCatalog } from "@/lib/server/catalog";
-import { CATEGORIES, DELIVERY, PRICES_UPDATED, PRODUCTS, axisOf, deliveryExplain, deliveryTypes, etaText, guaranteeOf, isSub, kindOf, minPrice, nounOf, optionLabel, planKeys, priceOf, type DeliveryType, type Product } from "@/lib/catalog";
+import { CATEGORIES, DELIVERY, PRICES_UPDATED, PRODUCTS, axisOf, deliveryExplain, deliveryTypes, etaText, guaranteeOf, isSub, kindOf, minPrice, nounOf, optionLabel, planKeys, priceOf, type DeliveryType, type Product, deliveryOf } from "@/lib/catalog";
 import { seoOf } from "@/lib/seo";
 import { Toc } from "@/components/toc";
 import { CONTENT, contentOf } from "@/lib/content";
@@ -16,7 +16,6 @@ import { BuyPanel } from "@/components/buy-panel";
 import { NumberShop } from "@/components/numbers";
 import { Reviews } from "@/components/reviews";
 import { splitName } from "@/components/pass";
-import { INSTALLMENTS, canInstall } from "@/lib/billing";
 
 export const dynamicParams = true;
 export const revalidate = 60;
@@ -115,7 +114,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         offerCount: prices.length, availability: "https://schema.org/InStock", url: `https://accdrop.ir/${c.slug}`,
         seller: { "@type": "Organization", name: "AccDrop" },
         offers: months.flatMap((m) => deliveryTypes(p).filter((t) => p.plans[m]?.[t]).map((t) => ({
-          "@type": "Offer", name: `${p.name}، ${optionLabel(p, m)}، ${DELIVERY[t].title}`, priceCurrency: "IRR",
+          "@type": "Offer", name: `${p.name}، ${optionLabel(p, m)}، ${deliveryOf(p, t).title}`, priceCurrency: "IRR",
           price: priceOf({ id: p.id, plan: m, type: t }).price * 10, availability: "https://schema.org/InStock",
           url: `https://accdrop.ir/${c.slug}?plan=${m}&type=${t}`,
         }))),
@@ -164,7 +163,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           </nav>
           <div className="p2-g">
             <div className="p2-info p2-head">
-              <div className="p2-brand"><span className="p2-logo"><BrandLogo id={p.id} size={30} /></span><div><small>{c.prefix ?? "خرید اکانت"} • {isSub(p) ? "اشتراک رسمی" : "رسمی و قانونی"}</small><b className="en">{p.maker}</b></div></div>
+              <div className="p2-brand"><span className="p2-logo"><BrandLogo id={p.id} size={30} /></span><div><small>{c.prefix ?? "خرید اکانت"} • {p.source ?? (isSub(p) ? "اشتراک رسمی" : "رسمی و قانونی")}</small><b className="en">{p.maker}</b></div></div>
               <h1 className="p2-h1"><span className="en">{tool}{tier && <i> {tier}</i>}</span></h1>
               <p className="p2-use">{p.use}</p>
               <p className="p2-lead">{c.intro}</p>
@@ -172,9 +171,6 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               <ul className="p2-perks" aria-label="مزایای خرید از اک‌دراپ">
                 <li><span className="p2-pi"><Icon id="shield" /></span><span><b>{isSub(p) && !p.warranty ? "ضمانت تا روز آخر" : guaranteeOf(p)}</b><small>{isSub(p) && !p.warranty ? "اگر قطع شد، روزهای باقی‌مانده برمی‌گردد" : p.warranty?.startsWith("بدون گارانتی") ? "فقط تحویل سالم تضمین می‌شود" : "جایگزینی یا بازگشت کامل وجه"}</small></span></li>
                 <li><span className="p2-pi"><Icon id="user" /></span><span><b>{instant ? "تحویل فوری و خودکار" : isSub(p) ? "روی اکانت خودت" : "تحویل در حساب کاربری"}</b><small>{instant ? "همان لحظه، در حساب کاربری و پیامک" : isSub(p) ? "فقط ایمیل؛ رمز نمی‌خواهیم" : "همراه با پیامک"}</small></span></li>
-                {canInstall(Math.max(...planKeys(p).map((m) => priceOf({ id: p.id, plan: m, type: Object.keys(p.plans[m] ?? {})[0] as DeliveryType }).price))) && (
-                  <li><span className="p2-pi sp"><img src="/pay/snapppay.svg" alt="" width={36} height={36} /></span><span><b>{fa(INSTALLMENTS.parts)} قسط بدون کارمزد</b><small>با اسنپ‌پی، بدون ضامن</small></span></li>
-                )}
                 {p.group?.length ? <li><a href="#buy" className="p2-pl"><span className="p2-pi"><Icon id="box" /></span><span><b>دنگی با دوستان</b><small>هر نفر تا {fa(p.group[p.group.length - 1][1])}٪ ارزان‌تر</small></span></a></li> : null}
               </ul>
             </div>
@@ -210,9 +206,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                   <div><dt>سرویس</dt><dd className="en">{p.name}</dd></div>
                   <div><dt>سازنده</dt><dd className="en">{p.maker}</dd></div>
                   <div><dt>دسته</dt><dd>{CATEGORIES[p.category]}</dd></div>
-                  <div><dt>نوع</dt><dd>{isSub(p) ? "اشتراک رسمی" : `${nounOf(p)}، رسمی و قانونی`}</dd></div>
+                  <div><dt>نوع</dt><dd>{p.source ?? (isSub(p) ? "اشتراک رسمی" : `${nounOf(p)}، رسمی و قانونی`)}</dd></div>
                   <div><dt>{axisOf(p).replace(" (آمریکا)", "")}</dt><dd>{months.map((m) => optionLabel(p, m)).join("، ")}</dd></div>
-                  <div><dt>روش تحویل</dt><dd>{types.map((t) => DELIVERY[t].title).join("، ")}</dd></div>
+                  <div><dt>روش تحویل</dt><dd>{types.map((t) => deliveryOf(p, t).title).join("، ")}</dd></div>
                   <div><dt>زمان تحویل</dt><dd>{etaText(p)}</dd></div>
                   <div><dt>پلتفرم‌ها</dt><dd>{seo.platforms.join("، ")}</dd></div>
                   <div><dt>شروع قیمت</dt><dd><b>{money(minPrice(p))}</b> تومان</dd></div>
@@ -251,7 +247,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             <div className="p2-tbl-w">
               <table className="p2-tbl">
                 <caption className="sr">جدول قیمت {p.name}</caption>
-                <thead><tr><th scope="col">{axisOf(p)}</th>{types.map((t) => <th scope="col" key={t}>{DELIVERY[t].title}</th>)}</tr></thead>
+                <thead><tr><th scope="col">{axisOf(p)}</th>{types.map((t) => <th scope="col" key={t}>{deliveryOf(p, t).title}</th>)}</tr></thead>
                 <tbody>
                   {months.map((m) => (
                     <tr key={m}>
@@ -281,7 +277,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             <div className="p2-ways">
               {types.map((t) => (
                 <div className="p2-way" key={t}>
-                  <h3>{DELIVERY[t].title}{t === "own" && types.length > 1 && <span className="p2-rec">پیشنهاد ما</span>}</h3>
+                  <h3>{deliveryOf(p, t).title}{t === "own" && types.length > 1 && <span className="p2-rec">پیشنهاد ما</span>}</h3>
                   <p>{deliveryExplain(p, t)}</p>
                   <ol>{stepsFor(p, t).map(([b, d]) => <li key={b}><b>{b}</b><span>{d}</span></li>)}</ol>
                 </div>

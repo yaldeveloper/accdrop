@@ -35,6 +35,9 @@ export type Product = {
   badge?: string;
   /** Group buy: [seats, percent off per seat], ascending. */
   group?: [number, number][];
+  /** Wholesale: [minimum quantity, percent off each unit], ascending. One line then carries up to MAX_QTY units
+   *  (stored in `seats`) and delivers that many codes or accounts. */
+  bulk?: [number, number][];
   /** Offers the dedicated foreign static IP add-on. */
   ip?: boolean;
   /** Brand colour for the product page (overrides the built-in theme). */
@@ -45,6 +48,8 @@ export type Product = {
   tier?: string;
   /** Supplier (Insight Store) product id per option; paid code lines are bought and delivered automatically. */
   ix?: Record<string, number>;
+  /** Per-product names of delivery methods, e.g. «آماده ۲۰۱۸» and «سفارشی» for Apple ID. `explain` replaces the long text. */
+  types?: Partial<Record<DeliveryType, { title: string; detail: string; explain?: string }>>;
   /** What the customer receives, replacing the generic text of the delivery method. */
   deliver?: string;
   /** The last step after delivery: how to redeem or use what was delivered. */
@@ -57,6 +62,8 @@ export type Product = {
   qd?: Record<string, { id: string; cost: number }>;
   /** Canboso product per option: its product id and our cost in USD. Paid lines are bought and delivered automatically. */
   cb?: Record<string, { id: string; cost: number }>;
+  /** Replaces «اشتراک رسمی» / «رسمی و قانونی» on the product page when the item is not from the maker itself. */
+  source?: string;
   /** Selling price in USDT per code option. When set, the Toman price follows the live Tether rate. */
   usdt?: Record<string, number>;
 };
@@ -145,11 +152,27 @@ const SAMPLES: Product[] = [
     description: "استارز برای ربات‌ها، کانال‌ها و هدیه", use: "پرداخت داخل تلگرام",
     plans: { "100": { username: 190000 }, "250": { username: 450000 }, "500": { username: 890000 }, "1000": { username: 1750000 } },
     includes: ["خرید در ربات‌ها و مینی‌اپ‌ها", "حمایت از کانال‌ها و پست‌های پولی", "هدیه دادن به دوستان"] },
-  { id: "appleid", hidden: true, name: "Apple ID", maker: "Apple", category: "apple", kind: "account", monogram: "AP", etaMinutes: 30,
-    axis: "کشور اکانت", labels: { us: "آمریکا", tr: "ترکیه", uk: "انگلیس" },
-    description: "اپل آیدی آماده و اختصاصی", use: "ورود به App Store",
-    plans: { us: { ready: 390000 }, tr: { ready: 390000 }, uk: { ready: 450000 } },
-    includes: ["اکانت تازه با ایمیل جدید، فقط برای تو", "سؤال‌های امنیتی و تاریخ تولد", "مناسب App Store و iCloud همان کشور"] },
+  // Sold the way Iranian shops offer it: what it is for and how long the warranty lasts, ready (made in 2018, instant
+  // from our stock, single or wholesale) or made to order with a new personal email. Priced just under competitors
+  // (Nov 2026: ready 380–440k, made to order 420–480k).
+  { id: "appleid", name: "Apple ID", maker: "Apple", category: "apple", kind: "account", monogram: "AP", etaMinutes: 0, badge: "عمده",
+    axis: "نوع و گارانتی", labels: { life: "iCloud مادام‌العمر", icloud: "iCloud ۳۰ روزه", store: "App Store ۳۰ روزه" },
+    description: "اپل آیدی آماده یا سفارشی با گارانتی، تکی یا عمده برای موبایل‌فروشی‌ها", use: "App Store و iCloud",
+    plans: {
+      life: { code: 429000, ready: 469000 },
+      icloud: { code: 409000, ready: 429000 },
+      store: { code: 369000, ready: 409000 },
+    },
+    types: {
+      code: { title: "آماده (ساخت ۲۰۱۸)", detail: "تحویل فوری و خودکار؛ تکی یا عمده" },
+      ready: { title: "سفارشی", detail: "با ایمیل شخصی تازه، معمولاً تا چند ساعت",
+        explain: "یک اپل آیدی تازه با ایمیل شخصی جدید فقط برای تو می‌سازیم. ایمیل، رمزها، سؤال‌های امنیتی و تاریخ تولد را در حساب کاربری‌ات تحویل می‌گیری و اکانت کاملاً مال خودت است." },
+    },
+    bulk: [[5, 8], [10, 12], [25, 18], [50, 25]],
+    deliver: "بلافاصله بعد از پرداخت، ایمیل و رمز اپل آیدی، رمز ایمیل، سؤال‌های امنیتی و تاریخ تولد در حساب کاربری‌ات نمایش داده و پیامک می‌شود. در خرید عمده هر اکانت در یک خط جداست.",
+    howTo: "اکانت‌های App Store را فقط در Settings › Media & Purchases وارد کن، نه در iCloud بالای تنظیمات. اکانت‌های iCloud را می‌توانی در iCloud هم وارد کنی. بعد از ورود، رمز را عوض کن.",
+    warranty: "گارانتی ۳۰ روزه یا مادام‌العمر",
+    includes: ["آماده ۲۰۱۸ یا سفارشی با ایمیل شخصی", "سؤال‌های امنیتی و تاریخ تولد", "اکانت آماده: تکی یا عمده تا ۱۰۰ عدد"] },
   // Live 5sim numbers (lib/server/fivesim.ts): countries and prices come from 5sim; the plan below is only the
   // «از …» price shown in listings and is never sold (see priceLines).
   { id: "vnumber", name: "Virtual Number", maker: "AccDrop", category: "number", kind: "number", monogram: "VN", etaMinutes: 0,
@@ -214,7 +237,8 @@ const REAL: Product[] = [
     includes: ["پلن Pro یک‌ساله", "کد رسمی روی اکانت خودت", "تحویل فوری"] },
   { id: "capcut", name: "CapCut Pro", maker: "ByteDance", category: "create", monogram: "CC", etaMinutes: 0, warranty: "گارانتی تا پایان اشتراک",
     description: "تدوین ویدئو برای تولیدکننده محتوا", use: "تدوین ویدئو، حرفه‌ای",
-    plans: { "1": { code: 790000 }, "6": { code: 1490000 }, "12": { code: 2890000 } }, ix: { "6": 68, "12": 113 }, qd: { "1": { id: "P_10017", cost: 1.89 } },
+    plans: { "1": { code: 790000 }, "3": { code: 0 }, "6": { code: 1490000 }, "12": { code: 2890000 } }, ix: { "6": 68, "12": 113 }, qd: { "1": { id: "P_10017", cost: 1.89 } },
+    cb: { "3": { id: "6ae8b1e95edeecad99de7819", cost: 7.72 } },
     deliver: "بلافاصله بعد از پرداخت، ایمیل و رمز یک اکانت CapCut Pro در حساب کاربری‌ات نمایش داده و پیامک می‌شود. تا ۲ روز ایمیل اکانت را به ایمیل خودت تغییر بده.",
     howTo: "وارد اکانت شو و تا ۲ روز ایمیلش را عوض کن؛ حداکثر روی ۲ دستگاه.",
     includes: ["افکت‌ها، قالب‌ها و ابزارهای هوش مصنوعی", "خروجی 4K بدون واترمارک", "گارانتی تا پایان اشتراک"] },
@@ -349,7 +373,7 @@ const USDT_PRICE: Record<string, Record<string, number>> = {
   lovable: { "12": 56 },            // 45
   warp: { "12": 15.5 },             // 12
   framer: { "12": 10.9 },           // 8
-  capcut: { "1": 2.9, "6": 14.5, "12": 28 }, // 1.89 (QuickDigi), 11, 22
+  capcut: { "1": 2.9, "3": 11.5, "6": 14.5, "12": 28 }, // 1.89 (QuickDigi), 7.72 (Canboso), 11, 22
   "adobe-express": { "12": 2 },     // 0.5
   linkedin: { "3": 3.5 },           // 1
   "linkedin-business": { "2": 3.5 },// 1
@@ -499,6 +523,101 @@ const CB_PRODUCTS: Product[] = [
     deliver: "ایمیل و رمز اکانت Microsoft 365 " + CB_INSTANT,
     howTo: "با ایمیل و رمز وارد اپ‌های آفیس شو (تا ۵ کامپیوتر). ماه اول گارانتی دارد؛ ۱۱ ماه بعد هدیه است و تضمینی نیست.",
     includes: ["Word، Excel، PowerPoint و OneNote", "۱۰۰ گیگ OneDrive", "۱ ماه گارانتی + ۱۱ ماه هدیه"] },
+  // ----- API keys (relay gateways compatible with OpenAI / Anthropic clients) -----
+  { id: "claude-api", source: "کلید API از درگاه واسط", tier: "Claude", name: "Claude API", maker: "Anthropic", category: "code", kind: "account", monogram: "AN", etaMinutes: 0, warranty: "گارانتی تا پایان اعتبار کلید",
+    description: "کد اعتبار API برای مدل‌های Opus و Sonnet، برای Claude Code، Cursor و VS Code", use: "کدنویسی با Claude، بدون اکانت خارجی",
+    axis: "حجم اعتبار", labels: { "10m": "۱۰ میلیون توکن، ۱ روز", "100m": "۱۰۰ میلیون توکن، ۳ روز", "100usd": "۱۰۰ دلار اعتبار، ۲۵ روز", "500usd": "۵۰۰ دلار اعتبار، ۳۰ روز" },
+    plans: { "10m": { code: 0 }, "100m": { code: 0 }, "100usd": { code: 0 }, "500usd": { code: 0 } },
+    usdt: { "10m": 3.5, "100m": 9.9, "100usd": 4.9, "500usd": 14.9 },
+    cb: { "10m": { id: "6ac5c9447f2352139423ed04", cost: 1.75 }, "100m": { id: "6ae31d2de106df8ea6f0d691", cost: 6 }, "100usd": { id: "6a8e697c6d4b1ff2c2372aa2", cost: 2.56 }, "500usd": { id: "6a8d036f3d2e21a852d338cd", cost: 9.3 } },
+    deliver: "کد فعال‌سازی اعتبار API " + CB_INSTANT,
+    howTo: "بسته‌های توکنی: کد را در miraiapi.com/usage بخش Redeem وارد کن و از بخش Config کلید و آدرس API را برای Claude Code، Cursor یا VS Code بگیر. بسته‌های دلاری: در api.mwapi.dev ثبت‌نام کن و کد را آنجا فعال کن. اعتبار از لحظه فعال‌سازی شروع می‌شود.",
+    includes: ["مدل‌های Claude Opus و Sonnet", "سازگار با Claude Code، Cursor و VS Code", "کلید از یک درگاه واسط (سازگار با OpenAI و Anthropic) است، نه از حساب رسمی سازنده"] },
+  { id: "codex-api", source: "کلید API از درگاه واسط", family: "claude-api", tier: "Codex", name: "Codex API", maker: "OpenAI", category: "code", kind: "account", monogram: "CX", etaMinutes: 0, warranty: "گارانتی تا پایان اعتبار کلید",
+    description: "اعتبار API مدل‌های GPT و Codex برای Codex CLI، Cursor و VS Code", use: "کدنویسی با Codex",
+    axis: "حجم اعتبار", labels: { "10m": "۱۰ میلیون توکن، ۱ روز", "50m": "۵۰ میلیون توکن، ۲ روز", "100m": "۱۰۰ میلیون توکن، ۳ روز" },
+    plans: { "10m": { code: 0 }, "50m": { code: 0 }, "100m": { code: 0 } }, usdt: { "10m": 3.9, "50m": 5.9, "100m": 9.9 },
+    cb: { "10m": { id: "6ae9aca7ed6738dee16897f7", cost: 1.96 }, "50m": { id: "6ae8bbed5edeecad99e164a3", cost: 3.22 }, "100m": { id: "6ae8baed5edeecad99e11e5c", cost: 6.5 } },
+    deliver: "کد یا کلید API به‌همراه لینک راهنمای نصب " + CB_INSTANT,
+    howTo: "بسته‌های ۵۰ و ۱۰۰ میلیونی: کد را در miraiapi.com/usage بخش Redeem فعال کن و از Config کلید بگیر. بسته ۱۰ میلیونی: کد را در zendigikey.shop/check به کلید تبدیل کن و با ابزار نصب ZendiKeySetup تنظیمش کن.",
+    includes: ["مدل‌های GPT و Codex", "سازگار با Codex CLI، Cursor و VS Code", "کلید از یک درگاه واسط (سازگار با OpenAI و Anthropic) است، نه از حساب رسمی سازنده"] },
+  { id: "grok-api", source: "کلید API از درگاه واسط", family: "claude-api", tier: "Grok", name: "Grok API", maker: "xAI", category: "code", kind: "account", monogram: "GK", etaMinutes: 0, warranty: "گارانتی تا پایان اعتبار کلید",
+    description: "اعتبار API مدل‌های Grok 4.x با آدرس سازگار با OpenAI", use: "API گراک، ارزان",
+    axis: "حجم اعتبار", labels: { "10m": "۱۰ میلیون توکن، ۳ روز", "30m": "۳۰ میلیون توکن، ۱ ماه", "100m": "۱۰۰ میلیون توکن، ۱ ماه" },
+    plans: { "10m": { code: 0 }, "30m": { code: 0 }, "100m": { code: 0 } }, usdt: { "10m": 3.9, "30m": 5.5, "100m": 12.9 },
+    cb: { "10m": { id: "6ae8acfa5edeecad99dceb65", cost: 2.34 }, "30m": { id: "6ae8ad3e5edeecad99dd0420", cost: 3.29 }, "100m": { id: "6ae8acd65edeecad99dcdc9f", cost: 8.29 } },
+    deliver: "کد اعتبار API " + CB_INSTANT,
+    howTo: "کد را در redeem.teamsoclo.site به کلید تبدیل کن. آدرس API: gpt.teamsoclo.site/v1 (سازگار با OpenAI)؛ مدل‌ها grok-4.5 تا grok-4.7. راهنما: docs.teamsoclo.site",
+    includes: ["مدل‌های Grok 4.5 تا 4.7", "سازگار با کتابخانه‌ها و ابزارهای OpenAI", "کلید از یک درگاه واسط (سازگار با OpenAI و Anthropic) است، نه از حساب رسمی سازنده"] },
+  { id: "gemini-api", source: "کلید API از درگاه واسط", family: "claude-api", tier: "Gemini", name: "Gemini API", maker: "Google", category: "code", kind: "account", monogram: "GE", etaMinutes: 0, warranty: "گارانتی ۱ روزه کلید",
+    description: "کلید API جمنای برای Claude Code، Codex CLI و ابزارهای سازگار، یک روز", use: "API جمنای برای یک روز کار سنگین",
+    axis: "حجم اعتبار", labels: { "1d": "۲۰ تا ۴۰ میلیون توکن، ۱ روز" },
+    plans: { "1d": { code: 0 } }, usdt: { "1d": 5.5 }, cb: { "1d": { id: "6ae8ad885edeecad99dd1d3e", cost: 3 } },
+    deliver: "کلید API و لینک راهنمای نصب " + CB_INSTANT,
+    howTo: "راهنمای نصب در daily.bddevlab.buzz/redeem.html است. حدود ۲۰ میلیون توکن با Gemini Argon یا ۴۰ میلیون با Gemini Flash؛ کلید یک روز بعد از صدور یا با تمام شدن توکن‌ها قطع می‌شود.",
+    includes: ["Gemini Argon و Gemini Flash", "سازگار با Claude Code و Codex CLI", "کلید از یک درگاه واسط (سازگار با OpenAI و Anthropic) است، نه از حساب رسمی سازنده"] },
+  { id: "deepseek-api", source: "کلید API از درگاه واسط", family: "claude-api", tier: "DeepSeek", name: "DeepSeek، Kimi و Qwen API", maker: "DeepSeek", category: "code", kind: "account", monogram: "DS", etaMinutes: 0, warranty: "گارانتی تا پایان اعتبار کلید",
+    description: "یک کلید برای DeepSeek V4، Kimi K3، Qwen و GLM", use: "مدل‌های چینی، یک‌جا",
+    axis: "حجم اعتبار", labels: { "50m": "۵۰ میلیون توکن، ۲ روز", "100m": "۱۰۰ میلیون توکن، ۴ روز" },
+    plans: { "50m": { code: 0 }, "100m": { code: 0 } }, usdt: { "50m": 6.5, "100m": 9.9 },
+    cb: { "50m": { id: "6ae3dc40ed8e0e40e4ed3647", cost: 3.79 }, "100m": { id: "6ae3dc21ed8e0e40e4ed2fda", cost: 6 } },
+    deliver: "کد اعتبار API " + CB_INSTANT,
+    howTo: "کد را در miraiapi.com/usage فعال کن. آدرس API: api.miraiapi.com/v1 (سازگار با OpenAI).",
+    includes: ["DeepSeek V4 Pro و Flash، Kimi K3، Qwen 3.8 Max، GLM", "سازگار با ابزارهای OpenAI", "کلید از یک درگاه واسط (سازگار با OpenAI و Anthropic) است، نه از حساب رسمی سازنده"] },
+  // ----- AI voice, video and photo -----
+  { id: "elevenlabs-vibi", family: "elevenlabs", tier: "اعتبار Vibi", name: "ElevenLabs Credits (Vibi)", maker: "ElevenLabs", category: "ai", kind: "account", monogram: "11", etaMinutes: 0, warranty: "گارانتی فعال‌سازی",
+    description: "اعتبار صدای ElevenLabs و MiniMax در Vibi.pro، بدون انقضای ماهانه", use: "صداگذاری با ElevenLabs، بدون اشتراک",
+    axis: "مقدار اعتبار", labels: { "131k": "۱۳۱ هزار اعتبار", "300k": "۳۰۰ هزار اعتبار" },
+    plans: { "131k": { code: 0 }, "300k": { code: 0 } }, usdt: { "131k": 5.9, "300k": 9.9 },
+    cb: { "131k": { id: "6ad0855f193b4b0d0f433b69", cost: 3.5 }, "300k": { id: "6adad7b0732d8b1904f4405a", cost: 6.54 } },
+    deliver: "کد بازخرید اعتبار Vibi " + CB_INSTANT,
+    howTo: "در vibi.pro ثبت‌نام کن و کد را در بخش بازخرید وارد کن. Vibi پلتفرم صداسازی با مدل‌های رسمی ElevenLabs و MiniMax است؛ اعتبار ماهانه منقضی نمی‌شود.",
+    includes: ["مدل‌های صدای ElevenLabs و MiniMax", "بیش از ۱۰ هزار صدای چندزبانه", "اعتبار بدون انقضای ماهانه"] },
+  { id: "minimax", name: "MiniMax Audio Credits", maker: "MiniMax", category: "ai", kind: "account", monogram: "MM", etaMinutes: 0, warranty: "گارانتی فعال‌سازی",
+    description: "اعتبار صداسازی MiniMax در Vibi.pro، بدون انقضای ماهانه", use: "صدای طبیعی، ارزان‌تر از ElevenLabs",
+    axis: "مقدار اعتبار", labels: { "131k": "۱۳۱ هزار اعتبار", "300k": "۳۰۰ هزار اعتبار" },
+    plans: { "131k": { code: 0 }, "300k": { code: 0 } }, usdt: { "131k": 5.5, "300k": 9.5 },
+    cb: { "131k": { id: "6aea88f9adf86f54778576f7", cost: 3.25 }, "300k": { id: "6adad7f2732d8b1904f455bd", cost: 6.16 } },
+    deliver: "کد بازخرید اعتبار Vibi " + CB_INSTANT,
+    howTo: "در vibi.pro ثبت‌نام کن و کد را در بخش بازخرید وارد کن. اعتبار ماهانه منقضی نمی‌شود.",
+    includes: ["مدل‌های صدای MiniMax و ElevenLabs", "بیش از ۱۰ هزار صدای چندزبانه", "اعتبار بدون انقضای ماهانه"] },
+  { id: "kling-account", name: "Kling AI", maker: "Kuaishou", category: "ai", monogram: "KL", etaMinutes: 0, warranty: "۱ روز گارانتی",
+    description: "اکانت آماده Kling برای ساخت ویدئو با هوش مصنوعی، ۶۰۰ تا ۸۰۰ اعتبار، یک ماه", use: "ویدئو از متن و عکس",
+    plans: { "1": { code: 0 } }, usdt: { "1": 8.9 }, cb: { "1": { id: "6ae32866e106df8ea6f3acab", cost: 5.5 } },
+    deliver: "اطلاعات ورود اکانت Kling " + CB_INSTANT,
+    howTo: "با اطلاعات تحویلی وارد klingai.com شو. گارانتی فقط ۱ روز است؛ همان روز اکانت را بررسی کن.",
+    includes: ["۶۰۰ تا ۸۰۰ اعتبار", "ساخت ویدئو از متن و عکس", "۱ روز گارانتی"] },
+  { id: "wink", name: "Wink VIP", maker: "Meitu", category: "create", monogram: "WK", etaMinutes: 0, warranty: "۳۰ روز گارانتی",
+    description: "ویرایش ویدئو و عکس با هوش مصنوعی، فقط اندروید، یک ماه", use: "بهبود کیفیت ویدئو و حذف اشیا",
+    plans: { "1": { code: 0 } }, usdt: { "1": 6.9 }, cb: { "1": { id: "6ae3dbdced8e0e40e4ed273b", cost: 4 } },
+    deliver: "اطلاعات ورود اکانت Wink VIP " + CB_INSTANT,
+    howTo: "فقط روی یک گوشی اندروید و حداکثر تا ۶ ساعت بعد از خرید وارد شو؛ بعد از آن گارانتی ندارد. از اکانت خارج نشو و آن را به اشتراک نگذار.",
+    includes: ["افزایش کیفیت عکس و ویدئو", "حذف اشیا با هوش مصنوعی و خروجی بدون واترمارک", "فقط اندروید، ۳۰ روز گارانتی"] },
+  { id: "meitu", name: "Meitu VIP+", maker: "Meitu", category: "create", monogram: "MT", etaMinutes: 0, warranty: "گارانتی کامل ۱۴ روز",
+    description: "فیلترها و ابزارهای هوش مصنوعی Meitu، ۱۴ روز", use: "ویرایش عکس و سلفی",
+    plans: { "14d": { code: 0 } }, labels: { "14d": "۱۴ روزه" }, usdt: { "14d": 3.9 }, cb: { "14d": { id: "6adad8d5732d8b1904f498aa", cost: 2.32 } },
+    deliver: "اطلاعات ورود اکانت Meitu VIP+ " + CB_INSTANT,
+    howTo: "حداکثر تا ۶ ساعت بعد از خرید و فقط روی یک دستگاه وارد شو؛ از اکانت خارج نشو و آن را به اشتراک نگذار.",
+    includes: ["همه فیلترهای VIP", "حذف اشیا و ابزارهای هوش مصنوعی", "خروجی HD و 4K بدون لوگو"] },
+  // ----- Cloud and dev tools -----
+  { id: "google-cloud", name: "Google Cloud $300", maker: "Google", category: "code", kind: "account", monogram: "GC", etaMinutes: 0, warranty: "گارانتی تحویل",
+    description: "اکانت آماده Google Cloud با ۳۰۰ دلار اعتبار، تا ۹۰ روز", use: "سرور مجازی و هاست ربات",
+    plans: { "3": { code: 0 } }, usdt: { "3": 28 }, cb: { "3": { id: "6acbb61afac01298229ef3a4", cost: 20 } },
+    deliver: "Gmail و رمز اکانت Google Cloud " + CB_INSTANT,
+    howTo: "با Gmail و رمز وارد console.cloud.google.com شو. اعتبار ۳۰۰ دلاری حداکثر ۹۰ روز اعتبار دارد. سرویس‌های گوگل کلود از ایران با IP ایران باز نمی‌شوند.",
+    includes: ["۳۰۰ دلار اعتبار Google Cloud", "VPS، Cloud Run، دیتابیس و ذخیره‌سازی", "تا ۹۰ روز"] },
+  { id: "apify", name: "Apify $110", maker: "Apify", category: "code", kind: "account", monogram: "AF", etaMinutes: 0, warranty: "۱۵ روز گارانتی",
+    description: "اکانت آماده Apify با ۱۱۰ دلار اعتبار برای اسکرپینگ و اتوماسیون وب", use: "اسکرپ و اتوماسیون وب",
+    plans: { "1": { code: 0 } }, usdt: { "1": 5.9 }, cb: { "1": { id: "6adc472f2141666167108fd9", cost: 3 } },
+    deliver: "ایمیل و رمز Outlook اکانت Apify " + CB_INSTANT,
+    howTo: "با ایمیل و رمز وارد apify.com شو.",
+    includes: ["۱۱۰ دلار اعتبار", "هزاران Actor آماده برای اسکرپینگ", "۱۵ تا ۲۰ روز گارانتی"] },
+  { id: "autodesk-admin", family: "autocad", tier: "پنل ادمین", name: "Autodesk Education Admin", maker: "Autodesk", category: "create", kind: "account", monogram: "AD", etaMinutes: 0, warranty: "۱ ماه گارانتی",
+    description: "پنل ادمین آموزشی Autodesk تا ۳۰۰۰ کاربر، سه ساله؛ برای تیم‌ها و آموزشگاه‌ها", use: "AutoCAD، Revit و Maya برای کل تیم",
+    plans: { "36": { code: 0 } }, labels: { "36": "سه ساله" }, usdt: { "36": 24 }, cb: { "36": { id: "6aa9818122a97e6cc9225036", cost: 15 } },
+    deliver: "ایمیل و رمز اکانت ادمین Autodesk " + CB_INSTANT,
+    howTo: "با اطلاعات تحویلی وارد manage.autodesk.com شو (برای کد دومرحله‌ای، ورود Gmail را با ایمیل بازیابی تأیید کن)، رمز را عوض کن و از پنل تا ۳۰۰۰ نفر را دعوت کن.",
+    includes: ["دعوت تا ۳۰۰۰ کاربر", "AutoCAD، Revit، Maya، Fusion و بقیه", "دسترسی سه ساله، ۱ ماه گارانتی"] },
 ];
 REAL.push(...CB_PRODUCTS);
 
@@ -548,11 +667,15 @@ export const STATIC_IP = {
   countries: { de: "آلمان", nl: "هلند", uk: "انگلیس", us: "آمریکا", fr: "فرانسه" } as Record<string, string>,
 };
 export const MAX_SEATS = 6;
+/** Most units of a wholesale product in one cart line. */
+export const MAX_QTY = 100;
+/** How many units one line of this product may carry: group seats, wholesale quantity, or just one. */
+export const maxUnits = (p: Product) => (p.bulk?.length ? MAX_QTY : p.group?.length ? MAX_SEATS : 1);
 
-/** Percent off per seat for a group of `seats`. */
+/** Percent off per seat for a group of `seats`, or per unit for a wholesale quantity. */
 export function groupOff(p: Product, seats: number) {
   let off = 0;
-  for (const [n, pct] of p.group ?? []) if (seats >= n) off = pct;
+  for (const [n, pct] of p.bulk ?? p.group ?? []) if (seats >= n) off = pct;
   return off;
 }
 export const ipPrice = (p: Product, plan: Months) => (p.ip && isSub(p) ? STATIC_IP.perMonth * Math.max(1, Number(plan) || 1) : 0);
@@ -560,7 +683,7 @@ export const ipPrice = (p: Product, plan: Months) => (p.ip && isSub(p) ? STATIC_
 /** Full price of one cart line: seats with group discount, plus add-ons. */
 export function linePrice(sel: Selection) {
   const p = productById(sel.id);
-  const seats = p.group?.length ? Math.min(MAX_SEATS, Math.max(1, sel.seats ?? 1)) : 1;
+  const seats = Math.min(maxUnits(p), Math.max(1, Math.trunc(sel.seats ?? 1)));
   const unit = priceOf(sel).price;
   const group = Math.round((unit * seats * (100 - groupOff(p, seats))) / 100 / 1000) * 1000;
   const ip = sel.ip && STATIC_IP.countries[sel.ip] ? ipPrice(p, sel.plan) : 0;
@@ -570,7 +693,7 @@ export function linePrice(sel: Selection) {
 /** «۳ نفر • آی‌پی ثابت آلمان», or "" for a plain line. */
 export function extrasLabel(sel: Selection) {
   const out: string[] = [];
-  if ((sel.seats ?? 1) > 1) out.push(`خرید گروهی ${fa(sel.seats!)} نفره`);
+  if ((sel.seats ?? 1) > 1) out.push(productById(sel.id)?.bulk?.length ? `${fa(sel.seats!)} عدد` : `خرید گروهی ${fa(sel.seats!)} نفره`);
   if (sel.ip && STATIC_IP.countries[sel.ip]) out.push(`${STATIC_IP.title} ${STATIC_IP.countries[sel.ip]}`);
   return out.join(" • ");
 }
@@ -583,8 +706,13 @@ export function priceOf(sel: Selection): { price: number; was?: number } {
   return { price: base };
 }
 
+/** Title and one-line detail of a delivery method, as this product names it. */
+export const deliveryOf = (p: Product | undefined, t: DeliveryType) => ({ ...DELIVERY[t], ...p?.types?.[t] });
+
 /** What each delivery method means, in plain words, for this product. */
 export function deliveryExplain(p: Product, t: DeliveryType) {
+  const own = p.types?.[t]?.explain;
+  if (own) return own;
   switch (t) {
     case "own": return `ایمیل اکانت ${p.maker} خودت را می‌دهی و اشتراک روی همان فعال می‌شود. رمز نمی‌خواهیم و تاریخچه‌ات می‌ماند.`;
     case "ready": return isSub(p) ? "یک اکانت تازه با ایمیل و رمز تحویل می‌گیری که فقط مال توست. ارزان‌تر و سریع‌تر است." : "یک اکانت تازه با ایمیل، رمز و اطلاعات امنیتی تحویل می‌گیری که فقط مال توست و می‌توانی رمزش را عوض کنی.";

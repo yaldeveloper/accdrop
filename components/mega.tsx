@@ -17,7 +17,7 @@ export const CAT_TONE: Record<Category, string> = {
 };
 export const CAT_LINE: Record<Category, string> = {
   ai: "ChatGPT، Manus، ElevenLabs", code: "Lovable و Warp", create: "CapCut، Framer، Adobe Express", work: "LinkedIn، Airtable، Duolingo",
-  apple: "اپل و گوگل‌پلی", music: "Spotify، YouTube Music، Tidal", game: "استیم، پلی‌استیشن، پابجی", telegram: "پرمیوم و استارز", number: "شماره برای ثبت‌نام",
+  apple: "اپل و گوگل‌پلی", music: "Deezer و Tidal", game: "استیم، پلی‌استیشن، پابجی", telegram: "پرمیوم و استارز", number: "شماره برای ثبت‌نام",
 };
 export const inCat = (c: Category) => listed().filter((p) => p.category === c);
 
