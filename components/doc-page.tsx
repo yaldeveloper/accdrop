@@ -8,7 +8,7 @@ export function DocPage({ title, lead, updated, children }: { title: string; lea
       <div className="wrap doc-g">
         <aside className="doc-side">
           <nav aria-label="صفحه‌های راهنما">
-            <Link href="/guarantee">شرایط ضمانت و بازگشت وجه</Link>
+            <Link href="/guarantee">گارانتی و بازگشت وجه</Link>
             <Link href="/terms">قوانین و مقررات</Link>
             <Link href="/contact">تماس و پشتیبانی</Link>
             <Link href="/reseller">نمایندگی فروش</Link>

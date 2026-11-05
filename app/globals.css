@@ -2272,3 +2272,68 @@ footer.ft .legal{margin-top:18px}
 .bx-tiers-q li button{display:grid;width:100%;padding:6px;background:transparent;color:inherit;cursor:pointer;border-radius:10px}
 .bx-stock{font-size:12px;color:#3c7a00;margin-top:6px}
 .bx-stock.bad{color:#c0392b}
+
+/* ===== Store flow: what you get, when, warranty ===== */
+/* Warranty levels share one colour code everywhere: green = covered for a period, neutral = delivery only, amber = short or none. */
+.w-period{--wc:#2f7a12}.w-delivery{--wc:var(--gray-l)}.w-short,.w-none{--wc:#a86400}
+/* Cards: delivery speed and warranty under the name. */
+.tile-meta{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:10px;font-size:11.5px;color:var(--gray-l)}
+.tile-meta>span{display:inline-flex;align-items:center;gap:5px}
+.tile-meta>span+span::before{content:"";width:3px;height:3px;border-radius:50%;background:currentColor;opacity:.5;margin-inline-end:5px}
+.tile-meta [class^="w-"]{color:var(--wc)}
+.hero3 .tile-meta{color:var(--gray-d)}
+/* Buy box facts */
+.bx-facts{list-style:none;display:grid;gap:0;border:1px solid var(--hair-l);border-radius:14px;background:#fff}
+.bx-facts li{display:grid;grid-template-columns:20px minmax(0,1fr);gap:10px;align-items:start;padding:11px 14px}
+.bx-facts li+li{border-top:1px solid var(--hair-l)}
+.bx-facts svg.i{width:18px;height:18px;margin-top:2px;color:var(--ink)}
+.bx-facts span{display:grid;gap:1px;min-width:0}
+.bx-facts small{font-size:11px;color:var(--gray-l)}
+.bx-facts b{font-size:14px;font-weight:600}
+.bx-facts em{font-style:normal;font-size:12px;color:var(--gray-l);line-height:1.7}
+.bx-facts li[class^="w-"] b,.bx-facts li[class^="w-"] svg.i{color:var(--wc)}
+.bx-facts li.w-short,.bx-facts li.w-none{background:#fff7e6}
+.bx-facts li.w-short em,.bx-facts li.w-none em{color:#7a4a00}
+.bx-help2{font-size:12px;color:var(--gray-l);text-align:center}
+.bx-help2 .link{font-size:12px}
+/* Checkout & order page warranty line */
+.co-war{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--gray-d);margin-top:8px;line-height:1.8}
+.co-war svg.i{width:15px;height:15px;flex:none;margin-top:4px;color:var(--wc)}
+.co-war b{color:var(--wc);font-weight:600}
+.co-war.w-delivery b{color:inherit}
+.od-war{color:var(--wc)!important}
+/* Guarantee page: every product's warranty */
+.gw{display:grid;gap:22px;margin:18px 0 8px}
+.gw h3{font-size:14px;color:var(--gray-l);font-weight:600;margin-bottom:6px}
+.gw ul{list-style:none;padding:0!important;margin:0;border:1px solid var(--hair-l);border-radius:16px;background:#fff;overflow:hidden}
+.gw li{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"n w" "r w";gap:2px 12px;align-items:center;padding:10px 14px;margin:0!important}
+.gw li+li{border-top:1px solid var(--hair-l)}
+.gw li a{grid-area:n;display:flex;align-items:center;gap:8px;color:inherit;text-decoration:none;min-width:0}
+.gw li a b{font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gw li small{grid-area:r;font-size:12px;color:var(--gray-l);padding-inline-start:34px}
+.gw .gw-w{grid-area:w;font-size:12px;font-weight:600;color:var(--wc);text-align:end;max-width:11em;line-height:1.6}
+.gw .mono{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;background:var(--paper-2);flex:none}
+/* Home, mobile: categories as big buttons instead of the decorative orbit. */
+.hcats{display:none}
+@media (max-width:720px){
+  .hero2 .orbit{display:none}
+  .hero2 .pick{display:none}
+  .hcats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:18px}
+  .hcats a{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"l n" "b n";gap:6px 8px;align-items:center;padding:12px 14px;border:1px solid var(--hair-2);border-radius:14px;color:var(--paper);background:rgba(255,255,255,.03)}
+  .hcats a:active{transform:scale(.98)}
+  .hcats-l{grid-area:l;display:flex;gap:6px;color:var(--gray-d)}
+  .hcats b{grid-area:b;font-size:14px;font-weight:600}
+  .hcats small{grid-area:n;font-size:12px;color:var(--gray-d);align-self:start}
+  .hero2{padding-bottom:16px}
+  .assure-row{margin-top:24px}
+}
+/* Product page, mobile: the decorative scene under the buy box only pushed the details down. */
+@media (max-width:900px){.p2-g>.p2-more{display:none}}
+.gw li{line-height:1.5}
+.gw section h3{margin-top:0}
+.bx-facts{overflow:hidden}
+@media (max-width:560px){.bx-facts li{padding:9px 12px}.bx-facts em{font-size:11.5px}}
+/* Many versions (API keys: Claude, Codex, Grok, Gemini, DeepSeek) wrap into rows instead of spilling out of the box. */
+.bx-var{display:flex;flex-wrap:wrap}
+.bx-var a{flex:1 1 28%;min-width:0}
+.bx-var a b{overflow-wrap:anywhere}

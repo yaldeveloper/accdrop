@@ -9,6 +9,8 @@ import { api } from "./account";
 import { fa, money } from "@/lib/format";
 import { Icon } from "./brand";
 import { useStore } from "./store";
+import { openChat } from "./chat";
+import { receiveOf, warrantyOf, whenOf } from "@/lib/facts";
 
 function initial(p: Product): Selection {
   const d = dropOf(p.id);
@@ -89,6 +91,8 @@ export function BuyPanel({ product: p }: { product: Product }) {
   };
   const setQty = (n: number) => setSel((s) => ({ ...s, seats: Math.min(MAX_QTY, Math.max(1, Math.trunc(n) || 1)) }));
   const buy = () => { if (group && dong) { startDong(); return; } addLine(sel); router.push("/checkout"); };
+  const rcv = receiveOf(p, sel.type);
+  const war = warrantyOf(p, sel.plan);
   const add = () => notify(addLine(sel) ? `${p.name} به سبد اضافه شد` : "این مورد از قبل در سبد هست");
 
   return (
@@ -143,7 +147,7 @@ export function BuyPanel({ product: p }: { product: Product }) {
           );
         })}
       </fieldset> : (
-        <p className="bx-one"><span>{months.length === 1 ? <>{optionLabel(p, sel.plan)} • </> : null}{deliveryOf(p, sel.type).title}</span><small>{deliveryOf(p, sel.type).detail}</small></p>
+        months.length === 1 ? <p className="bx-one"><span>{optionLabel(p, sel.plan)}</span><small>{p.description}</small></p> : null
       )}
 
       {bulk ? (
@@ -218,6 +222,12 @@ export function BuyPanel({ product: p }: { product: Product }) {
         </fieldset>
       ) : null}
 
+      <ul className="bx-facts" aria-label="خلاصه خرید">
+        <li><Icon id="box" /><span><small>چه می‌گیری</small><b>{rcv.title}</b><em>{rcv.detail}</em></span></li>
+        <li><Icon id="clock" /><span><small>تحویل</small><b>{later ? "معمولاً چند ساعت" : whenOf(p, sel.type)}</b><em>در صفحه سفارش و پیامک</em></span></li>
+        <li className={`w-${war.level}`}><Icon id="shield" /><span><small>گارانتی</small><b>{war.label}</b><em>{war.note}</em></span></li>
+      </ul>
+
       <div className="bx-sum">
         {group && dong
           ? <div className="bx-row"><span>سهم هر نفر</span><span>{unit.price > share ? <s className="num">{money(unit.price)}</s> : null}<b className="num">{money(share)}</b> <small>تومان</small></span></div>
@@ -227,11 +237,7 @@ export function BuyPanel({ product: p }: { product: Product }) {
       <button ref={cta} className="btn btn-paper btn-block bx-cta" onClick={buy} disabled={making}>{group && dong ? (making ? "در حال ساخت گروه…" : "ساخت گروه و گرفتن لینک") : "ادامه خرید"} <Icon id="arrow" className="arrow" /></button>
       {!(group && dong) && <button className="add-link" onClick={add}>افزودن به سبد خرید</button>}
 
-      <ul className="bx-trust">
-        <li><Icon id="shield" /><span>ضمانت<br />بازگشت وجه</span></li>
-        <li><Icon id="user" /><span>{isSub(p) ? <>روی اکانت<br />خودت</> : <>تحویل در<br />حساب کاربری</>}</span></li>
-        <li><Icon id="chat" /><span>پشتیبانی<br />تا ۱۲ شب</span></li>
-      </ul>
+      <p className="bx-help2">قبل از خرید سؤال داری؟ <button type="button" className="link" onClick={openChat}>از پشتیبانی بپرس</button></p>
 
       <div className={`buybar ${ctaVisible ? "" : "on"}`} role="region" aria-label="خرید سریع">
         <div><small>{optionLabel(p, sel.plan)}{seats > 1 ? (bulk ? ` • ${fa(seats)} عدد` : ` • ${fa(seats)} نفر${dong ? " • دنگی" : ""}`) : ""}</small><b className="num">{money(group && dong ? share : price)} <small>تومان{group && dong ? " / نفر" : ""}</small></b></div>
