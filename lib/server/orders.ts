@@ -1,6 +1,7 @@
 import { randomInt } from "node:crypto";
 import { DELIVERY, STATIC_IP, maxUnits, linePrice, productById, PRODUCTS, sellable, type DeliveryType, validOwn } from "@/lib/catalog";
 import { livePlan } from "@/lib/numbers";
+import { comboById, pricedLines } from "@/lib/combos";
 import { loadCatalog } from "./catalog";
 import { normalizeUsername, validEmail, validUsername, type Order, type OrderLine, type OrderStatus } from "@/lib/account";
 import { db } from "./db";
@@ -16,7 +17,7 @@ import { cancelNumber, finishNumber, fivesimConfigured, livePrice, publicNumber,
 type Sql = Awaited<ReturnType<typeof db>>;
 const ms = (d: Date | null) => (d ? new Date(d).getTime() : null);
 
-export type LineInput = { id: string; plan: string; type: DeliveryType; email?: string; username?: string; seats?: number; ip?: string; members?: string[] };
+export type LineInput = { id: string; plan: string; type: DeliveryType; email?: string; username?: string; seats?: number; ip?: string; members?: string[]; combo?: string };
 
 /** Validates the cart and prices it from the catalog. Prices sent by the browser are ignored.
  * `live` holds the server's current price of each live virtual number plan (from 5sim). */
@@ -44,9 +45,12 @@ export function priceLines(input: LineInput[], live: Record<string, number> = {}
       price: linePrice({ id: p.id, plan: l.plan, type: l.type, seats, ip, unit: live[l.plan] }),
       email: need === "email" ? l.email!.trim().toLowerCase() : undefined, // or the product's own field, e.g. a Claude Organization ID
       username: need === "username" ? normalizeUsername(l.username!) : undefined,
+      combo: comboById(l.combo ? String(l.combo) : undefined)?.id,
     });
   }
-  return { lines };
+  // Combo packs: lines of a pack that is complete in this cart get the pack discount; any other pack tag is dropped.
+  const packed = pricedLines(lines.map((l, i) => ({ ...l, unit: live[input[i].plan] })));
+  return { lines: lines.map((l, i) => ({ ...l, price: packed[i].price, combo: packed[i].combo })) };
 }
 
 export async function discountRate(code: string): Promise<number> {
@@ -70,7 +74,8 @@ export async function createOrder(mobile: string, input: LineInput[], discountCo
   const code = opts.split ? "" : discountCode.trim().toUpperCase();
   const rate = await discountRate(code);
   const subtotal = priced.lines.reduce((s, l) => s + l.price, 0);
-  const discount = Math.round((subtotal * rate) / 1000) * 1000;
+  // Discount codes don't stack on combo packs: those lines already carry the pack discount.
+  const discount = Math.round((priced.lines.reduce((s, l) => s + (l.combo ? 0 : l.price), 0) * rate) / 1000) * 1000;
   const total = subtotal - discount;
   let orderCode = "";
   await sql.begin(async (tx) => {
@@ -85,9 +90,9 @@ export async function createOrder(mobile: string, input: LineInput[], discountCo
       if (tries > 5) throw new Error("could not allocate order code");
     }
     for (const [i, l] of priced.lines.entries()) {
-      await tx`insert into order_lines (order_code, idx, product_id, plan, delivery, price, email, username, seats, ip, members)
+      await tx`insert into order_lines (order_code, idx, product_id, plan, delivery, price, email, username, seats, ip, members, combo)
         values (${orderCode}, ${i}, ${l.id}, ${l.plan}, ${l.type}, ${l.price}, ${l.email ?? null}, ${l.username ?? null},
-          ${l.seats ?? 1}, ${l.ip ?? null}, ${l.members?.length ? l.members.join(",") : null})`;
+          ${l.seats ?? 1}, ${l.ip ?? null}, ${l.members?.length ? l.members.join(",") : null}, ${l.combo ?? null})`;
     }
     const email = priced.lines.find((l) => l.email)?.email;
     if (email) await tx`update users set email = ${email} where mobile = ${mobile} and email = ''`;
@@ -237,7 +242,7 @@ export async function loadOrders(where: { mobile?: string; code?: string; status
       lineId: l.id, id: l.product_id, plan: l.plan, type: l.delivery as DeliveryType, price: Number(l.price),
       email: l.email ?? undefined, username: l.username ?? undefined,
       seats: Number(l.seats ?? 1), ip: l.ip ?? undefined, members: l.members ? String(l.members).split(",") : undefined, secret: l.secret ?? undefined, deliveredAt: ms(l.delivered_at),
-      supplyRef: l.supply_ref ?? undefined,
+      supplyRef: l.supply_ref ?? undefined, combo: l.combo ?? undefined,
       number: livePlan(l.plan) ? publicNumber(l.num as NumRecord | null) ?? { status: "BUYING", codes: [], tries: 0 } : undefined,
     })),
   }));

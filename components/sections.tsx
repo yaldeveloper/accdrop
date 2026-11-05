@@ -49,7 +49,7 @@ export function Header() {
       <div className="wrap">
         <a href="/" aria-label="اک‌دراپ، صفحه اصلی"><Wordmark /></a>
         <nav aria-label="منوی اصلی">
-          <MegaMenu /><Link href="/finder" className="hd-fd">ابزاریاب<i aria-hidden /></Link><Link href="/gift">کارت هدیه</Link><Link href="/group">خرید گروهی</Link>{liveDrops().length > 0 && <Link href="/#drop">دراپ‌ها</Link>}<Link href="/guarantee">گارانتی</Link><Link href="/account/orders">پیگیری سفارش</Link><Link href="/contact">پشتیبانی</Link>
+          <MegaMenu /><Link href="/finder" className="hd-fd">ابزاریاب<i aria-hidden /></Link><Link href="/packs">کمبو پک</Link><Link href="/gift">کارت هدیه</Link><Link href="/group">خرید گروهی</Link>{liveDrops().length > 0 && <Link href="/#drop">دراپ‌ها</Link>}<Link href="/guarantee">گارانتی</Link><Link href="/account/orders">پیگیری سفارش</Link><Link href="/contact">پشتیبانی</Link>
         </nav>
         <div className="sp" />
         <div className="tools">
@@ -475,7 +475,7 @@ export function Footer() {
           </div>
           <nav aria-label="دسته‌ها"><h5>دسته‌ها</h5><ul>{(Object.keys(CATEGORIES) as (keyof typeof CATEGORIES)[]).filter((c) => c !== "all" && listed().some((p) => p.category === c)).map((c) => <li key={c}><Link href={`/services?c=${c}`}>{CATEGORIES[c]}</Link></li>)}</ul></nav>
           <nav aria-label="پرفروش‌ها"><h5>پرفروش‌ها</h5><ul>{popular.map((p) => <li key={p.id}><Link href={productHref(p)} className="en">{p.name}</Link></li>)}</ul></nav>
-          <nav aria-label="راهنما"><h5>راهنما</h5><ul><li><Link href="/account/orders">پیگیری سفارش</Link></li><li><Link href="/guarantee">گارانتی همه محصولات</Link></li><li><Link href="/group">خرید گروهی</Link></li><li><Link href="/#concierge">سؤالات پرتکرار</Link></li><li><Link href="/account/tickets">تیکت پشتیبانی</Link></li><li><Link href="/terms">قوانین و مقررات</Link></li></ul></nav>
+          <nav aria-label="راهنما"><h5>راهنما</h5><ul><li><Link href="/account/orders">پیگیری سفارش</Link></li><li><Link href="/guarantee">گارانتی همه محصولات</Link></li><li><Link href="/packs">کمبو پک‌ها</Link></li><li><Link href="/group">خرید گروهی</Link></li><li><Link href="/#concierge">سؤالات پرتکرار</Link></li><li><Link href="/account/tickets">تیکت پشتیبانی</Link></li><li><Link href="/terms">قوانین و مقررات</Link></li></ul></nav>
           <nav aria-label="اک‌دراپ"><h5>اک‌دراپ</h5><ul><li><Link href="/blog">بلاگ</Link></li>{liveDrops().length > 0 && <li><Link href="/#drop">دراپ‌ها</Link></li>}<li><Link href="/reseller">نمایندگی فروش</Link></li><li><Link href="/contact">تماس با ما</Link></li></ul></nav>
         </div>
 

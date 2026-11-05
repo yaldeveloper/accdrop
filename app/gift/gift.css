@@ -270,18 +270,18 @@
 .gp p{color:var(--gray-d);font-size:16px;max-width:460px}
 .gp .btn{border-radius:14px}
 .gp-fan{position:relative;display:block;height:clamp(260px,30vw,380px)}
-.gp-c{position:absolute;width:min(74%,420px);top:50%;left:50%;transition:transform .6s var(--ease)}
-.gp-c1{transform:translate(-50%,-50%) translate(-26%,-8%) rotate(-12deg)}
-.gp-c2{transform:translate(-50%,-50%) translate(24%,-14%) rotate(9deg)}
+.gp-c{position:absolute;width:min(66%,400px);top:50%;left:50%;transition:transform .6s var(--ease)}
+.gp-c1{transform:translate(-50%,-50%) translate(-20%,-8%) rotate(-12deg)}
+.gp-c2{transform:translate(-50%,-50%) translate(20%,-14%) rotate(9deg)}
 .gp-c3{transform:translate(-50%,-50%) translate(0,10%) rotate(-2deg)}
 @media (hover:hover){
-  .gp-fan:hover .gp-c1{transform:translate(-50%,-50%) translate(-36%,-12%) rotate(-16deg)}
-  .gp-fan:hover .gp-c2{transform:translate(-50%,-50%) translate(34%,-18%) rotate(13deg)}
+  .gp-fan:hover .gp-c1{transform:translate(-50%,-50%) translate(-28%,-12%) rotate(-16deg)}
+  .gp-fan:hover .gp-c2{transform:translate(-50%,-50%) translate(28%,-18%) rotate(13deg)}
   .gp-fan:hover .gp-c3{transform:translate(-50%,-50%) translate(0,6%) rotate(0deg) scale(1.03)}
 }
 @media (max-width:900px){
   .gp{padding:64px 0}
   .gp-g{grid-template-columns:1fr;gap:28px}
   .gp-fan{order:-1;height:62vw}
-  .gp-c{width:72%}
+  .gp-c{width:64%}
 }

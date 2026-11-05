@@ -6,7 +6,7 @@ import type { DeliveryType } from "@/lib/catalog";
 import type { LegalInfo, PayMethod } from "@/lib/billing";
 
 export type Me = User & { isAdmin: boolean };
-export type PlaceLine = { id: string; plan: string; type: DeliveryType; email?: string; username?: string; seats?: number; ip?: string; members?: string[] };
+export type PlaceLine = { id: string; plan: string; type: DeliveryType; email?: string; username?: string; seats?: number; ip?: string; members?: string[]; combo?: string };
 export type ApiError = { error: string; index?: number; wait?: number; field?: string };
 
 type Account = {

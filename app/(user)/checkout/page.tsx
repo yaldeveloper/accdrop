@@ -14,6 +14,7 @@ import { EMPTY_LEGAL, LegalForm, useLegal } from "@/components/legal";
 import { type LegalInfo, type PayMethod } from "@/lib/billing";
 import { receiveOf, warrantyOf, whenOf } from "@/lib/facts";
 import { useCreditBalance } from "@/components/gift";
+import { comboById } from "@/lib/combos";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -50,7 +51,9 @@ export default function CheckoutPage() {
   const [only, setOnly] = useState<string | null>(null);
   useEffect(() => { setOnly(new URLSearchParams(location.search).get("only")); }, []);
   const indexed = cart.map((l, i) => ({ l, i }));
-  const focused = only ? indexed.filter(({ l }) => lineKey(l) === only) : [];
+  // A line of a combo pack is paid together with the rest of its pack (the pack price needs every item).
+  const packs = new Set(indexed.filter(({ l }) => lineKey(l) === only && l.combo).map(({ l }) => l.combo));
+  const focused = only ? indexed.filter(({ l }) => lineKey(l) === only || (l.combo && packs.has(l.combo))) : [];
   const rows = focused.length ? focused : indexed;
   const others = cart.length - rows.length;
   const payAll = () => { setOnly(null); history.replaceState(null, "", "/checkout"); };
@@ -63,8 +66,10 @@ export default function CheckoutPage() {
     setEmails((e) => Object.fromEntries(cart.map((l, i) => [i, e[i] ?? (l.type === "own" && !productById(l.id).ask ? user.email : "")])));
   }, [user?.email, cart]);
 
-  const subtotal = rows.reduce((s, { l }) => s + linePrice(l), 0);
-  const discount = Math.round((subtotal * rate) / 1000) * 1000;
+  // Line prices already carry the combo pack discount; discount codes apply only to lines outside a pack.
+  const subtotal = rows.reduce((s, { l }) => s + l.price, 0);
+  const packSave = rows.reduce((s, { l }) => s + (l.combo ? linePrice(l) - l.price : 0), 0);
+  const discount = Math.round((rows.reduce((s, { l }) => s + (l.combo ? 0 : l.price), 0) * rate) / 1000) * 1000;
   const total = subtotal - discount;
   const credit = useCredit ? Math.min(balance, total) : 0;
   const due = total - credit;
@@ -112,7 +117,7 @@ export default function CheckoutPage() {
     const r = await placeOrder(rows.map(({ l, i }) => ({ id: l.id, plan: l.plan, type: l.type,
       email: l.type === "own" ? emails[i]?.trim() : undefined,
       username: l.type === "username" ? normalizeUsername(emails[i] ?? "") : undefined,
-      seats: l.seats, ip: l.ip,
+      seats: l.seats, ip: l.ip, combo: l.combo,
       members: l.type === "own" && (l.seats ?? 1) > 1 ? Array.from({ length: l.seats! - 1 }, (_, k) => members[i]?.[k]?.trim() ?? "") : undefined })), applied, method, wantInvoice ? legal : null, credit > 0);
     if ("error" in r) {
       setPaying(false);
@@ -283,8 +288,8 @@ export default function CheckoutPage() {
               return (
                 <li key={i}>
                   <span className="mono"><BrandLogo id={p.id} size={20} /></span>
-                  <div><b className="en">{p.name}</b><small>{optionLabel(p, l.plan)} • {deliveryOf(p, l.type).title}</small>{extrasLabel(l) && <small className="co-x">{extrasLabel(l)}</small>}</div>
-                  <div className="r"><span className="num">{money(linePrice(l))}</span><button className="rm" onClick={() => removeLine(i)} aria-label={`حذف ${p.name}`}>حذف</button></div>
+                  <div><b className="en">{p.name}</b><small>{optionLabel(p, l.plan)} • {deliveryOf(p, l.type).title}</small>{extrasLabel(l) && <small className="co-x">{extrasLabel(l)}</small>}{l.combo && <small className="co-x co-pack">{comboById(l.combo)?.name}</small>}</div>
+                  <div className="r"><span className="num">{money(l.price)}</span><button className="rm" onClick={() => removeLine(i)} aria-label={`حذف ${p.name}`}>حذف</button></div>
                 </li>
               );
             })}
@@ -294,7 +299,8 @@ export default function CheckoutPage() {
             <button onClick={apply} type="button">اعمال</button>
           </div>
           <dl className="co-totals">
-            <div><dt>جمع</dt><dd className="num">{money(subtotal)}</dd></div>
+            <div><dt>جمع</dt><dd className="num">{money(subtotal + packSave)}</dd></div>
+            {packSave > 0 && <div className="disc"><dt>تخفیف پک</dt><dd className="num">−{money(packSave)}</dd></div>}
             {discount > 0 && <div className="disc"><dt>تخفیف ({applied})</dt><dd className="num">−{money(discount)}</dd></div>}
             {balance > 0 && (
               <div className="disc co-credit"><dt><label><input type="checkbox" checked={useCredit} onChange={(e) => setUseCredit(e.target.checked)} /> اعتبار اک‌دراپ <small className="muted">(<span className="num">{money(balance)}</span>)</small></label></dt><dd className="num">{credit > 0 ? `−${money(credit)}` : "—"}</dd></div>

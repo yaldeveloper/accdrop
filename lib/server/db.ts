@@ -242,6 +242,7 @@ create table if not exists sync_runs (
 alter table order_lines add column if not exists supply_ref text;
 alter table order_lines add column if not exists supply_cost numeric;
 alter table order_lines add column if not exists num jsonb;
+alter table order_lines add column if not exists combo text;
 insert into discounts (code, rate) values ('WELCOME', 0.1) on conflict do nothing;
 `;
 

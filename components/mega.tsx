@@ -153,6 +153,7 @@ export function MobileMenu({ open, onClose, onSearch, onChat }: { open: boolean;
         <small className="dr-k">اک‌دراپ</small>
         <div className="dr-links">
           <Link href="/account/orders">سفارش‌های من و پیگیری</Link>
+          <Link href="/packs">کمبو پک‌ها</Link>
           <Link href="/group">خرید گروهی</Link>
           {currentDrop() && <Link href="/#drop">دراپ‌ها</Link>}
           <Link href="/blog">بلاگ</Link>

@@ -8,6 +8,7 @@ import { INSTALLMENTS } from "@/lib/billing";
 import { BrandLogo, Icon } from "./brand";
 import { NumberBox } from "./numbers";
 import { receiveOf, warrantyOf } from "@/lib/facts";
+import { comboById } from "@/lib/combos";
 
 const DAY = 86_400_000;
 /** «۲۵ روز گارانتی، تا ۳۰ آبان» once delivered, so the customer knows the exact last day to report a problem. */
@@ -107,6 +108,7 @@ export function OrderDetail({ order, now, onPay, paying }: { order: Order; now: 
                     <b className="en">{p.name}</b>
                     <small>{optionLabel(p, l.plan)} • {deliveryOf(p, l.type).title}</small>
                     {extrasLabel(l) && <small className="od-x">{extrasLabel(l)}</small>}
+                    {l.combo && <small className="od-x">{comboById(l.combo)?.name ?? "کمبو پک"}</small>}
                     {l.members?.length ? <small className="ltr-i">بقیه اعضا: <span className="en">{l.members.join("، ")}</span></small> : null}
                     {l.type === "own" && l.email && <small className="ltr-i">فعال‌سازی روی {p.ask ? `${p.ask.short} ` : ""}<span className="en">{l.email}</span></small>}
                     {l.type === "username" && l.username && <small className="ltr-i">ارسال به <span className="en">{l.username}</span></small>}
