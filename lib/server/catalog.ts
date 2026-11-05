@@ -43,6 +43,8 @@ export async function loadCatalog(fresh = false): Promise<CatalogPatch[]> {
     supply = s.state;
     applyCatalog(data, rate, supply);
     await kickSync(s.lastRun).catch(() => {});
+    // Gift cards scheduled for a later time go out on the next visit after it (and from /api/cron/gifts).
+    await import("./gifts").then((m) => m.kickGiftDelivery()).catch(() => {});
     return data;
   } catch {
     supply = c?.supply ?? {};

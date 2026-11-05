@@ -128,6 +128,7 @@ export function OrderDetail({ order, now, onPay, paying }: { order: Order; now: 
           <dl className="co-totals">
             <div><dt>جمع</dt><dd className="num">{money(order.subtotal)}</dd></div>
             {order.discount > 0 && <div className="disc"><dt>تخفیف</dt><dd className="num">−{money(order.discount)}</dd></div>}
+            {order.subtotal - order.discount > order.total && <div className="disc"><dt>اعتبار اک‌دراپ</dt><dd className="num">−{money(order.subtotal - order.discount - order.total)}</dd></div>}
             <div className="tot"><dt>{paid ? "پرداخت شده" : "مبلغ سفارش"}</dt><dd><b className="num">{money(order.total)}</b> <small>تومان</small></dd></div>
           </dl>
           {paid && order.payMethod === "bnpl" && <p className="muted od-tip">پرداخت اقساطی با {INSTALLMENTS.provider}؛ قسط‌های بعدی را در اپ {INSTALLMENTS.provider} می‌بینی.</p>}

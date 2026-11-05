@@ -21,7 +21,7 @@ type Account = {
   updateProfile: (patch: Partial<Pick<User, "name" | "email">>) => Promise<boolean>;
   logout: () => Promise<void>;
   /** Creates the order on the server and returns where to send the customer to pay. */
-  placeOrder: (lines: PlaceLine[], discountCode: string, method?: PayMethod, invoice?: LegalInfo | null) => Promise<{ code: string; payUrl: string } | ApiError>;
+  placeOrder: (lines: PlaceLine[], discountCode: string, method?: PayMethod, invoice?: LegalInfo | null, credit?: boolean) => Promise<{ code: string; payUrl: string } | ApiError>;
   refreshOrders: () => Promise<void>;
   reseller: ResellerApp | null;
   applyReseller: (a: Omit<ResellerApp, "mobile" | "createdAt" | "status">) => Promise<boolean>;
@@ -88,8 +88,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       return !!r.user;
     },
     logout: async () => { await api("/api/auth/logout", { method: "POST", body: {} }); setUser(null); setOrders([]); setReseller(null); },
-    placeOrder: async (lines, discount, method = "card", invoice = null) => {
-      const r = await api<{ code: string; payUrl: string }>("/api/orders", { body: { lines, discount, method, invoice } });
+    placeOrder: async (lines, discount, method = "card", invoice = null, credit = false) => {
+      const r = await api<{ code: string; payUrl: string }>("/api/orders", { body: { lines, discount, method, invoice, credit } });
       return r.error || !r.code ? { error: r.error ?? "server_error", index: r.index, field: r.field } : { code: r.code, payUrl: r.payUrl };
     },
     refreshOrders: loadMine,

@@ -157,6 +157,7 @@ export function MobileMenu({ open, onClose, onSearch, onChat }: { open: boolean;
           <Link href="/group">خرید گروهی</Link>
           {currentDrop() && <Link href="/#drop">دراپ‌ها</Link>}
           <Link href="/blog">بلاگ</Link>
+          <Link href="/gift">کارت هدیه</Link>
           <Link href="/guarantee">گارانتی و بازگشت وجه</Link>
           <Link href="/reseller">نمایندگی فروش</Link>
           <button onClick={() => { onClose(); onChat(); }}>چت با پشتیبانی</button>

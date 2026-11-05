@@ -2,7 +2,7 @@
 // Without KAVENEGAR_API_KEY the site runs in demo mode: no SMS is sent and the login code is always 12345.
 export const smsConfigured = () => !!process.env.KAVENEGAR_API_KEY;
 
-async function lookup(mobile: string, template: string, tokens: string[]) {
+export async function lookup(mobile: string, template: string, tokens: string[]) {
   const key = process.env.KAVENEGAR_API_KEY;
   if (!key) { console.log(`[sms demo] ${template} → ${mobile}: ${tokens.join(" ")}`); return true; }
   const q = new URLSearchParams({ receptor: mobile, template });
