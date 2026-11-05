@@ -2474,19 +2474,17 @@ footer.ft::before{content:"";position:absolute;top:0;inset-inline:0;height:1px;b
 /* desktop: a plain grid, no sideways scrolling; long categories open with «نمایش همه» */
 @media (min-width:761px){
   .rail .cat-scroll{grid-auto-flow:row;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-columns:auto;overflow:visible;scroll-snap-type:none;padding:0;margin:0}
-  .rail:not(.open) .cat-scroll>*:nth-child(n+9){display:none}
+  .rail .cat-scroll>*:nth-child(n+5){display:none}
 }
 @media (min-width:761px) and (max-width:1100px){
   .rail .cat-scroll{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .rail:not(.open) .cat-scroll>*:nth-child(n+7){display:none}
+  .rail .cat-scroll>*:nth-child(n+4){display:none}
 }
-.rail-more{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:48px;margin-top:14px;border-radius:14px;border:1px dashed var(--hair-l2);font-size:14px;color:var(--ink);transition:border-color .2s,background-color .2s}
-.rail-more svg.i{width:16px;height:16px;transform:rotate(-90deg);transition:transform .3s var(--ease)}
-.rail.open .rail-more svg.i{transform:rotate(90deg)}
-@media (hover:hover){.rail-more:hover{border-style:solid;border-color:var(--ink);background:#fff}}
+/* «همه N» in each row header: a clear pill, since the row itself shows only the first few */
+.cat-row header .link{height:34px;padding:0 14px;border:1px solid var(--hair-l2);border-radius:999px;font-weight:600;color:var(--ink);transition:background-color .2s,color .2s,border-color .2s}
+@media (hover:hover){.cat-row header .link:hover{background:var(--ink);color:var(--paper);border-color:var(--ink)}}
 /* phones: the browser's own swipe, a fade only where more cards wait, all cards in the row */
 @media (max-width:760px){
-  .rail .rail-more{display:none}
   .rail .cat-scroll{scrollbar-width:none;overscroll-behavior-x:contain;--fade:22px}
   .rail .cat-scroll::-webkit-scrollbar{display:none}
   .rail:not(.at-end) .cat-scroll{-webkit-mask-image:linear-gradient(90deg,transparent,#000 var(--fade));mask-image:linear-gradient(90deg,transparent,#000 var(--fade))}
