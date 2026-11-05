@@ -6,7 +6,7 @@ import { isOut, DELIVERY, MAX_QTY, MAX_SEATS, axisOf, deliveryTypes, dropOf, gro
 import { api } from "./account";
 import { fa, money } from "@/lib/format";
 import { Icon } from "./brand";
-import { useStore } from "./store";
+import { lineKey, useStore } from "./store";
 import { openChat } from "./chat";
 import { VersionPicker } from "./version-picker";
 import { receiveOf, warrantyOf, whenOf } from "@/lib/facts";
@@ -14,8 +14,13 @@ import { receiveOf, warrantyOf, whenOf } from "@/lib/facts";
 function initial(p: Product): Selection {
   const d = dropOf(p.id);
   if (d) return { id: p.id, plan: d.plan, type: d.type };
-  // First option in stock (the first option when everything is out).
-  for (const plan of planKeys(p)) for (const t of Object.keys(p.plans[plan] ?? {})) if (!isOut(p, plan, t)) return { id: p.id, plan, type: t as DeliveryType };
+  // The cheapest option in stock, so the page opens on the price the card promised («از …»). Ties keep catalog order.
+  let best: Selection | null = null, bestPrice = Infinity;
+  for (const plan of planKeys(p)) for (const [t, v] of Object.entries(p.plans[plan] ?? {})) {
+    if (isOut(p, plan, t) || !((v as number) < bestPrice)) continue;
+    best = { id: p.id, plan, type: t as DeliveryType }; bestPrice = v as number;
+  }
+  if (best) return best;
   const plan = planKeys(p)[0];
   return { id: p.id, plan, type: Object.keys(p.plans[plan] ?? {})[0] as DeliveryType };
 }
@@ -92,7 +97,7 @@ export function BuyPanel({ product: p }: { product: Product }) {
     notify("ساخت گروه انجام نشد. دوباره امتحان کن.");
   };
   const setQty = (n: number) => setSel((s) => ({ ...s, seats: Math.min(MAX_QTY, Math.max(1, Math.trunc(n) || 1)) }));
-  const buy = () => { if (group && dong) { startDong(); return; } addLine(sel); router.push("/checkout"); };
+  const buy = () => { if (group && dong) { startDong(); return; } addLine(sel); router.push(`/checkout?only=${encodeURIComponent(lineKey(sel))}`); };
   const rcv = receiveOf(p, sel.type);
   const war = warrantyOf(p, sel.plan);
   const add = () => notify(addLine(sel) ? `${p.name} به سبد اضافه شد` : "این مورد از قبل در سبد هست");
