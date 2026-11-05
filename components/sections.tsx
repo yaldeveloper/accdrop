@@ -70,7 +70,7 @@ export function ToolCard({ p }: { p: Product }) {
   const tiers = tiersLabel(p);
   const [tool, tier] = splitName(p.name);
   return (
-    <Link className="tile" href={productHref(p)}>
+    <Link className="tile" href={productHref(p)} style={{ "--b": themeOf(p.id).c } as React.CSSProperties}>
       <span className="tile-top">
         <span className="tile-logo"><BrandLogo id={p.id} size={26} /></span>
         {d ? <span className="tile-drop">{fa(Math.round((1 - d.price / d.was) * 100))}٪ تخفیف</span>
@@ -164,6 +164,7 @@ export function Hero() {
         </div>
         <Orbit active={active} onPick={(id) => { setActive(id); setPaused(true); }} onHover={setPaused} />
       </div>
+      <LogoMarquee />
       <div className="wrap">
         <ul className="assure-row">
           <li><Dots size={3} />تحویل خودکار، حتی نیمه‌شب</li>
@@ -173,6 +174,27 @@ export function Hero() {
         </ul>
       </div>
     </section>
+  );
+}
+
+/** Every brand we sell, drifting by in one endless line; each one opens its product page. */
+function LogoMarquee() {
+  const items = listed();
+  const row = (hidden: boolean) => (
+    <ul className="mq-row" aria-hidden={hidden || undefined}>
+      {items.map((p) => (
+        <li key={p.id}>
+          <Link href={productHref(p)} tabIndex={hidden ? -1 : undefined} style={{ "--b": themeOf(p.id).c } as React.CSSProperties}>
+            <BrandLogo id={p.id} size={18} /><span className="en">{splitName(p.name)[0]}</span>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+  return (
+    <nav className="mq" aria-label="همه سرویس‌ها">
+      <div className="mq-track">{row(false)}{row(true)}</div>
+    </nav>
   );
 }
 
