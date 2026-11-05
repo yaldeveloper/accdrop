@@ -7,7 +7,7 @@ import { SERVICE_LOGOS } from "@/lib/number-logos";
 import { NUMBER_SERVICES, livePlanKey, type NumberState } from "@/lib/numbers";
 import { fa, money } from "@/lib/format";
 import { api } from "./account";
-import { useStore } from "./store";
+import { lineKey, useStore } from "./store";
 
 type Offer = { country: string; name: string; iso: string; price: number; count: number };
 
@@ -43,8 +43,9 @@ export function NumberShop({ product: p }: { product: Product }) {
   const svc = NUMBER_SERVICES.find((s) => s.id === service)!;
 
   const buy = (o: Offer) => {
-    addLine({ id: p.id, plan: livePlanKey(o.country, service), type: "number", unit: o.price });
-    router.push("/checkout");
+    const sel = { id: p.id, plan: livePlanKey(o.country, service), type: "number" as const, unit: o.price };
+    addLine(sel);
+    router.push(`/checkout?only=${encodeURIComponent(lineKey(sel))}`);
   };
 
   return (

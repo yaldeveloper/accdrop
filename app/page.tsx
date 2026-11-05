@@ -8,9 +8,9 @@ export default function Home() {
   return (
     <main>
       <Hero />
-      <Steps />
       <Collection />
       <ComboSection />
+      <Steps />
       <DropSection />
       <Shield />
       <Concierge />

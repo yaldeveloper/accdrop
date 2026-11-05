@@ -25,6 +25,8 @@ type Store = {
   addCombo: (id: string) => boolean;
   /** Removes a line; a line of a combo pack removes the whole pack. */
   removeLine: (i: number) => void;
+  /** Removes several lines at once (the ones just sent to the gateway). */
+  removeLines: (is: number[]) => void;
   /** Changes one cart line (e.g. adds an add-on at checkout) and re-prices it. */
   updateLine: (i: number, patch: Partial<Selection>) => void;
   clearCart: () => void;
@@ -36,6 +38,9 @@ type Store = {
 };
 
 const Ctx = createContext<Store | null>(null);
+
+/** Identifies a cart line across pages (the static IP add-on can change at checkout, so it is left out). */
+export const lineKey = (l: Selection) => [l.id, l.plan, l.type, l.seats ?? 1].join("~");
 const KEY = "accdrop-cart";
 
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -123,6 +128,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const pack = cart[i]?.combo;
       persist(cart.filter((l, j) => j !== i && !(pack && l.combo === pack)));
     },
+    removeLines: (is) => persist(cart.filter((_, j) => !is.includes(j))),
     updateLine: (i, patch) => persist(cart.map((l, j) => (j === i ? { ...l, ...patch } : l))),
     clearCart: () => persist([]),
     setView: (v) => setViewState(v),

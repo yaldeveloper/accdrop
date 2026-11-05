@@ -6,7 +6,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CATEGORIES, currentDrop, listed, minPrice, productById, tiersLabel, type Category } from "@/lib/catalog";
 import { productHref } from "@/lib/content";
-import { NEEDS } from "@/lib/search";
+import { liveTasks } from "@/lib/finder";
+import { TaskGlyph } from "./finder";
 import { fa, money } from "@/lib/format";
 import { BrandLogo, Icon } from "./brand";
 import { catLine } from "@/lib/facts";
@@ -83,8 +84,10 @@ export function MegaMenu() {
           )}
           <Link href="/group" className="mm-group" onClick={() => setOpen(false)}><Icon id="user" /><span><b>خرید گروهی</b><small>با دوستانت بخر، تا ۱۲٪ ارزان‌تر</small></span></Link>
           <div className="mm-needs">
-            <small>برای چه کاری؟</small>
-            <div>{NEEDS.slice(0, 6).map((n) => <Link key={n.label} href={`/services?need=${encodeURIComponent(n.label)}`}>{n.label}</Link>)}</div>
+            <Link href="/finder" className="mm-fd-h" onClick={() => setOpen(false)}><small>ابزاریاب: برای چه کاری؟</small><Icon id="arrow" className="arrow" /></Link>
+            <div>{liveTasks().slice(0, 8).map((t) => (
+              <Link key={t.id} href={`/finder?t=${t.id}`} onClick={() => setOpen(false)} style={{ "--t": t.tone } as React.CSSProperties}><TaskGlyph t={t} size={13} />{t.label}</Link>
+            ))}</div>
           </div>
         </aside>
       </div>
@@ -123,6 +126,11 @@ export function MobileMenu({ open, onClose, onSearch, onChat }: { open: boolean;
       <nav className={`dr ${open ? "on" : ""}`} aria-label="منو" aria-hidden={!open} inert={!open}>
         <div className="dr-h"><b>منو</b><button onClick={onClose} aria-label="بستن">×</button></div>
         <button className="dr-search" onClick={() => { onClose(); onSearch(); }}><Icon id="search" />جست‌وجوی سرویس…</button>
+        <Link href="/finder" className="dr-fd" onClick={onClose}>
+          <span className="fd-spark" aria-hidden><i /><i /><i /></span>
+          <span><b>ابزاریاب</b><small>بگو چه کار می‌خواهی، ابزارش را پیشنهاد می‌دهیم</small></span>
+          <Icon id="arrow" className="arrow" />
+        </Link>
         <small className="dr-k">دسته‌ها</small>
         <ul className="dr-cats">
           {CATS.filter((c) => inCat(c).length).map((c) => (

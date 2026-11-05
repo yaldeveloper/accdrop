@@ -10,6 +10,7 @@ import { browse, countIn, NEEDS, SORTS, type SortKey } from "@/lib/search";
 import { fa } from "@/lib/format";
 import { BrandLogo, Icon } from "./brand";
 import { ToolCard } from "./sections";
+import { Rail } from "./rail";
 
 const CATS = Object.keys(CATEGORIES) as ("all" | Category)[];
 const isCat = (v: string | null): v is "all" | Category => !!v && v in CATEGORIES;
@@ -97,7 +98,7 @@ export function ServiceBrowser({ syncUrl = false }: { syncUrl?: boolean }) {
                 <header><i /><h3>{CATEGORIES[k]}</h3><small className="muted">{catLine(k)}</small>
                   <button type="button" className="link" onClick={() => { setCat(k); window.scrollTo({ top: (input.current?.getBoundingClientRect().top ?? 0) + scrollY - 120, behavior: "smooth" }); }}>همه {fa(items.length)} <Icon id="arrow" className="arrow" /></button>
                 </header>
-                <div className="cat-scroll">{items.map((p) => <ToolCard key={p.id} p={p} />)}</div>
+                <Rail label={CATEGORIES[k]}>{items.map((p) => <ToolCard key={p.id} p={p} />)}</Rail>
               </section>
             );
           })}

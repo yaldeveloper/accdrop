@@ -195,6 +195,7 @@ create index if not exists orders_split on orders(split) where split is not null
 alter table orders add column if not exists pay_token text;
 alter table orders add column if not exists invoice jsonb;
 alter table orders add column if not exists tax_id text not null default '';
+alter table orders add column if not exists reminded_at timestamptz;
 create table if not exists legal_profiles (
   mobile text primary key references users(mobile),
   data jsonb not null,
