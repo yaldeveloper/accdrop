@@ -7,8 +7,8 @@ export default function Home() {
   return (
     <main>
       <Hero />
-      <Steps />
       <Collection />
+      <Steps />
       <DropSection />
       <Shield />
       <Concierge />

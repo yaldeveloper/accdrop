@@ -4,12 +4,12 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DELIVERY, STATIC_IP, extrasLabel, ipPrice, linePrice, optionLabel, productById, deliveryOf, ownAsk, validOwn } from "@/lib/catalog";
-import { normalizeUsername, validEmail, validUsername } from "@/lib/account";
+import { emailTypo, normalizeUsername, validEmail, validUsername } from "@/lib/account";
 import { fa, money } from "@/lib/format";
 import { BrandLogo, Dots, Icon } from "@/components/brand";
 import { LoginFlow } from "@/components/login";
 import { api, useAccount } from "@/components/account";
-import { useStore } from "@/components/store";
+import { lineKey, useStore } from "@/components/store";
 import { EMPTY_LEGAL, LegalForm, useLegal } from "@/components/legal";
 import { type LegalInfo, type PayMethod } from "@/lib/billing";
 import { receiveOf, warrantyOf, whenOf } from "@/lib/facts";
@@ -17,7 +17,7 @@ import { useCreditBalance } from "@/components/gift";
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { cart, removeLine, updateLine, clearCart, notify } = useStore();
+  const { cart, removeLine, removeLines, updateLine, notify } = useStore();
   const { ready, user, placeOrder, demo } = useAccount();
   const [emails, setEmails] = useState<Record<number, string>>({});
   /** Group-buy teammates: members[line][k] is the email of seat k+2. */
@@ -40,9 +40,22 @@ export default function CheckoutPage() {
   const [usdt, setUsdt] = useState(0);
   useEffect(() => { if (method === "crypto" && !usdt) api<{ rate: number }>("/api/rate").then((r) => r.rate && setUsdt(r.rate)); }, [method, usdt]);
   const [bad, setBad] = useState<number[]>([]);
+  /** Lines whose email looked like a typo and the customer said it is right. */
+  const [typoOk, setTypoOk] = useState<number[]>([]);
+  const typoOf = (i: number, own: boolean) => (own && !typoOk.includes(i) ? emailTypo(emails[i] ?? "") : null);
   // Keep the login form mounted until it finishes (it may still ask a new user for their name).
   const [inFlow, setInFlow] = useState(false);
   useEffect(() => { if (ready && !user) setInFlow(true); }, [ready, user]);
+  /** «ادامه خرید» on a product page sends ?only=<line>: pay for that line alone and leave the rest of the cart for later. */
+  const [only, setOnly] = useState<string | null>(null);
+  useEffect(() => { setOnly(new URLSearchParams(location.search).get("only")); }, []);
+  const indexed = cart.map((l, i) => ({ l, i }));
+  const focused = only ? indexed.filter(({ l }) => lineKey(l) === only) : [];
+  const rows = focused.length ? focused : indexed;
+  const others = cart.length - rows.length;
+  const payAll = () => { setOnly(null); history.replaceState(null, "", "/checkout"); };
+  /** Pay was pressed before signing in: continue to the gateway as soon as sign-in finishes. */
+  const [wantPay, setWantPay] = useState(false);
 
   // Prefill activation emails from the profile.
   useEffect(() => {
@@ -50,7 +63,7 @@ export default function CheckoutPage() {
     setEmails((e) => Object.fromEntries(cart.map((l, i) => [i, e[i] ?? (l.type === "own" && !productById(l.id).ask ? user.email : "")])));
   }, [user?.email, cart]);
 
-  const subtotal = cart.reduce((s, l) => s + linePrice(l), 0);
+  const subtotal = rows.reduce((s, { l }) => s + linePrice(l), 0);
   const discount = Math.round((subtotal * rate) / 1000) * 1000;
   const total = subtotal - discount;
   const credit = useCredit ? Math.min(balance, total) : 0;
@@ -64,10 +77,9 @@ export default function CheckoutPage() {
   };
 
   const pay = async () => {
-    if (!user || inFlow) { notify("اول وارد حسابت شو"); document.getElementById("co-account")?.scrollIntoView({ behavior: "smooth", block: "center" }); return; }
     const ok = (id: string, t: string, v: string) => (t === "own" ? validOwn(productById(id), v) : t === "username" ? validUsername(v) : true);
-    const missing = cart.map((l, i) => (!ok(l.id, l.type, emails[i] ?? "") ? i : -1)).filter((i) => i >= 0);
-    const team = cart.map((l, i) => (l.type === "own" && (l.seats ?? 1) > 1 && !Array.from({ length: l.seats! - 1 }, (_, k) => members[i]?.[k] ?? "").every(validEmail) ? i : -1)).filter((i) => i >= 0);
+    const missing = rows.map(({ l, i }) => (!ok(l.id, l.type, emails[i] ?? "") ? i : -1)).filter((i) => i >= 0);
+    const team = rows.map(({ l, i }) => (l.type === "own" && (l.seats ?? 1) > 1 && !Array.from({ length: l.seats! - 1 }, (_, k) => members[i]?.[k] ?? "").every(validEmail) ? i : -1)).filter((i) => i >= 0);
     if (!missing.length && team.length) {
       setBad(team.map((i) => 100 + i));
       notify("ایمیل همه اعضای گروه را درست وارد کن");
@@ -76,13 +88,28 @@ export default function CheckoutPage() {
     }
     if (missing.length) {
       setBad(missing);
-      notify(cart[missing[0]].type === "username" ? "یوزرنیم تلگرام را درست وارد کن" : "ایمیل اکانت را درست وارد کن");
+      notify(cart[missing[0]]?.type === "username" ? "یوزرنیم تلگرام را درست وارد کن" : "ایمیل اکانت را درست وارد کن");
       document.getElementById(`co-em-${missing[0]}`)?.focus();
       return;
     }
+    const typo = rows.find(({ l, i }) => l.type === "own" && typoOf(i, !productById(l.id).ask));
+    if (typo) {
+      setBad([typo.i]);
+      notify("ایمیل را یک بار دیگر چک کن؛ اشتراک روی همین ایمیل فعال می‌شود");
+      document.getElementById(`co-em-${typo.i}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     if (!agree) { notify("قوانین را بپذیر"); return; }
+    if (!user || inFlow) {
+      // Sign-in is the last step: ask for the mobile number now, then go straight on to the gateway.
+      setWantPay(true);
+      notify("برای پرداخت، شماره موبایلت را وارد کن");
+      document.getElementById("co-account")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      setTimeout(() => document.getElementById("lg-m")?.focus(), 350);
+      return;
+    }
     setPaying(true);
-    const r = await placeOrder(cart.map((l, i) => ({ id: l.id, plan: l.plan, type: l.type,
+    const r = await placeOrder(rows.map(({ l, i }) => ({ id: l.id, plan: l.plan, type: l.type,
       email: l.type === "own" ? emails[i]?.trim() : undefined,
       username: l.type === "username" ? normalizeUsername(emails[i] ?? "") : undefined,
       seats: l.seats, ip: l.ip,
@@ -101,9 +128,16 @@ export default function CheckoutPage() {
         : r.error === "bad_item" ? "یکی از اقلام سبد دیگر موجود نیست. حذفش کن و دوباره امتحان کن." : r.error === "number_unavailable" ? "شماره این کشور همین الان تمام شد. از صفحه شماره مجازی کشور دیگری انتخاب کن." : r.error === "out_of_stock" ? "موجودی یکی از اقلام سبد همین الان تمام شد. حذفش کن یا کمی بعد دوباره امتحان کن." : r.error === "unauthorized" ? "اول وارد حسابت شو" : "ثبت سفارش انجام نشد. دوباره امتحان کن.");
       return;
     }
-    clearCart();
+    removeLines(rows.map(({ i }) => i));
     if (r.payUrl.startsWith("/")) router.push(r.payUrl); else window.location.href = r.payUrl;
   };
+
+  useEffect(() => {
+    if (!wantPay || !user || inFlow) return;
+    setWantPay(false);
+    pay();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantPay, user, inFlow]);
 
   if (!cart.length && !paying) {
     return (
@@ -116,26 +150,29 @@ export default function CheckoutPage() {
     );
   }
 
-  const step1Done = !!user && !inFlow;
+  const signedIn = !!user && !inFlow;
+  const hasIp = rows.some(({ l }) => ipPrice(productById(l.id), l.plan) > 0);
+  const n = (k: number) => fa(k);
   return (
     <div className="wrap co">
       <nav className="crumbs" aria-label="مسیر"><Link href="/">اک‌دراپ</Link><span>/</span><span>تسویه حساب</span></nav>
       <h1 className="co-h">تسویه حساب</h1>
       <div className="co-g">
         <div className="co-steps">
-          <section className={`co-step ${step1Done ? "done" : "on"}`} id="co-account">
-            <header><span className="co-n">{step1Done ? "✓" : "۱"}</span><h2>حساب کاربری</h2></header>
-            {!ready ? null : step1Done && user ? (
+          {others > 0 && (
+            <p className="co-only"><span>{fa(others)} مورد دیگر هم در سبدت هست که در این پرداخت نیست.</span> <button type="button" className="link" onClick={payAll}>همه را با هم پرداخت کن</button></p>
+          )}
+          {signedIn && user && (
+            <section className="co-step done" id="co-account">
+              <header><span className="co-n">✓</span><h2>حساب کاربری</h2></header>
               <p className="co-who"><span>{user.name || "کاربر اک‌دراپ"}</span><span className="num muted">{fa(user.mobile)}</span></p>
-            ) : (
-              <LoginFlow compact onDone={() => { setInFlow(false); notify("وارد شدی"); }} />
-            )}
-          </section>
+            </section>
+          )}
 
-          <section className={`co-step ${step1Done ? "on" : "off"}`}>
-            <header><span className="co-n">۲</span><h2>{cart.some((l) => l.type === "own" || l.type === "username") ? "اطلاعات فعال‌سازی" : "چه چیزی تحویل می‌گیری"}</h2></header>
+          <section className="co-step on">
+            <header><span className="co-n">{n(1)}</span><h2>{rows.some(({ l }) => l.type === "own" || l.type === "username") ? "اطلاعات فعال‌سازی" : "چه چیزی تحویل می‌گیری"}</h2></header>
             <div className="co-lines">
-              {cart.map((l, i) => {
+              {rows.map(({ l, i }) => {
                 const p = productById(l.id);
                 return (
                   <div className="co-act" key={i}>
@@ -143,14 +180,23 @@ export default function CheckoutPage() {
                     {l.type === "own" ? (
                       <div className="fld">
                         <label htmlFor={`co-em-${i}`}>{ownAsk(p).label}</label>
-                        <input id={`co-em-${i}`} type={p.ask ? "text" : "email"} className={`ltr ${bad.includes(i) ? "bad" : ""}`} placeholder={ownAsk(p).placeholder} disabled={!step1Done}
-                          value={emails[i] ?? ""} onChange={(e) => { setEmails({ ...emails, [i]: e.target.value }); setBad(bad.filter((x) => x !== i)); }} />
-                        <small className="muted">{ownAsk(p).hint}</small>
+                        <input id={`co-em-${i}`} type={p.ask ? "text" : "email"} className={`ltr ${bad.includes(i) ? "bad" : ""}`} placeholder={ownAsk(p).placeholder}
+                          value={emails[i] ?? ""} onChange={(e) => { setEmails({ ...emails, [i]: e.target.value }); setBad(bad.filter((x) => x !== i)); setTypoOk(typoOk.filter((x) => x !== i)); }} />
+                        {(() => {
+                          const fix = typoOf(i, !p.ask);
+                          return fix ? (
+                            <p className="co-typo" role="alert">
+                              <span>منظورت <b className="ltr">{fix}</b> بود؟</span>
+                              <button type="button" className="link" onClick={() => { setEmails({ ...emails, [i]: fix }); setBad(bad.filter((x) => x !== i)); }}>بله، اصلاح کن</button>
+                              <button type="button" className="link" onClick={() => { setTypoOk([...typoOk, i]); setBad(bad.filter((x) => x !== i)); }}>نه، درست است</button>
+                            </p>
+                          ) : <small className="muted">{ownAsk(p).hint}</small>;
+                        })()}
                         {(l.seats ?? 1) > 1 && (
                           <div className={`co-team ${bad.includes(100 + i) ? "bad" : ""}`} id={`co-mb-${i}`}>
                             <b>ایمیل بقیه اعضای گروه</b>
                             {Array.from({ length: l.seats! - 1 }, (_, k) => (
-                              <input key={k} type="email" className="ltr" placeholder={`member${k + 2}@gmail.com`} disabled={!step1Done} aria-label={`ایمیل نفر ${fa(k + 2)}`}
+                              <input key={k} type="email" className="ltr" placeholder={`member${k + 2}@gmail.com`} aria-label={`ایمیل نفر ${fa(k + 2)}`}
                                 value={members[i]?.[k] ?? ""} onChange={(e) => { const next = [...(members[i] ?? [])]; next[k] = e.target.value; setMembers({ ...members, [i]: next }); setBad(bad.filter((x) => x !== 100 + i)); }} />
                             ))}
                             <small className="muted">هر نفر یک اشتراک جدا روی ایمیل خودش می‌گیرد.</small>
@@ -160,7 +206,7 @@ export default function CheckoutPage() {
                     ) : l.type === "username" ? (
                       <div className="fld">
                         <label htmlFor={`co-em-${i}`}>یوزرنیم تلگرام گیرنده</label>
-                        <input id={`co-em-${i}`} type="text" autoCapitalize="off" spellCheck={false} className={`ltr ${bad.includes(i) ? "bad" : ""}`} placeholder="@username" disabled={!step1Done}
+                        <input id={`co-em-${i}`} type="text" autoCapitalize="off" spellCheck={false} className={`ltr ${bad.includes(i) ? "bad" : ""}`} placeholder="@username"
                           value={emails[i] ?? ""} onChange={(e) => { setEmails({ ...emails, [i]: e.target.value }); setBad(bad.filter((x) => x !== i)); }} />
                         <small className="muted">می‌توانی آیدی خودت یا دوستت را بزنی. کد ورود و رمز نمی‌خواهیم.</small>
                       </div>
@@ -174,17 +220,17 @@ export default function CheckoutPage() {
             </div>
           </section>
 
-          {cart.some((l) => ipPrice(productById(l.id), l.plan) > 0) && (
-            <section className={`co-step ${step1Done ? "on" : "off"}`}>
-              <header><span className="co-n">۳</span><h2>افزودنی‌ها <small className="muted">اختیاری</small></h2></header>
+          {hasIp && (
+            <section className="co-step on">
+              <header><span className="co-n">{n(2)}</span><h2>افزودنی‌ها <small className="muted">اختیاری</small></h2></header>
               <div className="co-addons">
-                {cart.map((l, i) => {
+                {rows.map(({ l, i }) => {
                   const p = productById(l.id), cost = ipPrice(p, l.plan);
                   if (!cost) return null;
                   return (
                     <div key={i} className={`co-ad ${l.ip ? "on" : ""}`}>
                       <label className="co-ad-h">
-                        <input type="checkbox" checked={!!l.ip} disabled={!step1Done} onChange={(e) => updateLine(i, { ip: e.target.checked ? "de" : undefined })} />
+                        <input type="checkbox" checked={!!l.ip} onChange={(e) => updateLine(i, { ip: e.target.checked ? "de" : undefined })} />
                         <span className="co-ck" aria-hidden="true"><Icon id="check" /></span>
                         <span><b>{STATIC_IP.title} برای <span className="en">{p.name}</span></b><small>یک آی‌پی خارج فقط برای تو؛ ورود پایدار و کمتر بسته شدن اکانت. مشخصات اتصال بعد از فعال‌سازی در صفحه سفارش.</small></span>
                         <span className="num co-ad-p">+{money(cost)}</span>
@@ -203,8 +249,8 @@ export default function CheckoutPage() {
             </section>
           )}
 
-          <section className={`co-step ${step1Done ? "on" : "off"}`}>
-            <header><span className="co-n">{cart.some((l) => ipPrice(productById(l.id), l.plan) > 0) ? "۴" : "۳"}</span><h2>روش پرداخت</h2></header>
+          <section className="co-step on">
+            <header><span className="co-n">{n(hasIp ? 3 : 2)}</span><h2>روش پرداخت</h2></header>
             <div className="opts v co-pay">
               <button className={`opt ${method === "card" ? "on" : ""}`} type="button" aria-pressed={method === "card"} onClick={() => setMethod("card")}><span className="opt-logo ic"><Icon id="lock" /></span><b>کارت بانکی</b><small>همه کارت‌های عضو شتاب</small></button>
               <button className={`opt ${method === "crypto" ? "on" : ""}`} type="button" aria-pressed={method === "crypto"} onClick={() => setMethod("crypto")}>
@@ -212,9 +258,16 @@ export default function CheckoutPage() {
               </button>
             </div>
           </section>
-          <section className={`co-step co-inv ${step1Done ? "on" : "off"} ${wantInvoice ? "open" : ""}`}>
+          {!signedIn && ready && (
+            <section className={`co-step on ${wantPay ? "co-ask" : ""}`} id="co-account">
+              <header><span className="co-n">{n(hasIp ? 4 : 3)}</span><h2>شماره موبایل</h2></header>
+              <p className="muted co-why">کد سفارش و {rows.some(({ l }) => l.type === "code" || l.type === "number") ? "کد تحویلی" : "خبر فعال‌سازی"} به همین شماره پیامک می‌شود.</p>
+              <LoginFlow compact onDone={() => { setInFlow(false); notify("وارد شدی"); }} />
+            </section>
+          )}
+          <section className={`co-step co-inv on ${wantInvoice ? "open" : ""}`}>
             <label className="co-inv-h">
-              <input type="checkbox" checked={wantInvoice} onChange={(e) => setWantInvoice(e.target.checked)} disabled={!step1Done} />
+              <input type="checkbox" checked={wantInvoice} onChange={(e) => setWantInvoice(e.target.checked)} />
               <span className="co-ck" aria-hidden="true"><Icon id="check" /></span>
               <span><b>فاکتور رسمی می‌خواهم</b><small>به نام شرکت یا شخص، با کد اقتصادی، برای حسابداری</small></span>
             </label>
@@ -225,7 +278,7 @@ export default function CheckoutPage() {
         <aside className="co-sum">
           <h2>سفارش تو</h2>
           <ul className="co-items">
-            {cart.map((l, i) => {
+            {rows.map(({ l, i }) => {
               const p = productById(l.id);
               return (
                 <li key={i}>

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { DELIVERY, extrasLabel, linePrice, axisOf, deliveryTypes, etaText, guaranteeOf, isSub, optionLabel, planKeys, priceOf, productById, type Months, deliveryOf } from "@/lib/catalog";
 import { fa, money } from "@/lib/format";
 import { BrandLogo, Dots, Icon } from "./brand";
-import { useStore } from "./store";
+import { lineKey, useStore } from "./store";
 
 const Arrow = () => <Icon id="arrow" className="arrow" />;
 
@@ -73,7 +73,7 @@ function ProductView() {
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: 10 }}>
           <button className="btn btn-ghost" onClick={() => { addSelection(); close(); notify(`${p.name} به سبد اضافه شد`); }}>افزودن به سبد</button>
-          <button className="btn btn-paper" onClick={() => { addSelection(); close(); router.push("/checkout"); }}>همین الان بخر <Arrow /></button>
+          <button className="btn btn-paper" onClick={() => { addSelection(); close(); router.push(`/checkout?only=${encodeURIComponent(lineKey(selection))}`); }}>همین الان بخر <Arrow /></button>
         </div>
       </div>
     </>

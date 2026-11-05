@@ -36,3 +36,10 @@ export async function sendSplitSms(mobile: string, splitCode: string) {
   const t = process.env.KAVENEGAR_SPLIT_TEMPLATE;
   if (t || !smsConfigured()) await lookup(mobile, t || "accdrop-split", [splitCode]);
 }
+
+/** Optional: one SMS to a customer who started a checkout and didn't pay (template with %token = order code, linking
+ *  to accdrop.ir/orders/%token). See lib/server/reminders.ts. Off until KAVENEGAR_REMIND_TEMPLATE is set. */
+export async function sendRemindSms(mobile: string, orderCode: string) {
+  const t = process.env.KAVENEGAR_REMIND_TEMPLATE;
+  if (t || !smsConfigured()) await lookup(mobile, t || "accdrop-remind", [orderCode]);
+}
