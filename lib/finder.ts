@@ -17,6 +17,8 @@ export type Task = {
   words: string[];
   /** In order of recommendation: the first is «بهترین انتخاب». */
   picks: Pick[];
+  /** Not a card in the grid: only reached by typing, or as the fallback. */
+  hidden?: boolean;
 };
 
 export const TASKS: Task[] = [
@@ -165,6 +167,57 @@ export const TASKS: Task[] = [
       { id: "grammarly", why: "ایمیل و رزومه انگلیسی بدون حتی یک غلط." },
     ],
   },
+  {
+    id: "health", label: "پزشکی و سلامت", line: "درس پزشکی، مقاله، آزمایش و دارو", tone: "#2EC4B6",
+    glyph: "M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.5-7 10-7 10ZM9 12h2v-2h2v2h2",
+    words: ["پزشکی", "پزشک", "دکتر", "طب", "دارو", "داروسازی", "بیماری", "آزمایش", "سلامت", "رزیدنتی", "پرستاری", "دندانپزشکی", "دندان", "بیمارستان", "تشخیص", "فیزیوتراپی", "تغذیه", "رژیم", "medical", "medicine", "doctor", "health", "nurse", "usmle", "pharmacy"],
+    picks: [
+      { id: "chatgpt", why: "برای درس پزشکی، توضیح بیماری و دارو و خواندن عکس جواب آزمایش، قوی‌ترین گزینه است. جای ویزیت پزشک را نمی‌گیرد." },
+      { id: "claude", why: "گایدلاین و مقاله‌های بلند پزشکی را دقیق می‌خواند و با منبع خلاصه می‌کند." },
+      { id: "google-ai-pro", why: "رفرنس‌ها و جزوه‌ها را در NotebookLM بریز و از رویشان سؤال امتحانی و خلاصه بگیر." },
+    ],
+  },
+  {
+    id: "law", label: "حقوق و قرارداد", line: "قرارداد، لایحه و متن حقوقی", tone: "#C9A227",
+    glyph: "M12 4v16M7 20h10M5 8h14M5 8l-2 6a3 3 0 0 0 4 0L5 8Zm14 0-2 6a3 3 0 0 0 4 0l-2-6Z",
+    words: ["حقوق", "حقوقی", "وکیل", "وکالت", "قرارداد", "لایحه", "دادگاه", "قانون", "شکایت", "سردفتر", "law", "legal", "contract", "lawyer"],
+    picks: [
+      { id: "claude", why: "قراردادهای طولانی را بند به بند دقیق می‌خواند و ریسک‌ها را نشان می‌دهد." },
+      { id: "chatgpt", why: "پیش‌نویس قرارداد، نامه و لایحه را سریع آماده می‌کند." },
+      { id: "ilovepdf", why: "اسکن، ادغام و تبدیل PDF پرونده‌ها، بدون محدودیت." },
+    ],
+  },
+  {
+    id: "marketing", label: "مارکتینگ و فروش", line: "تبلیغ، کمپین و پیدا کردن مشتری", tone: "#FF6B8B",
+    glyph: "M4 10v4h3l6 4V6L7 10H4ZM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12",
+    words: ["مارکتینگ", "بازاریابی", "تبلیغ", "تبلیغات", "کمپین", "فروش", "مشتری", "برند", "سئو", "دیجیتال مارکتینگ", "marketing", "ads", "seo", "sales", "brand"],
+    picks: [
+      { id: "chatgpt", why: "متن تبلیغ، ایده کمپین و تقویم محتوا را در چند دقیقه می‌سازد." },
+      { id: "manus", why: "تحقیق بازار و بررسی رقبا را از اول تا آخر خودش انجام می‌دهد." },
+      { id: "adobe-express", why: "بنر و پست تبلیغاتی با قالب‌های آماده." },
+      { id: "linkedin-sales", why: "پیدا کردن مشتری سازمانی و فروش B2B در لینکدین." },
+    ],
+  },
+  {
+    id: "finance", label: "اکسل و حسابداری", line: "فرمول، گزارش مالی و تحلیل داده", tone: "#21A366",
+    glyph: "M4 4h16v16H4zM4 10h16M10 4v16",
+    words: ["اکسل", "حسابداری", "حسابدار", "مالی", "بودجه", "ترید", "بورس", "فرمول", "جدول", "داده", "تحلیل داده", "excel", "accounting", "finance", "data", "spreadsheet"],
+    picks: [
+      { id: "chatgpt", why: "فایل اکسل را بده؛ تحلیل می‌کند، نمودار می‌کشد و فرمول می‌نویسد." },
+      { id: "microsoft-365", why: "Excel کامل با Copilot و یک ترابایت فضا، یک سال." },
+      { id: "airtable", why: "جدول و دیتابیس تیمی با اتوماسیون، بدون کد." },
+    ],
+  },
+  {
+    id: "general", hidden: true, label: "هر کار دیگری", line: "دستیارهای همه‌کاره", tone: "#B9FF63",
+    glyph: "M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2L12 3Z",
+    words: [],
+    picks: [
+      { id: "chatgpt", why: "همه‌کاره‌ترین دستیار؛ تقریباً هر سؤال و کاری را جواب می‌دهد، با فارسی خوب." },
+      { id: "claude", why: "برای متن دقیق، تحلیل اسناد بلند و کد." },
+      { id: "google-ai-pro", why: "Gemini کنار Gmail و Docs، به‌همراه ۲ ترابایت فضا، شش ماهه." },
+    ],
+  },
 ];
 
 /** On sale and has a page: a pick that was hidden or removed by the admin is skipped. */
@@ -176,7 +229,10 @@ export function picksOf(t: Task): { p: Product; why: string }[] {
 }
 
 /** Tasks with at least two products on sale: a single option is not a recommendation. */
-export const liveTasks = () => TASKS.filter((t) => picksOf(t).length >= 2);
+const usable = () => TASKS.filter((t) => picksOf(t).length >= 2);
+export const liveTasks = () => usable().filter((t) => !t.hidden);
+/** Shown when nothing typed matches a task: the all-round assistants. */
+export const generalTask = () => usable().find((t) => t.id === "general");
 
 /** The cheapest pick that is not the first one, for the «اقتصادی» tag. */
 export function budgetPick(list: { p: Product }[]) {
@@ -190,7 +246,7 @@ export function budgetPick(list: { p: Product }[]) {
 export function matchTasks(text: string) {
   const q = norm(text);
   if (!q) return { tasks: [] as Task[], products: [] as Product[] };
-  const scored = liveTasks().map((t) => {
+  const scored = usable().filter((t) => t.words.length).map((t) => {
     let s = 0;
     if (norm(t.label).includes(q) || q.includes(norm(t.label))) s += 5;
     for (const w of t.words) {

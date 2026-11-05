@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { minPrice, type Product } from "@/lib/catalog";
 import { productHref } from "@/lib/content";
 import { whenShort } from "@/lib/facts";
-import { budgetPick, liveTasks, matchTasks, picksOf, type Task } from "@/lib/finder";
+import { budgetPick, generalTask, liveTasks, matchTasks, picksOf, type Task } from "@/lib/finder";
 import { money } from "@/lib/format";
 import { BrandLogo, Icon } from "./brand";
 
@@ -39,6 +39,8 @@ export function Finder() {
 
   const match = useMemo(() => matchTasks(q), [q]);
   const task = tasks.find((t) => t.id === sel) ?? (q.trim() ? match.tasks[0] : undefined);
+  // Nothing matched what they typed: the all-round assistants still fit almost any job.
+  const general = !task && q.trim() ? generalTask() : undefined;
   const also = q.trim() ? match.tasks.filter((t) => t.id !== task?.id).slice(0, 3) : [];
 
   const sync = (t: string | null, text: string) => {
@@ -78,18 +80,11 @@ export function Finder() {
       </div>
 
       <div ref={result} className="fd-out" aria-live="polite">
-        {task ? <Picks t={task} key={task.id} /> : q.trim() ? (
-          match.products.length ? (
-            <div className="fd-none">
-              <p>برای «{q}» دسته مشخصی پیدا نکردیم، ولی این‌ها به حرفت نزدیک‌اند:</p>
-              <div className="fd-alts">{match.products.map((p) => <Alt key={p.id} p={p} why={p.use} />)}</div>
-            </div>
-          ) : (
-            <div className="fd-none">
-              <p>برای «{q}» هنوز پیشنهادی نداریم. یکی از کارهای بالا را انتخاب کن یا از پشتیبانی بپرس؛ اگر ابزارش را بخواهی برایت می‌آوریم.</p>
-              <Link className="btn btn-ghost" href={`/account/tickets/new?topic=request&q=${encodeURIComponent(q)}`}>درخواست ابزار</Link>
-            </div>
-          )
+        {task ? <Picks t={task} key={task.id} /> : general ? (
+          <>
+            <Picks t={general} key="general" note={`برای «${q.trim()}» یک دستیار همه‌کاره بهترین شروع است:`} />
+            {match.products.length > 0 && <div className="fd-more"><small>این‌ها هم به حرفت نزدیک‌اند:</small><div className="fd-alts">{match.products.map((p) => <Alt key={p.id} p={p} why={p.use} />)}</div></div>}
+          </>
         ) : (
           <p className="fd-hint">یکی از کارها را انتخاب کن یا با زبان خودت بنویس چه می‌خواهی.</p>
         )}
@@ -104,13 +99,13 @@ export function Finder() {
   );
 }
 
-function Picks({ t }: { t: Task }) {
+function Picks({ t, note }: { t: Task; note?: string }) {
   const list = picksOf(t);
   const cheap = budgetPick(list);
   const [best, ...rest] = list;
   return (
     <section className="fd-res" style={{ "--t": t.tone } as React.CSSProperties} aria-label={`پیشنهاد برای ${t.label}`}>
-      <header className="fd-res-h"><span className="fd-g"><TaskGlyph t={t} size={18} /></span><span>برای <b>{t.label}</b></span></header>
+      <header className="fd-res-h"><span className="fd-g"><TaskGlyph t={t} size={18} /></span><span>{note ?? <>برای <b>{t.label}</b></>}</span></header>
       <Link href={productHref(best.p)} className="fd-best">
         <span className="fd-tag">بهترین انتخاب</span>
         <span className="fd-best-logo"><BrandLogo id={best.p.id} size={44} /></span>
