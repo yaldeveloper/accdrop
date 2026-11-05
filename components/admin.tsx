@@ -9,6 +9,7 @@ import { fa, faDate, money } from "@/lib/format";
 import { api, useAccount } from "./account";
 import { BrandLogo, Icon } from "./brand";
 import { StatusChip } from "./orders";
+import { comboById } from "@/lib/combos";
 import { useStore } from "./store";
 
 const NAV = [
@@ -63,7 +64,7 @@ function useApi<T>(path: string) {
 const lineText = (l: Order["lines"][number]) => {
   const p = productById(l.id);
   const x = extrasLabel(l);
-  return `${p.name} • ${optionLabel(p, l.plan)} • ${deliveryOf(p, l.type).title}${x ? ` • ${x}` : ""}`;
+  return `${p.name} • ${optionLabel(p, l.plan)} • ${deliveryOf(p, l.type).title}${x ? ` • ${x}` : ""}${l.combo ? ` • ${comboById(l.combo)?.name ?? "کمبو پک"}` : ""}`;
 };
 
 // ----- Overview -----
