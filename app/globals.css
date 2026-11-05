@@ -2416,20 +2416,22 @@ section.light:has(+section:not(.light)){border-bottom-left-radius:40px;border-bo
 /* product cards: lime-edged on hover, the mark lights up, the arrow becomes a button */
 .tile{position:relative;isolation:isolate;box-shadow:0 1px 2px rgba(17,20,24,.04)}
 .tile::after{content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1px;pointer-events:none;opacity:0;transition:opacity .35s var(--ease);
-  background:linear-gradient(140deg,var(--lime-d),rgba(185,255,99,.15) 35%,transparent 55%,rgba(17,20,24,.28));
+  background:linear-gradient(140deg,var(--b,var(--lime-d)),color-mix(in srgb,var(--b,var(--lime-d)) 18%,transparent) 35%,transparent 55%,rgba(17,20,24,.28));
   -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
-.tile-logo{transition:background-color .3s,color .3s,border-color .3s,transform .45s var(--ease)}
+.tile-logo{transition:background-color .3s,color .3s,border-color .3s,box-shadow .3s,transform .45s var(--ease)}
+.tile::before{content:"";position:absolute;z-index:-1;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .45s var(--ease);background:radial-gradient(90% 60% at 100% 0,color-mix(in srgb,var(--b,var(--lime)) 13%,transparent),transparent 70%)}
 .tile-foot b{font-size:18px;font-weight:700;letter-spacing:-.01em}
 .tile-foot .arrow{width:30px!important;height:30px!important;padding:7px;border-radius:50%;background:var(--paper-2);color:var(--ink);transition:background-color .3s,color .3s,transform .4s var(--ease)}
 @media (hover:hover){
   .tile:hover{box-shadow:0 22px 40px -28px rgba(17,20,24,.45)}
   .tile:hover::after{opacity:1}
-  .tile:hover .tile-logo{background:var(--ink);color:var(--lime);border-color:var(--ink);transform:rotate(-5deg) scale(1.05)}
+  .tile:hover .tile-logo{background:var(--ink);color:var(--b,var(--lime));border-color:var(--ink);transform:rotate(-5deg) scale(1.05);box-shadow:0 10px 24px -10px color-mix(in srgb,var(--b,var(--lime)) 70%,transparent)}
+  .tile:hover::before{opacity:1}
   .tile:hover .tile-foot .arrow{background:var(--ink);color:var(--lime)}
 }
 
 /* rails: room for the hover lift so the lime edge isn't cut off */
-.cat-scroll{padding-top:8px;margin-top:-8px}
+.cat-scroll{padding-top:8px;margin-top:-8px;padding-bottom:28px;margin-bottom:-20px}
 
 /* buy box: the main button gets a light sweep on hover */
 .bx-cta{position:relative;overflow:hidden;box-shadow:0 14px 30px -16px rgba(17,20,24,.7)}
@@ -2448,3 +2450,32 @@ section.light:has(+section:not(.light)){border-bottom-left-radius:40px;border-bo
 footer.ft{position:relative}
 footer.ft::before{content:"";position:absolute;top:0;inset-inline:0;height:1px;background:linear-gradient(90deg,transparent,rgba(185,255,99,.45),transparent)}
 .ft-news button{transition:background-color .2s}.ft-news button:hover{background:var(--paper)}
+
+/* ===== v19b: brand marquee, tighter rhythm, scroll hints ===== */
+.mq{position:relative;margin-top:48px;overflow:hidden;direction:ltr;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}
+.mq-track{display:flex;width:max-content;animation:mq 70s linear infinite}
+.mq:hover .mq-track,.mq:focus-within .mq-track{animation-play-state:paused}
+.mq-row{list-style:none;display:flex;gap:10px;padding-inline-end:10px}
+.mq-row a{display:inline-flex;align-items:center;gap:10px;height:46px;padding:0 18px;border-radius:999px;border:1px solid var(--hair);background:rgba(255,255,255,.02);color:var(--gray-d);font-size:14px;white-space:nowrap;transition:color .25s,border-color .25s,background-color .25s,box-shadow .25s}
+.mq-row a .blogo{color:var(--paper);opacity:.75;transition:color .25s,opacity .25s}
+@media (hover:hover){.mq-row a:hover{color:var(--paper);border-color:color-mix(in srgb,var(--b) 55%,transparent);background:color-mix(in srgb,var(--b) 10%,transparent);box-shadow:0 0 28px -8px color-mix(in srgb,var(--b) 60%,transparent)}
+  .mq-row a:hover .blogo{color:var(--b);opacity:1}}
+@keyframes mq{to{transform:translateX(-50%)}}
+.hero2 .assure-row{margin-top:28px}
+
+/* the store comes right after the hero: less air above it */
+#collection{padding-top:96px;padding-bottom:110px}
+#collection .head{margin-bottom:40px}
+.steps3{padding:96px 0}
+
+/* rails: fade the far edge so it's clear there are more cards */
+.cat-scroll{-webkit-mask-image:linear-gradient(90deg,transparent,#000 56px);mask-image:linear-gradient(90deg,transparent,#000 56px)}
+
+@media (max-width:720px){
+  .mq{margin-top:28px}
+  .mq-row a{height:40px;padding:0 14px;font-size:13px}
+  #collection{padding-top:64px;padding-bottom:72px}
+  .steps3{padding:64px 0}
+}
+@media (prefers-reduced-motion:reduce){.mq{overflow-x:auto}}
