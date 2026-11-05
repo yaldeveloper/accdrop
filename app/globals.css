@@ -2431,7 +2431,7 @@ section.light:has(+section:not(.light)){border-bottom-left-radius:40px;border-bo
 }
 
 /* rails: room for the hover lift so the lime edge isn't cut off */
-.cat-scroll{padding-top:8px;margin-top:-8px;padding-bottom:28px;margin-bottom:-20px}
+.cat-scroll{padding-top:8px;margin-top:-8px;padding-bottom:44px;margin-bottom:-36px}
 
 /* buy box: the main button gets a light sweep on hover */
 .bx-cta{position:relative;overflow:hidden;box-shadow:0 14px 30px -16px rgba(17,20,24,.7)}
@@ -2469,8 +2469,40 @@ footer.ft::before{content:"";position:absolute;top:0;inset-inline:0;height:1px;b
 #collection .head{margin-bottom:40px}
 .steps3{padding:96px 0}
 
-/* rails: fade the far edge so it's clear there are more cards */
-.cat-scroll{-webkit-mask-image:linear-gradient(90deg,transparent,#000 56px);mask-image:linear-gradient(90deg,transparent,#000 56px)}
+/* rails (components/rail.tsx): arrows, mouse drag, and a fade only where more cards wait */
+.rail{position:relative}
+.rail .cat-scroll{scrollbar-width:none;overscroll-behavior-x:contain}
+.rail .cat-scroll::-webkit-scrollbar{display:none}
+.rail:not(.at-end) .cat-scroll{-webkit-mask-image:linear-gradient(90deg,transparent,#000 var(--fade,64px));mask-image:linear-gradient(90deg,transparent,#000 var(--fade,64px))}
+.rail:not(.at-start) .cat-scroll{-webkit-mask-image:linear-gradient(270deg,transparent,#000 var(--fade,64px));mask-image:linear-gradient(270deg,transparent,#000 var(--fade,64px))}
+.rail:not(.at-start):not(.at-end) .cat-scroll{-webkit-mask-image:linear-gradient(90deg,transparent,#000 var(--fade,64px),#000 calc(100% - var(--fade,64px)),transparent);mask-image:linear-gradient(90deg,transparent,#000 var(--fade,64px),#000 calc(100% - var(--fade,64px)),transparent)}
+.rail-btn{position:absolute;z-index:3;top:calc(50% - 26px);width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:#fff;color:var(--ink);border:1px solid var(--hair-l);
+  box-shadow:0 10px 30px -10px rgba(17,20,24,.35);transition:opacity .25s,transform .2s var(--ease-out),background-color .2s,color .2s}
+.rail-btn svg.i{width:20px;height:20px}
+.rail-btn.prev{inset-inline-start:-20px}.rail-btn.prev svg{transform:scaleX(-1)}
+.rail-btn.next{inset-inline-end:-20px}
+.rail-btn:disabled{opacity:0;pointer-events:none;transform:scale(.8)}
+.rail-btn:active{transform:scale(.92)}
+@media (hover:hover){.rail-btn:hover{background:var(--ink);color:var(--lime)}.rail .cat-scroll{cursor:grab}}
+.rail .cat-scroll.dragging{cursor:grabbing;scroll-snap-type:none;user-select:none}
+.rail .cat-scroll.dragging .tile{pointer-events:none}
+@media (hover:none),(max-width:760px){.rail-btn{display:none}}
+/* phones: two and a bit compact cards per row, so a swipe shows real choice instead of one giant card */
+@media (max-width:760px){
+  .rail .cat-scroll{grid-auto-columns:44%;gap:10px;--fade:22px}
+  .rail .tile{padding:14px;min-height:0;border-radius:16px}
+  .rail .tile-logo{width:40px;height:40px;border-radius:11px}
+  .rail .tile-logo .blogo{width:20px;height:20px}
+  .rail .tile-drop{font-size:10px;padding:2px 7px}
+  .rail .cat-scroll .tile-tool{font-size:17px;margin-top:14px;line-height:1.25}
+  .rail .tile-tool small{font-size:12px}
+  .rail .tile-use{font-size:11.5px;margin-top:6px;line-height:1.7;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .rail .tile-meta{font-size:10.5px;flex-direction:column;gap:2px;margin-top:8px}
+  .rail .tile-meta>span+span::before{display:none}
+  .rail .tile-foot{padding-top:12px;font-size:11px}
+  .rail .tile-foot b{font-size:14px;margin:0 2px}
+  .rail .tile-foot .arrow{display:none}
+}
 
 @media (max-width:720px){
   .mq{margin-top:28px}
