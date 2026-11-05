@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { DELIVERY, STATIC_IP, extrasLabel, ipPrice, linePrice, optionLabel, productById, typeName, ownAsk, validOwn } from "@/lib/catalog";
+import { DELIVERY, STATIC_IP, extrasLabel, ipPrice, linePrice, optionLabel, productById, deliveryOf, ownAsk, validOwn } from "@/lib/catalog";
 import { normalizeUsername, validEmail, validUsername } from "@/lib/account";
 import { fa, money } from "@/lib/format";
 import { BrandLogo, Dots, Icon } from "@/components/brand";
@@ -11,7 +11,8 @@ import { LoginFlow } from "@/components/login";
 import { api, useAccount } from "@/components/account";
 import { useStore } from "@/components/store";
 import { EMPTY_LEGAL, LegalForm, useLegal } from "@/components/legal";
-import { INSTALLMENTS, canInstall, installment, type LegalInfo, type PayMethod } from "@/lib/billing";
+import { type LegalInfo, type PayMethod } from "@/lib/billing";
+import { receiveOf, warrantyOf, whenOf } from "@/lib/facts";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -48,8 +49,6 @@ export default function CheckoutPage() {
   const subtotal = cart.reduce((s, l) => s + linePrice(l), 0);
   const discount = Math.round((subtotal * rate) / 1000) * 1000;
   const total = subtotal - discount;
-  const bnplOk = canInstall(total);
-  useEffect(() => { if (method === "bnpl" && !bnplOk) setMethod("card"); }, [method, bnplOk]);
 
   const apply = async () => {
     const c = code.trim().toUpperCase();
@@ -93,9 +92,7 @@ export default function CheckoutPage() {
       if (r.index !== undefined && (r.error === "bad_email" || r.error === "bad_username")) { setBad([r.index]); document.getElementById(`co-em-${r.index}`)?.focus(); }
       if (r.index !== undefined && r.error === "bad_members") setBad([100 + r.index]);
       notify(r.error === "crypto_unavailable" ? "پرداخت با ارز دیجیتال فعلاً فعال نیست؛ از درگاه بانکی استفاده کن."
-        : r.error === "bnpl_unavailable" || r.error === "bnpl_failed" ? "پرداخت اقساطی فعلاً در دسترس نیست؛ از درگاه بانکی استفاده کن."
-        : r.error === "bnpl_not_eligible" ? `${INSTALLMENTS.provider} این خرید را قسطی تأیید نکرد؛ از درگاه بانکی استفاده کن.`
-        : r.error === "bnpl_min" ? `خرید اقساطی از ${money(INSTALLMENTS.min)} تومان به بالاست.` : r.error === "bad_item" ? "یکی از اقلام سبد دیگر موجود نیست. حذفش کن و دوباره امتحان کن." : r.error === "number_unavailable" ? "شماره این کشور همین الان تمام شد. از صفحه شماره مجازی کشور دیگری انتخاب کن." : r.error === "out_of_stock" ? "موجودی یکی از اقلام سبد همین الان تمام شد. حذفش کن یا کمی بعد دوباره امتحان کن." : r.error === "unauthorized" ? "اول وارد حسابت شو" : "ثبت سفارش انجام نشد. دوباره امتحان کن.");
+        : r.error === "bad_item" ? "یکی از اقلام سبد دیگر موجود نیست. حذفش کن و دوباره امتحان کن." : r.error === "number_unavailable" ? "شماره این کشور همین الان تمام شد. از صفحه شماره مجازی کشور دیگری انتخاب کن." : r.error === "out_of_stock" ? "موجودی یکی از اقلام سبد همین الان تمام شد. حذفش کن یا کمی بعد دوباره امتحان کن." : r.error === "unauthorized" ? "اول وارد حسابت شو" : "ثبت سفارش انجام نشد. دوباره امتحان کن.");
       return;
     }
     clearCart();
@@ -130,13 +127,13 @@ export default function CheckoutPage() {
           </section>
 
           <section className={`co-step ${step1Done ? "on" : "off"}`}>
-            <header><span className="co-n">۲</span><h2>اطلاعات فعال‌سازی</h2></header>
+            <header><span className="co-n">۲</span><h2>{cart.some((l) => l.type === "own" || l.type === "username") ? "اطلاعات فعال‌سازی" : "چه چیزی تحویل می‌گیری"}</h2></header>
             <div className="co-lines">
               {cart.map((l, i) => {
                 const p = productById(l.id);
                 return (
                   <div className="co-act" key={i}>
-                    <div className="co-act-h"><span className="mono"><BrandLogo id={p.id} size={22} /></span><b className="en">{p.name}</b><small className="muted">{typeName(p, l.type).title}</small></div>
+                    <div className="co-act-h"><span className="mono"><BrandLogo id={p.id} size={22} /></span><b className="en">{p.name}</b><small className="muted">{deliveryOf(p, l.type).title}</small></div>
                     {l.type === "own" ? (
                       <div className="fld">
                         <label htmlFor={`co-em-${i}`}>{ownAsk(p).label}</label>
@@ -162,12 +159,9 @@ export default function CheckoutPage() {
                         <small className="muted">می‌توانی آیدی خودت یا دوستت را بزنی. کد ورود و رمز نمی‌خواهیم.</small>
                       </div>
                     ) : (
-                      <p className="muted co-note">{{
-                        ready: "یک اکانت تازه برایت ساخته می‌شود. اطلاعات ورودش را در داشبورد و پیامک می‌بینی.",
-                        code: "بلافاصله بعد از پرداخت، کد یا اطلاعات تحویل در صفحه سفارش و پیامک نمایش داده می‌شود.",
-                        number: "شماره بلافاصله بعد از پرداخت در صفحه سفارش نمایش داده می‌شود و کد تأیید هم همان‌جا می‌آید.",
-                      }[l.type as "ready" | "code" | "number"]}</p>
+                      <p className="muted co-note"><b>{receiveOf(p, l.type).title}</b>، {whenOf(p, l.type)}. {receiveOf(p, l.type).detail}؛ در صفحه سفارش و پیامک. چیزی لازم نیست وارد کنی.</p>
                     )}
+                    {(() => { const w = warrantyOf(p, l.plan); return <p className={`co-war w-${w.level}`}><Icon id="shield" /><span><b>{w.label}</b> {w.level === "none" || w.level === "short" ? w.note : ""}</span></p>; })()}
                   </div>
                 );
               })}
@@ -207,11 +201,6 @@ export default function CheckoutPage() {
             <header><span className="co-n">{cart.some((l) => ipPrice(productById(l.id), l.plan) > 0) ? "۴" : "۳"}</span><h2>روش پرداخت</h2></header>
             <div className="opts v co-pay">
               <button className={`opt ${method === "card" ? "on" : ""}`} type="button" aria-pressed={method === "card"} onClick={() => setMethod("card")}><span className="opt-logo ic"><Icon id="lock" /></span><b>کارت بانکی</b><small>همه کارت‌های عضو شتاب</small></button>
-              <button className={`opt ${method === "bnpl" ? "on" : ""} ${bnplOk ? "" : "dis"}`} type="button" aria-pressed={method === "bnpl"} disabled={!bnplOk} onClick={() => setMethod("bnpl")}>
-                <img className="opt-logo" src="/pay/snapppay.svg" alt="" width={36} height={36} />
-                <b>اقساطی با اسنپ‌پی</b>
-                <small>{bnplOk ? <><span className="num">{fa(INSTALLMENTS.parts)}</span> قسط <span className="num">{money(installment(total))}</span> تومانی • بدون کارمزد و ضامن</> : <>برای خریدهای بالای <span className="num">{money(INSTALLMENTS.min)}</span> تومان</>}</small>
-              </button>
               <button className={`opt ${method === "crypto" ? "on" : ""}`} type="button" aria-pressed={method === "crypto"} onClick={() => setMethod("crypto")}>
                 <span className="opt-logo ic usdt">₮</span><b>ارز دیجیتال</b><small>تتر، بیت‌کوین و بیشتر{method === "crypto" && usdt ? <> • <span className="num">{fa(Math.ceil((total / usdt) * 100) / 100)}</span> تتر (هر تتر <span className="num">{money(usdt)}</span> تومان)</> : null}</small>
               </button>
@@ -235,7 +224,7 @@ export default function CheckoutPage() {
               return (
                 <li key={i}>
                   <span className="mono"><BrandLogo id={p.id} size={20} /></span>
-                  <div><b className="en">{p.name}</b><small>{optionLabel(p, l.plan)} • {typeName(p, l.type).title}</small>{extrasLabel(l) && <small className="co-x">{extrasLabel(l)}</small>}</div>
+                  <div><b className="en">{p.name}</b><small>{optionLabel(p, l.plan)} • {deliveryOf(p, l.type).title}</small>{extrasLabel(l) && <small className="co-x">{extrasLabel(l)}</small>}</div>
                   <div className="r"><span className="num">{money(linePrice(l))}</span><button className="rm" onClick={() => removeLine(i)} aria-label={`حذف ${p.name}`}>حذف</button></div>
                 </li>
               );
@@ -250,9 +239,9 @@ export default function CheckoutPage() {
             {discount > 0 && <div className="disc"><dt>تخفیف ({applied})</dt><dd className="num">−{money(discount)}</dd></div>}
             <div className="tot"><dt>قابل پرداخت</dt><dd><b className="num">{money(total)}</b> <small>تومان</small></dd></div>
           </dl>
-          <label className="co-agree"><input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} /><span>قوانین و <a className="link" href="#">شرایط گارانتی</a> را می‌پذیرم.</span></label>
+          <label className="co-agree"><input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} /><span><Link className="link" href="/terms">قوانین</Link> و <Link className="link" href="/guarantee">گارانتی هر محصول</Link> را خواندم و می‌پذیرم.</span></label>
           <button className="btn btn-paper btn-block co-btn" onClick={pay} disabled={paying}>
-            {paying ? "در حال اتصال به درگاه…" : method === "crypto" ? <>پرداخت با ارز دیجیتال</> : method === "bnpl" ? <>ادامه با اسنپ‌پی • قسط اول <span className="num">{money(installment(total))}</span></> : <>پرداخت <span className="num">{money(total)}</span> تومان</>}
+            {paying ? "در حال اتصال به درگاه…" : method === "crypto" ? <>پرداخت با ارز دیجیتال</> : <>پرداخت <span className="num">{money(total)}</span> تومان</>}
           </button>
           <div className="co-bar" aria-hidden="true">
             <div><small>قابل پرداخت</small><b className="num">{money(total)} <small>تومان</small></b></div>

@@ -10,7 +10,8 @@ type Ours = { productId: string; plan: string; name: string; label: string; pric
 type Fivesim = { configured: boolean; currency: string; perUsd: number; markup: number; min: number; balance?: number | null; error?: string; sample?: { country: string; name: string; price: number; count: number }[] };
 type Data = { fivesim?: Fivesim; configured: boolean; rate: { rate: number; source: string }; ours: Ours[]; map: { productId: string; plan: string; supplierId: number }[]; products: SP[]; balance: number | null; test?: boolean; error?: string;
   cr?: { configured: boolean; wallet: { address: string; usdt: number; bnb: number } | { error: string } | null };
-  qd?: { configured: boolean; balance: { available: number; reserved: number } | { error: string } | null } };
+  qd?: { configured: boolean; balance: { available: number; reserved: number } | { error: string } | null };
+  cb?: { configured: boolean; balance: { balance: number; currency: string } | { error: string } | null } };
 
 const round = (n: number) => Math.round(n / 1000) * 1000;
 
@@ -55,6 +56,14 @@ export function AdminSupplier() {
         ) : d.qd.balance && "available" in d.qd.balance ? (
           <p className="muted">موجودی کیف پول: <b className="num">{fa(d.qd.balance.available.toFixed(2))}</b> تتر ≈ {money(round(d.qd.balance.available * rate))} تومان{d.qd.balance.reserved > 0 && <> • رزرو برای سفارش‌های در جریان: <span className="num">{fa(d.qd.balance.reserved.toFixed(2))}</span></>}{d.qd.balance.available < 20 && <b className="bad"> (کم است)</b>}. محصولات وصل‌شده در کد مشخص‌اند (فیلد <span className="en">qd</span>) و فقط سفارش‌های زیر ۱۵ تتر خودکار خریده می‌شوند.</p>
         ) : <p className="adm-split warn">خطا در خواندن کیف پول: <span className="en">{d.qd.balance && "error" in d.qd.balance ? d.qd.balance.error : ""}</span></p>}
+      </div>
+      <div className="dash-sec">
+        <b>Canboso (اکانت‌های ارزان‌تر)</b>
+        {!d.cb?.configured ? (
+          <p className="muted">وصل نیست. در Vercel کلید API (که با <span className="en">tgb_</span> شروع می‌شود) را با نام <span className="en sel">CANBOSO_API_KEY</span> بگذار و دوباره دیپلوی کن. کیف پول را از ربات Binance کانبوسو با USDT شارژ کن.</p>
+        ) : d.cb.balance && "balance" in d.cb.balance ? (
+          <p className="muted">موجودی کیف پول: <b className="num">{fa(d.cb.balance.balance.toFixed(2))}</b> {d.cb.balance.currency === "USD" ? "دلار" : d.cb.balance.currency} ≈ {money(round(d.cb.balance.balance * rate))} تومان{d.cb.balance.balance < 15 && <b className="bad"> (کم است)</b>}. محصولات وصل‌شده در کد مشخص‌اند (فیلد <span className="en">cb</span>). موجودی کانبوسو از هر محصول چند عدد است؛ وقتی تمام شود، پرداخت آن محصول بسته می‌شود.</p>
+        ) : <p className="adm-split warn">خطا در خواندن کیف پول: <span className="en">{d.cb.balance && "error" in d.cb.balance ? d.cb.balance.error : ""}</span></p>}
       </div>
       {!d.configured ? (
         <div className="dash-sec"><b>هنوز وصل نیست</b><p className="muted">کلید API را در Vercel با نام <span className="en sel">INSIGHT_API_KEY</span> بگذار و دوباره دیپلوی کن. برای امتحان بدون خرج، <span className="en sel">INSIGHT_TEST_MODE=1</span> را هم بگذار.</p></div>

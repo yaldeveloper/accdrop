@@ -9,6 +9,7 @@ import { productHref } from "@/lib/content";
 import { NEEDS } from "@/lib/search";
 import { fa, money } from "@/lib/format";
 import { BrandLogo, Icon } from "./brand";
+import { catLine } from "@/lib/facts";
 
 export const CATS = Object.keys(CATEGORIES).filter((c) => c !== "all") as Category[];
 /** Accent colour per category, used by the menu and category tiles. */
@@ -54,7 +55,7 @@ export function MegaMenu() {
               <button role="tab" aria-selected={c === cat} className={c === cat ? "on" : ""} style={{ "--t": CAT_TONE[c] } as React.CSSProperties}
                 onMouseEnter={() => setCat(c)} onFocus={() => setCat(c)} onClick={() => setCat(c)}>
                 <i />
-                <span><b>{CATEGORIES[c]}</b><small>{CAT_LINE[c]}</small></span>
+                <span><b>{CATEGORIES[c]}</b><small>{catLine(c)}</small></span>
                 <em className="num">{fa(inCat(c).length)}</em>
               </button>
             </li>
@@ -143,10 +144,11 @@ export function MobileMenu({ open, onClose, onSearch, onChat }: { open: boolean;
         </ul>
         <small className="dr-k">اک‌دراپ</small>
         <div className="dr-links">
+          <Link href="/account/orders">سفارش‌های من و پیگیری</Link>
           <Link href="/group">خرید گروهی</Link>
           {currentDrop() && <Link href="/#drop">دراپ‌ها</Link>}
           <Link href="/blog">بلاگ</Link>
-          <Link href="/guarantee">ضمانت و بازگشت وجه</Link>
+          <Link href="/guarantee">گارانتی و بازگشت وجه</Link>
           <Link href="/reseller">نمایندگی فروش</Link>
           <button onClick={() => { onClose(); onChat(); }}>چت با پشتیبانی</button>
         </div>

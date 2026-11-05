@@ -42,7 +42,7 @@ export default function ResellerPage() {
           <div>
             <span className="rs-k"><Dots size={4} />نمایندگی فروش اک‌دراپ</span>
             <h1>ابزارهای حرفه‌ای را بفروش،<br /><b>تحویل با ما.</b></h1>
-            <p className="lead">اکانت ChatGPT، Claude، Cursor، Canva و {fa(PRODUCTS.length - 4)} ابزار دیگر را با قیمت همکاری به مشتری‌هایت بفروش. فعال‌سازی، ضمانت و پشتیبانی با ماست؛ سود با تو.</p>
+            <p className="lead">ChatGPT، اپل آیدی، گیفت‌کارت، شماره مجازی و {fa(PRODUCTS.length - 4)} سرویس دیگر را با قیمت همکاری به مشتری‌هایت بفروش. تحویل خودکار، گارانتی و پشتیبانی با ماست؛ سود با تو.</p>
             <div className="rs-cta"><a className="btn btn-paper" href="#apply">درخواست نمایندگی <Icon id="arrow" className="arrow" /></a><span className="muted">رایگان، بدون حداقل فروش</span></div>
           </div>
           <div className="rs-logos" aria-hidden="true">

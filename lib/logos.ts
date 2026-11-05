@@ -49,7 +49,10 @@ export const LOGOS: Record<string, string> = {
 // Products sold under another brand mark.
 LOGOS["google-ai-pro"] = LOGOS.gemini;
 LOGOS["grok-cursor"] = LOGOS.cursor;
+LOGOS["apple-tv"] = LOGOS.appleid;
+LOGOS["kling-account"] = LOGOS.kling;
 LOGOS["claude-api"] = LOGOS.claude;
+LOGOS["codex-api"] = LOGOS.chatgpt;
 LOGOS["grok-api"] = LOGOS.grok;
-LOGOS["elevenlabs-credits"] = LOGOS.elevenlabs;
-LOGOS["notion-business"] = LOGOS.notion;
+LOGOS["gemini-api"] = LOGOS.gemini;
+LOGOS["google-cloud"] = LOGOS.gemini;

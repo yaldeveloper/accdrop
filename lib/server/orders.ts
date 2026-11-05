@@ -1,14 +1,14 @@
 import { randomInt } from "node:crypto";
-import { DELIVERY, MAX_SEATS, STATIC_IP, linePrice, productById, PRODUCTS, sellable, type DeliveryType, validOwn } from "@/lib/catalog";
+import { DELIVERY, STATIC_IP, maxUnits, linePrice, productById, PRODUCTS, sellable, type DeliveryType, validOwn } from "@/lib/catalog";
 import { livePlan } from "@/lib/numbers";
 import { loadCatalog } from "./catalog";
 import { normalizeUsername, validEmail, validUsername, type Order, type OrderLine, type OrderStatus } from "@/lib/account";
 import { db } from "./db";
 import { gatewayConfigured, startPayment, verifyPayment } from "./pay";
 import { cryptoConfigured, startCrypto } from "./crypto";
-import { bnplConfigured, cancelBnpl, confirmBnpl, startBnpl } from "./bnpl";
+import { cancelBnpl, confirmBnpl } from "./bnpl";
 import { onSplitPaid } from "./splits";
-import { canInstall, type LegalInfo, type PayMethod } from "@/lib/billing";
+import { type LegalInfo, type PayMethod } from "@/lib/billing";
 import { sendOrderSms } from "./sms";
 import { firstOutOfStock, supplyLine } from "./supplier";
 import { cancelNumber, finishNumber, fivesimConfigured, livePrice, publicNumber, refreshNumber, supplyNumber, type NumRecord } from "./fivesim";
@@ -27,8 +27,8 @@ export function priceLines(input: LineInput[], live: Record<string, number> = {}
     const p = PRODUCTS.find((x) => x.id === l?.id);
     if (!p || p.hidden || !(l.type in DELIVERY) || !sellable(p, l)) return { error: "bad_item", index: i };
     if (livePlan(l.plan) && !live[l.plan]) return { error: "number_unavailable", index: i };
-    const seats = p.group?.length ? Math.trunc(Number(l.seats ?? 1)) : 1;
-    if (!(seats >= 1 && seats <= MAX_SEATS)) return { error: "bad_item", index: i };
+    const seats = maxUnits(p) > 1 ? Math.trunc(Number(l.seats ?? 1)) : 1;
+    if (!(seats >= 1 && seats <= maxUnits(p))) return { error: "bad_item", index: i };
     const ip = l.ip ? String(l.ip) : undefined;
     if (ip && (!p.ip || !STATIC_IP.countries[ip])) return { error: "bad_item", index: i };
     let members: string[] | undefined;
@@ -108,7 +108,8 @@ async function livePrices(input: LineInput[]): Promise<Record<string, number>> {
 }
 
 export type { PayMethod };
-export const asMethod = (m: unknown): PayMethod => (m === "crypto" || m === "bnpl" ? m : "card");
+// Installments (SnappPay) are switched off for new orders; old "bnpl" orders still settle and refund through ./bnpl.
+export const asMethod = (m: unknown): PayMethod => (m === "crypto" ? m : "card");
 
 /** Sends the customer to the gateway (or marks a free order paid). */
 export async function payOrder(code: string, mobile: string, method: PayMethod = "card"): Promise<{ url: string } | { error: string }> {
@@ -118,21 +119,6 @@ export async function payOrder(code: string, mobile: string, method: PayMethod =
   if (o.status !== "pending" && o.status !== "canceled") return { url: `/orders/${code}` };
   if (Number(o.total) === 0) { await markPaid(code, "FREE"); return { url: `/orders/${code}` }; }
   if (method === "crypto" && !cryptoConfigured() && gatewayConfigured()) return { error: "crypto_unavailable" };
-  if (method === "bnpl") {
-    if (!canInstall(Number(o.total))) return { error: "bnpl_min" };
-    if (!bnplConfigured() && gatewayConfigured()) return { error: "bnpl_unavailable" };
-    await loadCatalog();
-    const lines = await sql`select product_id, plan, price from order_lines where order_code = ${code} order by idx`;
-    try {
-      const p = await startBnpl(code, Number(o.subtotal), Number(o.discount), mobile,
-        lines.map((l) => ({ id: `${l.product_id}-${l.plan}`, name: productById(l.product_id)?.name ?? l.product_id, amount: Number(l.price) })));
-      await sql`update orders set authority = ${p.authority}, pay_token = ${p.token ?? null}, status = 'pending', pay_method = 'bnpl' where code = ${code}`;
-      return { url: p.url };
-    } catch (e) {
-      console.error(e);
-      return { error: String((e as Error).message) === "bnpl_not_eligible" ? "bnpl_not_eligible" : "bnpl_failed" };
-    }
-  }
   const p = method === "crypto" ? await startCrypto(code, Number(o.total)) : await startPayment(code, Number(o.total), mobile);
   await sql`update orders set authority = ${p.authority}, status = 'pending', pay_method = ${method} where code = ${code}`;
   return { url: p.url };
@@ -185,17 +171,19 @@ export async function fulfilInstant(sql: Sql, onlyOrder?: string) {
     order by o.paid_at, l.idx`;
   const touched = new Set<string>(onlyOrder ? [onlyOrder] : []);
   for (const l of waiting) {
+    // One code per unit: a group line gets one per seat, a wholesale line one per account bought.
+    const need = Math.max(1, Number(l.seats ?? 1));
     await sql.begin(async (tx) => {
-      const [c] = await tx`select id, code from gift_codes where product_id = ${l.product_id} and plan = ${l.plan} and line_id is null
-        order by id limit 1 for update skip locked`;
-      if (!c) return;
-      await tx`update gift_codes set line_id = ${l.id}, used_at = now() where id = ${c.id}`;
-      await tx`update order_lines set secret = ${c.code}, delivered_at = now() where id = ${l.id}`;
+      const cs = await tx`select id, code from gift_codes where product_id = ${l.product_id} and plan = ${l.plan} and line_id is null
+        order by id limit ${need} for update skip locked`;
+      if (cs.length < need) return;
+      await tx`update gift_codes set line_id = ${l.id}, used_at = now() where id in ${tx(cs.map((c) => c.id))}`;
+      await tx`update order_lines set secret = ${cs.map((c) => c.code).join("\n")}, delivered_at = now() where id = ${l.id}`;
       touched.add(l.order_code);
     });
     if (touched.has(l.order_code) && (await sql`select 1 from order_lines where id = ${l.id} and secret is not null`).length) continue;
-    // Our own stock is empty: buy the code from the supplier, if this product/plan is connected to one.
-    const codes = await supplyLine(l.id, l.product_id, l.plan, Math.max(1, Number(l.seats ?? 1)));
+    // Our own stock can't cover the line: buy the codes from the supplier, if this product/plan is connected to one.
+    const codes = await supplyLine(l.id, l.product_id, l.plan, need);
     if (codes?.length) {
       const r = await sql`update order_lines set secret = ${codes.join("\n")}, delivered_at = now() where id = ${l.id} and secret is null returning id`;
       if (r.length) touched.add(l.order_code);
@@ -333,7 +321,7 @@ export async function stockSummary() {
 export async function addStock(productId: string, plan: string, codes: string[]) {
   const p = productById(productId);
   if (!p?.plans[plan]?.code) return { error: "bad_item" as const };
-  const clean = [...new Set(codes.map((c) => c.trim()).filter((c) => c.length >= 4 && c.length <= 200))];
+  const clean = [...new Set(codes.map((c) => c.trim()).filter((c) => c.length >= 4 && c.length <= 500))];
   if (!clean.length) return { added: 0, duplicates: 0 };
   const sql = await db();
   const r = await sql`insert into gift_codes ${sql(clean.map((code) => ({ product_id: productId, plan, code })))} on conflict (code) do nothing returning id`;

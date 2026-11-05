@@ -1,12 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { DELIVERY, extrasLabel, isSub, optionLabel, productById, typeName } from "@/lib/catalog";
+import { DELIVERY, extrasLabel, isSub, optionLabel, productById, deliveryOf } from "@/lib/catalog";
 import { STAGES, STATUS_TITLE, isPaid, passWindow, stageOf, type Order } from "@/lib/account";
 import { fa, faDate, money } from "@/lib/format";
 import { INSTALLMENTS } from "@/lib/billing";
 import { BrandLogo, Icon } from "./brand";
 import { NumberBox } from "./numbers";
+import { receiveOf, warrantyOf } from "@/lib/facts";
+
+const DAY = 86_400_000;
+/** «۲۵ روز گارانتی، تا ۳۰ آبان» once delivered, so the customer knows the exact last day to report a problem. */
+function WarrantyLine({ order, line }: { order: Order; line: Order["lines"][number] }) {
+  const w = warrantyOf(productById(line.id), line.plan);
+  const from = line.deliveredAt ?? (line.secret ? order.activatedAt ?? order.paidAt : null);
+  return <small className={`od-war w-${w.level}`}>{w.label}{from && w.days ? <>، تا {faDate(from + w.days * DAY, false)}</> : null}</small>;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function StatusChip({ order, now }: { order: Order; now?: number }) {
@@ -78,8 +87,8 @@ export function OrderDetail({ order, now, onPay, paying }: { order: Order; now: 
           </> : paid ? <>
             {sp && <p className="od-tip"><Link className="link" href={`/dong/${sp.code}`}>سهم تو از دنگ <span className="en">{sp.code}</span></Link></p>}
             <OrderTimeline order={order} now={now} />
-            {s < 2 ? <p className="muted od-tip">{order.lines.some((l) => l.number) ? "شماره را در اپ وارد کن؛ کد تأیید در همین صفحه، کنار شماره نمایش داده می‌شود." : "لازم نیست این صفحه باز بماند؛ وقتی فعال شد پیامک می‌گیری."}</p>
-              : <p className="od-tip ok">همه‌چیز فعال است. از خریدت لذت ببر.</p>}
+            {s < 2 ? <p className="muted od-tip">{order.lines.some((l) => l.number) ? "شماره را در اپ وارد کن؛ کد تأیید در همین صفحه، کنار شماره نمایش داده می‌شود." : "لازم نیست این صفحه باز بماند؛ وقتی تحویل شد همین‌جا نمایش داده می‌شود و پیامک می‌گیری."}</p>
+              : <p className="od-tip ok">همه‌چیز تحویل شد. راهنمای استفاده کنار هر مورد نوشته شده؛ مشکلی بود، تیکت بزن.</p>}
           </> : order.status === "refunded" ? <p className="muted od-tip">مبلغ این سفارش به کارتت برگشت داده شد.</p> : <>
             <p className="od-tip">{order.status === "pending" ? "این سفارش هنوز پرداخت نشده." : "پرداخت انجام نشد. اگر از حسابت کم شده، بانک تا ۷۲ ساعت برمی‌گرداند."}</p>
             {onPay && <button className="btn btn-paper" onClick={onPay} disabled={paying}>{paying ? "در حال اتصال به درگاه…" : <>پرداخت <span className="num">{money(order.total)}</span> تومان</>}</button>}
@@ -96,15 +105,16 @@ export function OrderDetail({ order, now, onPay, paying }: { order: Order; now: 
                   <span className="mono"><BrandLogo id={p.id} size={22} /></span>
                   <div className="od-l">
                     <b className="en">{p.name}</b>
-                    <small>{optionLabel(p, l.plan)} • {typeName(p, l.type).title}</small>
+                    <small>{optionLabel(p, l.plan)} • {deliveryOf(p, l.type).title}</small>
                     {extrasLabel(l) && <small className="od-x">{extrasLabel(l)}</small>}
                     {l.members?.length ? <small className="ltr-i">بقیه اعضا: <span className="en">{l.members.join("، ")}</span></small> : null}
                     {l.type === "own" && l.email && <small className="ltr-i">فعال‌سازی روی {p.ask ? `${p.ask.short} ` : ""}<span className="en">{l.email}</span></small>}
                     {l.type === "username" && l.username && <small className="ltr-i">ارسال به <span className="en">{l.username}</span></small>}
                     {s === 2 && isSub(p) && <small className="ok">فعال تا {faDate(w.end, false)}</small>}
                     {paid && l.number && l.lineId ? <NumberBox code={order.code} lineId={l.lineId} initial={l.number} /> : <>
-                    {l.secret && <small className="od-secret"><span>{{ code: p.kind === "gift" ? "کد گیفت‌کارت" : "کد / اطلاعات تحویل", number: "شماره", ready: "اطلاعات ورود" }[l.type as "code"] ?? (l.ip ? "مشخصات آی‌پی ثابت" : "اطلاعات تحویل")}</span><b className="en">{l.secret}</b></small>}
+                    {l.secret && <small className="od-secret"><span>{l.type === "code" || l.type === "ready" ? receiveOf(p, l.type).title : l.type === "number" ? "شماره" : l.ip ? "مشخصات آی‌پی ثابت" : "اطلاعات تحویل"}</span><b className="en">{l.secret}</b></small>}
                     {l.secret && l.type === "code" && p.howTo && <small className="muted">{p.howTo}</small>}
+                    {paid && <WarrantyLine order={order} line={l} />}
                     {paid && !l.secret && (l.type === "code" || l.type === "number" || l.type === "ready") && <small className="muted">به‌محض آماده شدن همین‌جا نمایش داده می‌شود و پیامک می‌گیری.</small>}
                     </>}
                   </div>

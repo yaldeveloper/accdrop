@@ -2,7 +2,7 @@
 
 import { type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
-import { DELIVERY, extrasLabel, linePrice, axisOf, deliveryTypes, etaText, guaranteeOf, isSub, optionLabel, planKeys, priceOf, productById, type Months, typeName } from "@/lib/catalog";
+import { DELIVERY, extrasLabel, linePrice, axisOf, deliveryTypes, etaText, guaranteeOf, isSub, optionLabel, planKeys, priceOf, productById, type Months, deliveryOf } from "@/lib/catalog";
 import { fa, money } from "@/lib/format";
 import { BrandLogo, Dots, Icon } from "./brand";
 import { useStore } from "./store";
@@ -49,8 +49,8 @@ function ProductView() {
               const amount = offers[t];
               return (
                 <button key={t} className={`opt ${t === selection.type ? "on" : ""}`} disabled={!amount} onClick={() => select({ type: t })}>
-                  <b>{typeName(p, t).title}{amount ? <span className="num" style={{ fontWeight: 400, opacity: 0.7 }}> · {money(amount)}</span> : null}</b>
-                  <small>{amount ? typeName(p, t).detail : "برای این مدت موجود نیست"}</small>
+                  <b>{deliveryOf(p, t).title}{amount ? <span className="num" style={{ fontWeight: 400, opacity: 0.7 }}> · {money(amount)}</span> : null}</b>
+                  <small>{amount ? deliveryOf(p, t).detail : "برای این مدت موجود نیست"}</small>
                 </button>
               );
             })}
@@ -64,7 +64,7 @@ function ProductView() {
         </div>
         <p className="assure">
           تحویل: <b>{etaText(p)}</b>.{" "}
-          {typeName(p, selection.type).detail}.
+          {deliveryOf(p, selection.type).detail}.
         </p>
       </div>
       <div className="s-f">
@@ -95,7 +95,7 @@ function CartView() {
                 return (
                   <div className="ln" key={i}>
                     <span className="mono"><BrandLogo id={p.id} size={22} /></span>
-                    <div className="t"><b>{p.name}</b><small>{optionLabel(p, l.plan)} · {typeName(p, l.type).title}{extrasLabel(l) ? ` · ${extrasLabel(l)}` : ""}</small></div>
+                    <div className="t"><b>{p.name}</b><small>{optionLabel(p, l.plan)} · {deliveryOf(p, l.type).title}{extrasLabel(l) ? ` · ${extrasLabel(l)}` : ""}</small></div>
                     <div style={{ textAlign: "left" }}><span className="num">{money(linePrice(l))}</span><button className="rm" onClick={() => removeLine(i)}>حذف</button></div>
                   </div>
                 );

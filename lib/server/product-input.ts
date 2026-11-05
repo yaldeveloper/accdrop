@@ -1,4 +1,4 @@
-import { CATEGORIES, DELIVERY, MAX_SEATS, type Product } from "@/lib/catalog";
+import { CATEGORIES, DELIVERY, MAX_QTY, MAX_SEATS, type Product } from "@/lib/catalog";
 import type { ProductContent } from "@/lib/content";
 import type { CatalogPatch } from "@/lib/catalog-sync";
 
@@ -42,6 +42,13 @@ export function cleanPatch(id: string, isNew: boolean, b: { product?: Record<str
       .filter(([n, o]) => n >= 2 && n <= MAX_SEATS && o >= 0 && o <= 50)
       .sort((a, c) => a[0] - c[0]);
     out.group = g.length ? g : undefined;
+  }
+  if (p.bulk !== undefined) {
+    const g = (Array.isArray(p.bulk) ? p.bulk : [])
+      .map((t) => [Math.round(Number((t as unknown[])[0])), Math.round(Number((t as unknown[])[1]))] as [number, number])
+      .filter(([n, o]) => n >= 2 && n <= MAX_QTY && o >= 0 && o <= 50)
+      .sort((a, c) => a[0] - c[0]);
+    out.bulk = g.length ? g : undefined;
   }
   if (p.plans !== undefined) {
     const plans: Product["plans"] = {};

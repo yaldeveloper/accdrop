@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { DELIVERY, extrasLabel, optionLabel, productById, typeName, ownAsk } from "@/lib/catalog";
+import { DELIVERY, extrasLabel, optionLabel, productById, deliveryOf, ownAsk } from "@/lib/catalog";
 import { STATUS_TITLE, type Order, type OrderStatus } from "@/lib/account";
 import { fa, faDate, money } from "@/lib/format";
 import { api, useAccount } from "./account";
@@ -63,7 +63,7 @@ function useApi<T>(path: string) {
 const lineText = (l: Order["lines"][number]) => {
   const p = productById(l.id);
   const x = extrasLabel(l);
-  return `${p.name} • ${optionLabel(p, l.plan)} • ${typeName(p, l.type).title}${x ? ` • ${x}` : ""}`;
+  return `${p.name} • ${optionLabel(p, l.plan)} • ${deliveryOf(p, l.type).title}${x ? ` • ${x}` : ""}`;
 };
 
 // ----- Overview -----

@@ -1,6 +1,6 @@
 // Shared (browser + server): installments, legal buyer details for official invoices, and «دنگ» (split payment) types.
 
-/** Pay-later (SnappPay): four interest-free parts; shown for orders from `min` Toman. */
+/** Pay-later (SnappPay): switched off on the site; kept so existing installment orders still display. */
 export const INSTALLMENTS = { parts: 4, min: 500_000, provider: "اسنپ‌پی" } as const;
 export const installment = (total: number) => Math.ceil(total / INSTALLMENTS.parts / 1000) * 1000;
 export const canInstall = (total: number) => total >= INSTALLMENTS.min;
