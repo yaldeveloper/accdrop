@@ -2469,27 +2469,33 @@ footer.ft::before{content:"";position:absolute;top:0;inset-inline:0;height:1px;b
 #collection .head{margin-bottom:40px}
 .steps3{padding:96px 0}
 
-/* rails (components/rail.tsx): arrows, mouse drag, and a fade only where more cards wait */
+/* rails (components/rail.tsx) */
 .rail{position:relative}
-.rail .cat-scroll{scrollbar-width:none;overscroll-behavior-x:contain}
-.rail .cat-scroll::-webkit-scrollbar{display:none}
-.rail:not(.at-end) .cat-scroll{-webkit-mask-image:linear-gradient(90deg,transparent,#000 var(--fade,64px));mask-image:linear-gradient(90deg,transparent,#000 var(--fade,64px))}
-.rail:not(.at-start) .cat-scroll{-webkit-mask-image:linear-gradient(270deg,transparent,#000 var(--fade,64px));mask-image:linear-gradient(270deg,transparent,#000 var(--fade,64px))}
-.rail:not(.at-start):not(.at-end) .cat-scroll{-webkit-mask-image:linear-gradient(90deg,transparent,#000 var(--fade,64px),#000 calc(100% - var(--fade,64px)),transparent);mask-image:linear-gradient(90deg,transparent,#000 var(--fade,64px),#000 calc(100% - var(--fade,64px)),transparent)}
-.rail-btn{position:absolute;z-index:3;top:calc(50% - 26px);width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:#fff;color:var(--ink);border:1px solid var(--hair-l);
-  box-shadow:0 10px 30px -10px rgba(17,20,24,.35);transition:opacity .25s,transform .2s var(--ease-out),background-color .2s,color .2s}
-.rail-btn svg.i{width:20px;height:20px}
-.rail-btn.prev{inset-inline-start:-20px}.rail-btn.prev svg{transform:scaleX(-1)}
-.rail-btn.next{inset-inline-end:-20px}
-.rail-btn:disabled{opacity:0;pointer-events:none;transform:scale(.8)}
-.rail-btn:active{transform:scale(.92)}
-@media (hover:hover){.rail-btn:hover{background:var(--ink);color:var(--lime)}.rail .cat-scroll{cursor:grab}}
-.rail .cat-scroll.dragging{cursor:grabbing;scroll-snap-type:none;user-select:none}
-.rail .cat-scroll.dragging .tile{pointer-events:none}
-@media (hover:none),(max-width:760px){.rail-btn{display:none}}
+/* desktop: a plain grid, no sideways scrolling; long categories open with «نمایش همه» */
+@media (min-width:761px){
+  .rail .cat-scroll{grid-auto-flow:row;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-columns:auto;overflow:visible;scroll-snap-type:none;padding:0;margin:0}
+  .rail:not(.open) .cat-scroll>*:nth-child(n+9){display:none}
+}
+@media (min-width:761px) and (max-width:1100px){
+  .rail .cat-scroll{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .rail:not(.open) .cat-scroll>*:nth-child(n+7){display:none}
+}
+.rail-more{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:48px;margin-top:14px;border-radius:14px;border:1px dashed var(--hair-l2);font-size:14px;color:var(--ink);transition:border-color .2s,background-color .2s}
+.rail-more svg.i{width:16px;height:16px;transform:rotate(-90deg);transition:transform .3s var(--ease)}
+.rail.open .rail-more svg.i{transform:rotate(90deg)}
+@media (hover:hover){.rail-more:hover{border-style:solid;border-color:var(--ink);background:#fff}}
+/* phones: the browser's own swipe, a fade only where more cards wait, all cards in the row */
+@media (max-width:760px){
+  .rail .rail-more{display:none}
+  .rail .cat-scroll{scrollbar-width:none;overscroll-behavior-x:contain;--fade:22px}
+  .rail .cat-scroll::-webkit-scrollbar{display:none}
+  .rail:not(.at-end) .cat-scroll{-webkit-mask-image:linear-gradient(90deg,transparent,#000 var(--fade));mask-image:linear-gradient(90deg,transparent,#000 var(--fade))}
+  .rail:not(.at-start) .cat-scroll{-webkit-mask-image:linear-gradient(270deg,transparent,#000 var(--fade));mask-image:linear-gradient(270deg,transparent,#000 var(--fade))}
+  .rail:not(.at-start):not(.at-end) .cat-scroll{-webkit-mask-image:linear-gradient(90deg,transparent,#000 var(--fade),#000 calc(100% - var(--fade)),transparent);mask-image:linear-gradient(90deg,transparent,#000 var(--fade),#000 calc(100% - var(--fade)),transparent)}
+}
 /* phones: two and a bit compact cards per row, so a swipe shows real choice instead of one giant card */
 @media (max-width:760px){
-  .rail .cat-scroll{grid-auto-columns:44%;gap:10px;--fade:22px}
+  .rail .cat-scroll{grid-auto-columns:44%;gap:10px}
   .rail .tile{padding:14px;min-height:0;border-radius:16px}
   .rail .tile-logo{width:40px;height:40px;border-radius:11px}
   .rail .tile-logo .blogo{width:20px;height:20px}
