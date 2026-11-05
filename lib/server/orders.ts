@@ -1,5 +1,5 @@
 import { randomInt } from "node:crypto";
-import { DELIVERY, STATIC_IP, maxUnits, linePrice, productById, PRODUCTS, sellable, type DeliveryType } from "@/lib/catalog";
+import { DELIVERY, STATIC_IP, maxUnits, linePrice, productById, PRODUCTS, sellable, type DeliveryType, validOwn } from "@/lib/catalog";
 import { livePlan } from "@/lib/numbers";
 import { loadCatalog } from "./catalog";
 import { normalizeUsername, validEmail, validUsername, type Order, type OrderLine, type OrderStatus } from "@/lib/account";
@@ -37,12 +37,12 @@ export function priceLines(input: LineInput[], live: Record<string, number> = {}
       if (members.length !== seats - 1 || !members.every(validEmail)) return { error: "bad_members", index: i };
     }
     const need = DELIVERY[l.type].input;
-    if (need === "email" && !validEmail(l.email ?? "")) return { error: "bad_email", index: i };
+    if (need === "email" && !validOwn(p, l.email ?? "")) return { error: "bad_email", index: i };
     if (need === "username" && !validUsername(l.username ?? "")) return { error: "bad_username", index: i };
     lines.push({
       id: p.id, plan: l.plan, type: l.type, seats, ip, members,
       price: linePrice({ id: p.id, plan: l.plan, type: l.type, seats, ip, unit: live[l.plan] }),
-      email: need === "email" ? l.email!.trim().toLowerCase() : undefined,
+      email: need === "email" ? l.email!.trim().toLowerCase() : undefined, // or the product's own field, e.g. a Claude Organization ID
       username: need === "username" ? normalizeUsername(l.username!) : undefined,
     });
   }

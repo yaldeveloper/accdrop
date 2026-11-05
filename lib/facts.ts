@@ -11,7 +11,8 @@ const has = (s: string | undefined, ...w: string[]) => !!s && w.some((x) => s.in
 export function receiveOf(p: Product, t: DeliveryType): Receive {
   const d = p.deliver;
   switch (t) {
-    case "own": return { title: "فعال‌سازی روی اکانت خودت", detail: `ایمیل اکانت ${p.maker} را می‌دهی؛ رمز لازم نیست` };
+    case "own": return { title: "فعال‌سازی روی اکانت خودت", detail: `${p.ask?.short ?? "ایمیل"} اکانت ${p.maker} را می‌دهی؛ رمز لازم نیست` };
+    case "shared": return { title: "اکانت آماده اشتراکی", detail: "ایمیل و رمز یک اکانت مشترک با چند نفر؛ ارزان‌تر" };
     case "ready": return kindOf(p) === "account" && p.types?.ready
       ? { title: p.types.ready.title, detail: p.types.ready.detail }
       : { title: "اکانت آماده اختصاصی", detail: "ایمیل و رمز یک اکانت تازه که فقط مال توست" };

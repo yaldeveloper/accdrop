@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { DELIVERY, extrasLabel, optionLabel, productById, deliveryOf } from "@/lib/catalog";
+import { DELIVERY, extrasLabel, optionLabel, productById, deliveryOf, ownAsk } from "@/lib/catalog";
 import { STATUS_TITLE, type Order, type OrderStatus } from "@/lib/account";
 import { fa, faDate, money } from "@/lib/format";
 import { api, useAccount } from "./account";
@@ -182,7 +182,7 @@ export function AdminOrder({ code }: { code: string }) {
             {o.lines.map((l) => (
               <li key={l.lineId}>
                 <div className="adm-lh"><BrandLogo id={l.id} size={20} /><b>{lineText(l)}</b><span className="num">{money(l.price)}</span></div>
-                {l.email && <p>ایمیل مشتری: <b className="en sel">{l.email}</b></p>}
+                {l.email && <p>{ownAsk(productById(l.id)).short}: <b className="en sel">{l.email}</b></p>}
                 {l.username && <p>آیدی تلگرام: <b className="en sel">{l.username}</b></p>}
                 {l.members?.length ? <p>اعضای گروه: {l.members.map((m) => <b key={m} className="en sel" style={{ marginInlineEnd: 8 }}>{m}</b>)}</p> : null}
                 {l.number && <p>شماره ۵سیم: <b>{l.number.status}</b> • تلاش <span className="num">{fa(l.number.tries)}</span>{l.number.codes.length ? <> • کد: <b className="en sel">{l.number.codes.map((c) => c.code).join("، ")}</b></> : null}{l.supplyRef ? <> • <span className="en sel">{l.supplyRef}</span></> : null}</p>}

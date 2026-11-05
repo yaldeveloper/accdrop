@@ -108,7 +108,7 @@ export function OrderDetail({ order, now, onPay, paying }: { order: Order; now: 
                     <small>{optionLabel(p, l.plan)} • {deliveryOf(p, l.type).title}</small>
                     {extrasLabel(l) && <small className="od-x">{extrasLabel(l)}</small>}
                     {l.members?.length ? <small className="ltr-i">بقیه اعضا: <span className="en">{l.members.join("، ")}</span></small> : null}
-                    {l.type === "own" && l.email && <small className="ltr-i">فعال‌سازی روی <span className="en">{l.email}</span></small>}
+                    {l.type === "own" && l.email && <small className="ltr-i">فعال‌سازی روی {p.ask ? `${p.ask.short} ` : ""}<span className="en">{l.email}</span></small>}
                     {l.type === "username" && l.username && <small className="ltr-i">ارسال به <span className="en">{l.username}</span></small>}
                     {s === 2 && isSub(p) && <small className="ok">فعال تا {faDate(w.end, false)}</small>}
                     {paid && l.number && l.lineId ? <NumberBox code={order.code} lineId={l.lineId} initial={l.number} /> : <>

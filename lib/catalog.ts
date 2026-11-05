@@ -3,8 +3,8 @@ import { duration, fa } from "./format";
 import { livePlan, livePlanLabel } from "./numbers";
 
 /** How a purchase reaches the customer. */
-export type DeliveryType = "own" | "ready" | "username" | "code" | "number";
-export type Category = "ai" | "code" | "create" | "work" | "apple" | "music" | "game" | "telegram" | "number";
+export type DeliveryType = "own" | "ready" | "shared" | "username" | "code" | "number";
+export type Category = "ai" | "code" | "api" | "create" | "work" | "apple" | "music" | "game" | "telegram" | "number";
 /** What the customer picks: a subscription length, a gift-card amount, a region, a quantity or a country. */
 export type ProductKind = "sub" | "gift" | "account" | "qty" | "number";
 /** Key of one purchasable option: months ("1", "12"), dollars ("10"), a region ("us"), a quantity ("500"). */
@@ -64,8 +64,10 @@ export type Product = {
   cb?: Record<string, { id: string; cost: number }>;
   /** Replaces «اشتراک رسمی» / «رسمی و قانونی» on the product page when the item is not from the maker itself. */
   source?: string;
-  /** Selling price in USDT per code option. When set, the Toman price follows the live Tether rate. */
-  usdt?: Record<string, number>;
+  /** What «own» activation asks for when it is not the account email, e.g. Claude's Organization ID. */
+  ask?: { label: string; placeholder: string; hint: string; pattern: string; short: string };
+  /** Selling price in USDT per option (every delivery type of that option, or per type). When set, the Toman price follows the live Tether rate. */
+  usdt?: Record<string, number | Partial<Record<DeliveryType, number>>>;
 };
 
 export type Drop = {
@@ -83,6 +85,7 @@ export const CATEGORIES: Record<"all" | Category, string> = {
   all: "همه",
   ai: "هوش مصنوعی",
   code: "کدنویسی",
+  api: "API و اعتبار",
   create: "طراحی و ویدئو",
   work: "کار و آموزش",
   apple: "اپل و گیفت‌کارت",
@@ -96,6 +99,7 @@ export const CATEGORIES: Record<"all" | Category, string> = {
 export const DELIVERY: Record<DeliveryType, { title: string; detail: string; input: "email" | "username" | null }> = {
   own: { title: "روی ایمیل خودم", detail: "روی اکانت شخصی خودت فعال می‌شود", input: "email" },
   ready: { title: "اکانت آماده", detail: "یک اکانت تازه، فقط برای تو", input: null },
+  shared: { title: "اکانت آماده اشتراکی", detail: "اکانت مشترک با چند نفر؛ ارزان‌تر", input: null },
   username: { title: "روی آیدی تلگرام", detail: "فقط یوزرنیم لازم است؛ ورود و رمز نمی‌خواهیم", input: "username" },
   code: { title: "تحویل خودکار", detail: "بعد از پرداخت، در صفحه سفارش و پیامک", input: null },
   number: { title: "شماره آماده", detail: "شماره و کد تأیید در حساب کاربری", input: null },
@@ -103,9 +107,11 @@ export const DELIVERY: Record<DeliveryType, { title: string; detail: string; inp
 
 /** The first demo catalogue (placeholder prices). Kept hidden so old orders, reviews and blog links still resolve; unhide from the admin panel. */
 const SAMPLES: Product[] = [
-  { id: "claude", hidden: true, tier: "Pro", name: "Claude Pro", maker: "Anthropic", category: "ai", monogram: "CL", group: [[2, 5], [3, 8], [5, 12]], ip: true, etaMinutes: 20,
-    description: "برای نوشتن دقیق، کدنویسی و اسناد طولانی", use: "برای متن دقیق و کد تمیز",
-    plans: { "1": { own: 2090000 }, "3": { own: 5990000 } },
+  // Claude Pro and Max: activated by the admin on the customer's own account, from its Organization ID.
+  { id: "claude", tier: "Pro", name: "Claude Pro", maker: "Anthropic", category: "ai", monogram: "CL", ip: true, etaMinutes: 120, warranty: "گارانتی تا پایان اشتراک",
+    description: "Claude Pro روی اکانت خودت، با Organization ID", use: "برای متن دقیق و کد تمیز",
+    plans: { "1": { own: 0 }, "3": { own: 0 } }, usdt: { "1": 24.9, "3": 72.9 }, ask: { label: "Organization ID اکانت Claude تو", placeholder: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", hint: "در claude.ai از Settings › Account، مقدار Organization ID را کپی کن. رمز و ورود نمی‌خواهیم.", pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", short: "Organization ID" }, types: { own: { title: "روی اکانت Claude خودت", detail: "فقط با Organization ID؛ رمز و ورود نمی‌خواهیم" } },
+    howTo: "در claude.ai وارد اکانتت شو؛ بعد از فعال‌سازی، پلن Pro را در Settings › Billing می‌بینی.",
     includes: ["مدل‌های Claude با سقف استفاده بالاتر", "Projects و Claude Code", "پردازش فایل‌های حجیم"] },
   { id: "gemini", hidden: true, tier: "Pro", name: "Google AI Pro", maker: "Google", category: "ai", monogram: "GE", group: [[2, 5], [3, 8], [5, 12]], ip: true, etaMinutes: 15,
     description: "Gemini به‌همراه ۲ ترابایت فضای ابری", use: "هوش گوگل، کنار Gmail و Docs",
@@ -181,18 +187,36 @@ const SAMPLES: Product[] = [
     plans: { from: { number: 40000 } },
     includes: ["شماره اختصاصی از بیش از ۱۰۰ کشور", "کد تأیید در همان صفحه سفارش", "کد نیامد؟ شماره جدید یا بازگشت وجه"] },
   // ----- Variants (one page each, grouped on the product page by `family`) -----
-  { id: "chatgpt-go", hidden: true, family: "chatgpt", tier: "Go", name: "ChatGPT Go", maker: "OpenAI", category: "ai", monogram: "GO", etaMinutes: 10,
-    description: "نسخه اقتصادی ChatGPT با سقف بالاتر از رایگان", use: "برای استفاده روزمره، ارزان",
-    plans: { "1": { own: 690000 }, "3": { own: 1950000 } },
-    includes: ["سقف پیام و تصویر بالاتر از نسخه رایگان", "حافظه طولانی‌تر", "آپلود فایل بیشتر"] },
-  { id: "chatgpt-pro", hidden: true, family: "chatgpt", tier: "Pro", name: "ChatGPT Pro", maker: "OpenAI", category: "ai", monogram: "PRO", etaMinutes: 30, ip: true,
-    description: "قوی‌ترین نسخه ChatGPT برای کار سنگین", use: "برای کار حرفه‌ای بدون سقف",
-    plans: { "1": { own: 19900000 } },
-    includes: ["استفاده تقریباً نامحدود از مدل‌ها", "حالت Pro برای سخت‌ترین سؤال‌ها", "Deep Research و Agent با سقف بالا"] },
-  { id: "claude-max", hidden: true, family: "claude", tier: "Max", name: "Claude Max", maker: "Anthropic", category: "ai", monogram: "MAX", etaMinutes: 30, ip: true,
-    description: "Claude با ۵ برابر سقف Pro", use: "برای کدنویسی و کار سنگین",
-    plans: { "1": { own: 9900000 } },
+  // ChatGPT Go, Business and Pro come from QuickDigi. Go is bought automatically. Options at or above 15 USDT can't be
+  // bought through the API, so the admin buys them in the QuickDigi Telegram bot (same Wallet) and enters the delivery:
+  // ChatGPT Pro P_11164, ChatGPT Business P_10216 (customer email), Cursor Ultra P_11143,
+  // Google AI Ultra P_11105/6/7/8 (1/3/6/12M), Ultra Basic P_11103/4 (3/12M), Ultra Private P_11119 (all customer email),
+  // Notion Business P_10209 (customer email), ChatGPT Plus on own account: CDK P_11142, ElevenLabs 3M/7M P_10322/P_10321.
+  { id: "chatgpt-go", family: "chatgpt", tier: "Go", name: "ChatGPT Go", maker: "OpenAI", category: "ai", monogram: "GO", etaMinutes: 5, warranty: "۳ روز گارانتی",
+    description: "نسخه اقتصادی ChatGPT، سه ماه، اکانت آماده", use: "برای استفاده روزمره، ارزان",
+    plans: { "3": { code: 0 } }, usdt: { "3": 5.9 }, qd: { "3": { id: "P_11190", cost: 3.97 } },
+    deliver: "ایمیل، رمز و کلید 2FA یک اکانت آماده بعد از پرداخت، معمولاً ظرف چند دقیقه خودکار در حساب کاربری‌ات نمایش داده و پیامک می‌شود.",
+    howTo: "وارد شو، یک Passkey اضافه کن و بعد رمز و 2FA را عوض کن.",
+    includes: ["سقف پیام و تصویر بالاتر از نسخه رایگان", "حافظه طولانی‌تر و آپلود فایل بیشتر", "سه ماه، با قیمت کمتر از Plus"] },
+  { id: "chatgpt-pro", family: "chatgpt", tier: "Pro", name: "ChatGPT Pro", maker: "OpenAI", category: "ai", monogram: "PRO", etaMinutes: 720, warranty: "۷ روز گارانتی پلن",
+    description: "قوی‌ترین نسخه ChatGPT برای کار سنگین، اکانت آماده یک‌ماهه", use: "برای کار حرفه‌ای بدون سقف",
+    plans: { "1": { ready: 0 } }, usdt: { "1": 79 },
+    deliver: "اکانت Pro مخصوص تو ساخته و فعال می‌شود؛ بین ۱ تا ۲۴ ساعت. اطلاعات ورود در حساب کاربری‌ات نمایش داده و پیامک می‌شود.",
+    includes: ["استفاده تقریباً نامحدود از مدل‌ها", "حالت Pro برای سخت‌ترین سؤال‌ها", "Deep Research، Codex و Agent با سقف بالا"] },
+  { id: "chatgpt-business", family: "chatgpt", tier: "Business", name: "ChatGPT Business", maker: "OpenAI", category: "ai", monogram: "BIZ", etaMinutes: 720, warranty: "گارانتی تا پایان اشتراک",
+    description: "ChatGPT Business (Team) روی ایمیل خودت، یک ماه", use: "برای کار تیمی و داده‌های امن",
+    plans: { "1": { own: 0 } }, usdt: { "1": 23.9 },
+    deliver: "ایمیل ChatGPT تو به یک فضای کاری Business اضافه می‌شود؛ معمولاً ظرف چند ساعت. دعوت‌نامه به همان ایمیل می‌آید.",
+    howTo: "دعوت‌نامه را از ایمیلت قبول کن و در ChatGPT فضای کاری Business را انتخاب کن. برای تمدید، ۳ تا ۵ روز قبل از پایان خبر بده.",
+    includes: ["سقف بالاتر از Plus", "داده‌هایت برای آموزش مدل استفاده نمی‌شود", "روی اکانت و ایمیل خودت"] },
+  { id: "claude-max", family: "claude", tier: "Max 5x", name: "Claude Max 5x", maker: "Anthropic", category: "ai", monogram: "MAX", etaMinutes: 120, ip: true, warranty: "گارانتی تا پایان اشتراک",
+    description: "Claude با ۵ برابر سقف Pro، روی اکانت خودت", use: "برای کدنویسی و کار سنگین",
+    plans: { "1": { own: 0 } }, usdt: { "1": 119 }, ask: { label: "Organization ID اکانت Claude تو", placeholder: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", hint: "در claude.ai از Settings › Account، مقدار Organization ID را کپی کن. رمز و ورود نمی‌خواهیم.", pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", short: "Organization ID" }, types: { own: { title: "روی اکانت Claude خودت", detail: "فقط با Organization ID؛ رمز و ورود نمی‌خواهیم" } },
     includes: ["۵ برابر سقف استفاده Pro", "Claude Code با سقف بالا", "دسترسی زودتر به امکانات تازه"] },
+  { id: "claude-max-20", family: "claude", tier: "Max 20x", name: "Claude Max 20x", maker: "Anthropic", category: "ai", monogram: "MAX", etaMinutes: 120, ip: true, warranty: "گارانتی تا پایان اشتراک",
+    description: "Claude با ۲۰ برابر سقف Pro، روی اکانت خودت", use: "برای استفاده تمام‌وقت از Claude Code",
+    plans: { "1": { own: 0 } }, usdt: { "1": 229 }, ask: { label: "Organization ID اکانت Claude تو", placeholder: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", hint: "در claude.ai از Settings › Account، مقدار Organization ID را کپی کن. رمز و ورود نمی‌خواهیم.", pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", short: "Organization ID" }, types: { own: { title: "روی اکانت Claude خودت", detail: "فقط با Organization ID؛ رمز و ورود نمی‌خواهیم" } },
+    includes: ["۲۰ برابر سقف استفاده Pro", "Claude Code تمام‌روز", "اولویت در ساعت‌های شلوغ"] },
   { id: "gemini-ultra", hidden: true, family: "gemini", tier: "Ultra", name: "Google AI Ultra", maker: "Google", category: "ai", monogram: "UL", etaMinutes: 30,
     description: "بالاترین سطح Gemini به‌همراه ۳۰ ترابایت فضا", use: "همه هوش گوگل، بدون سقف",
     plans: { "1": { own: 24500000 } },
@@ -204,8 +228,13 @@ const SAMPLES: Product[] = [
  *  live Tether rate (lib/server/catalog.ts), so the margin over the supplier's USDT cost stays the same. */
 const REAL: Product[] = [
   { id: "chatgpt", tier: "Plus", name: "ChatGPT Plus", maker: "OpenAI", category: "ai", monogram: "GPT", badge: "پرفروش", etaMinutes: 0, warranty: "۲۵ روز گارانتی",
-    description: "اکانت آماده ChatGPT Plus، تحویل فوری", use: "برای نوشتن، فکر کردن و ساختن",
-    plans: { "1": { code: 1190000 } }, ix: { "1": 117 },
+    description: "ChatGPT Plus یک‌ماهه: اکانت آماده اختصاصی، اکانت اشتراکی یا روی اکانت خودت", use: "برای نوشتن، فکر کردن و ساختن",
+    plans: { "1": { code: 1190000, shared: 0, own: 0 } }, ix: { "1": 117 },
+    types: {
+      code: { title: "آماده اختصاصی", detail: "اکانت Plus فقط برای تو؛ تحویل فوری و خودکار" },
+      shared: { title: "آماده اشتراکی", detail: "اکانت Plus مشترک با چند نفر؛ ارزان‌ترین", explain: "اطلاعات ورود یک اکانت Plus مشترک (با چند نفر دیگر) معمولاً ظرف چند ساعت در حساب کاربری‌ات نمایش داده و پیامک می‌شود. رمز را عوض نکن؛ گفتگوهایت برای بقیه هم دیده می‌شود." },
+      own: { title: "روی اکانت خودت", detail: "Plus روی اکانت ChatGPT خودت؛ تاریخچه‌ات می‌ماند", explain: "بعد از پرداخت، کد فعال‌سازی Plus (CDK) معمولاً ظرف چند ساعت در حساب کاربری‌ات نمایش داده و پیامک می‌شود. با آن روی اکانت ChatGPT خودت در cdk.gpt2fa.com در چند ثانیه Plus می‌گیری؛ نه رمز می‌خواهیم، نه ورود به اکانتت. ۳۰ روز گارانتی پلن." },
+    },
     deliver: "بلافاصله بعد از پرداخت، ایمیل، رمز و کلید ورود دومرحله‌ای (2FA) یک اکانت Plus در حساب کاربری‌ات نمایش داده و پیامک می‌شود. کلید 2FA را تغییر نده و فقط روی یک دستگاه وارد شو.",
     howTo: "با ایمیل و رمز وارد شو و کد تأیید را با کلید 2FA در یک اپ Authenticator بساز.",
     includes: ["اکانت Plus با ایمیل و رمز", "تحویل خودکار و فوری", "۲۵ روز گارانتی"] },
@@ -280,6 +309,15 @@ const REAL: Product[] = [
 export const BASE_RATE = 270_000;
 /** Toman price of a USDT amount at `rate`, rounded up to 10,000 Toman. */
 export const tomanAt = (usdt: number, rate: number) => Math.ceil((usdt * rate) / 10_000) * 10_000;
+/** A plan with every delivery type priced from `usdt` at `rate`. */
+export const planAt = (plan: Partial<Record<DeliveryType, number>> | undefined, usdt: number | Partial<Record<DeliveryType, number>>, rate: number) =>
+  Object.fromEntries(Object.keys(plan ?? (typeof usdt === "number" ? { code: 0 } : usdt)).map((t) => {
+    const v = typeof usdt === "number" ? usdt : usdt[t as DeliveryType];
+    return [t, v ? tomanAt(v, rate) : plan?.[t as DeliveryType] ?? 0];
+  })) as Partial<Record<DeliveryType, number>>;
+/** The field «own» activation asks for on this product, and whether a value is valid. */
+export const ownAsk = (p: Product) => p.ask ?? { label: `ایمیل اکانت ${p.maker} تو`, placeholder: "you@gmail.com", hint: "فقط ایمیل. هیچ‌وقت رمز عبورت را نمی‌خواهیم.", pattern: "^\\S+@\\S+\\.\\S+$", short: "ایمیل مشتری" };
+export const validOwn = (p: Product, v: string) => new RegExp(ownAsk(p).pattern, "i").test(v.trim());
 
 // ----- Gift cards (Cryptorefills, US region). Bought on-chain per order and delivered automatically. -----
 type G = { id: string; name: string; maker: string; category: Category; monogram: string; brand: string; axis?: string;
@@ -366,8 +404,8 @@ const GIFT_PRODUCTS: Product[] = GIFTS.map((g) => ({
   cr: Object.fromEntries(g.opts.map(([k, , d, c]) => [k, typeof d === "number" ? { brand: g.brand, value: d, cost: c } : { brand: g.brand, denom: d, cost: c }])),
 }));
 /** Selling price in USDT per option. Supplier cost in the comment; roughly +25–35% on larger items, more on sub-$2 codes. */
-const USDT_PRICE: Record<string, Record<string, number>> = {
-  chatgpt: { "1": 9.9 },            // 7.5
+const USDT_PRICE: Record<string, NonNullable<Product["usdt"]>> = {
+  chatgpt: { "1": { code: 9.9, shared: 4.9, own: 22.9 } }, // 7.5 (Insight) / shared: admin / own: QuickDigi CDK P_11142 17.81 (admin)
   manus: { "12": 62 },              // 50
   elevenlabs: { "3": 9.5 },         // 7
   lovable: { "12": 56 },            // 45
@@ -394,12 +432,36 @@ const QD_PRODUCTS: Product[] = [
     deliver: "کد فعال‌سازی شش‌ماهه " + QD_INSTANT,
     howTo: "قبل از فعال‌سازی، همه کارت‌ها و پروفایل‌های پرداخت اکانت گوگل را حذف کن و اگر عضو Family هستی خارج شو. بعد در renewgpt.online با اکانت خودت وارد شو و کد را وارد کن (ویدئوی راهنما در همان سایت هست).",
     includes: ["Gemini Pro و Deep Research", "۲ ترابایت Google One", "روی اکانت گوگل خودت، بدون کارت بانکی"] },
-  { id: "grok-cursor", name: "SuperGrok + Cursor Pro", maker: "xAI", category: "ai", monogram: "GK", etaMinutes: 5, warranty: "۲۸ روز گارانتی",
-    description: "اکانت آماده Grok پریمیوم به‌همراه Cursor پریمیوم، یک ماه", use: "هوش مصنوعی و کدنویسی در یک اکانت",
+  { id: "google-ai-ultra", family: "google-ai-pro", tier: "Ultra", name: "Google AI Ultra", maker: "Google", category: "ai", monogram: "UL", etaMinutes: 1440, warranty: "گارانتی تا پایان اشتراک",
+    description: "بالاترین سطح Gemini و ساخت ویدئو با Veo، روی ایمیل خودت (عضو Family)", use: "همه هوش گوگل، بدون سقف",
+    plans: { "1": { own: 0 }, "3": { own: 0 }, "6": { own: 0 }, "12": { own: 0 } }, usdt: { "1": 34.9, "3": 64.9, "6": 94.9, "12": 149 },
+    deliver: "ایمیل گوگل تو به یک Family اشتراک Ultra اضافه می‌شود (۲۵ هزار اعتبار)؛ بین ۱ تا ۴۸ ساعت. ایمیل را با دقت وارد کن؛ فقط یک بار قابل تغییر است.",
+    howTo: "دعوت‌نامه Family را از Gmail قبول کن و Gemini و Flow را باز کن.",
+    includes: ["Gemini با بالاترین سقف و Deep Think", "ساخت ویدئو با Veo و ۲۵ هزار اعتبار", "روی اکانت گوگل خودت"] },
+  { id: "google-ai-ultra-basic", family: "google-ai-pro", tier: "Ultra Basic", name: "Google AI Ultra Basic", maker: "Google", category: "ai", monogram: "UL", etaMinutes: 1440, warranty: "گارانتی تا پایان اشتراک",
+    description: "Gemini Ultra و Veo کم‌اولویت بدون اعتبار، ارزان‌ترین راه Ultra، روی ایمیل خودت", use: "Ultra ارزان، بدون اعتبار ویدئو",
+    plans: { "3": { own: 0 }, "12": { own: 0 } }, usdt: { "3": 52.9, "12": 119 },
+    deliver: "ایمیل گوگل تو به یک Family اشتراک Ultra اضافه می‌شود؛ بین ۱ تا ۴۸ ساعت. فقط مدل‌های بدون مصرف اعتبار (Veo کم‌اولویت) مجازند؛ استفاده از مدل‌های اعتباری باعث حذف از گروه می‌شود.",
+    howTo: "دعوت‌نامه Family را از Gmail قبول کن. در Flow فقط مدل‌های Lower Priority را انتخاب کن.",
+    includes: ["Gemini با سقف Ultra", "Veo کم‌اولویت بدون اعتبار", "روی اکانت گوگل خودت"] },
+  { id: "google-ai-ultra-private", family: "google-ai-pro", tier: "Ultra Private", name: "Google AI Ultra Private", maker: "Google", category: "ai", monogram: "UL", etaMinutes: 1440, warranty: "گارانتی تا پایان اشتراک",
+    description: "Ultra اختصاصی با ۱۰۰ هزار اعتبار Veo، یک ماه، روی ایمیل خودت", use: "برای ساخت ویدئوی زیاد با Veo",
+    plans: { "1": { own: 0 } }, usdt: { "1": 149 },
+    deliver: "اشتراک Ultra با ۱۰۰ هزار اعتبار فقط برای ایمیل تو فعال می‌شود؛ بین ۱ تا ۴۸ ساعت.",
+    howTo: "دعوت‌نامه را از Gmail قبول کن و Gemini و Flow را باز کن.",
+    includes: ["۱۰۰ هزار اعتبار Veo", "Gemini با بالاترین سقف و Deep Think", "اختصاصی، روی اکانت گوگل خودت"] },
+  { id: "grok-cursor", tier: "Pro", name: "Cursor Pro + SuperGrok", maker: "Anysphere", category: "code", monogram: "CU", badge: "پیشنهاد ویژه", etaMinutes: 5, warranty: "۲۸ روز گارانتی",
+    description: "اکانت آماده Cursor پریمیوم به‌همراه Grok پریمیوم، یک ماه", use: "کدنویسی با هوش مصنوعی، به‌همراه Grok",
     plans: { "1": { code: 0 } }, usdt: { "1": 18.9 }, qd: { "1": { id: "P_11149", cost: 14.3 } },
     deliver: "ایمیل، رمز اکانت و رمز ایمیل " + QD_INSTANT,
     howTo: "با ایمیل و رمز وارد grok.com شو؛ Cursor هم با همین ایمیل فعال است. بعد از ورود، رمز را عوض کن و 2FA بگذار.",
-    includes: ["مدل‌های پیشرفته Grok", "Cursor پریمیوم برای کدنویسی", "۲۸ روز گارانتی"] },
+    includes: ["Cursor پریمیوم: Agent و تکمیل کد", "مدل‌های پیشرفته Grok", "۲۸ روز گارانتی"] },
+  { id: "cursor-ultra", family: "grok-cursor", tier: "Ultra", name: "Cursor Ultra", maker: "Anysphere", category: "code", monogram: "CU", etaMinutes: 720, warranty: "گارانتی پلن",
+    description: "Cursor با ۲۰ برابر سقف Pro، اکانت آماده یک‌ماهه", use: "برای کدنویسی سنگین و روزانه",
+    plans: { "1": { ready: 0 } }, usdt: { "1": 105 },
+    deliver: "اکانت Ultra مخصوص تو فعال می‌شود؛ بین ۱ تا ۲۴ ساعت. اطلاعات ورود در حساب کاربری‌ات نمایش داده و پیامک می‌شود.",
+    howTo: "با اطلاعات تحویلی وارد Cursor شو و از همان روز استفاده کن.",
+    includes: ["۲۰ برابر سقف استفاده Pro", "دسترسی اولویت‌دار به مدل‌های تازه", "اکانت آماده، فقط برای تو"] },
   { id: "gamma", tier: "Plus", name: "Gamma Plus", maker: "Gamma", category: "work", monogram: "GA", etaMinutes: 5, warranty: "۲۵ روز گارانتی",
     description: "ساخت ارائه، سند و سایت با هوش مصنوعی", use: "اسلاید حرفه‌ای در چند دقیقه",
     plans: { "1": { code: 0 } }, usdt: { "1": 8.9 }, qd: { "1": { id: "P_10156", cost: 6.47 } },
@@ -461,6 +523,14 @@ const QD_PRODUCTS: Product[] = [
     deliver: "اطلاعات ورود یک اکانت آماده Coursera Business " + QD_INSTANT,
     howTo: "با اطلاعات تحویلی وارد coursera.org شو و دوره‌ها را شروع کن.",
     includes: ["هزاران دوره با گواهی", "دوره‌های گوگل، IBM و دانشگاه‌ها", "گارانتی تا پایان اشتراک"] },
+  { id: "kimi-api", family: "claude-api", tier: "Kimi", source: "کلید API از درگاه واسط", name: "Kimi API", maker: "Moonshot AI", category: "api", kind: "account", monogram: "KI", etaMinutes: 5, warranty: "کلید سالم یا بازگشت وجه",
+    axis: "حجم و مدت", labels: { "1d": "۱۵ میلیون توکن، ۱ روز", "7d": "۱۰۰ میلیون توکن، ۷ روز", "30d": "۳۰۰ میلیون توکن، ۳۰ روز" },
+    description: "کلید API مدل Kimi K3 از طریق درگاه واسط، برای ایجنت‌های کدنویسی", use: "Kimi در Cursor، OpenCode و Codex CLI",
+    plans: { "1d": { code: 0 }, "7d": { code: 0 }, "30d": { code: 0 } }, usdt: { "1d": 3.5, "7d": 5.9, "30d": 10.9 },
+    qd: { "1d": { id: "P_10350", cost: 2.12 }, "7d": { id: "P_10351", cost: 3.77 }, "30d": { id: "P_10352", cost: 7.63 } },
+    deliver: "کلید API و آدرس درگاه " + QD_INSTANT,
+    howTo: "کلید و Base URL تحویلی را در ابزارت وارد کن. این کلید از یک درگاه واسط است، نه حساب رسمی Moonshot.",
+    includes: ["Kimi K3 برای کدنویسی و ایجنت", "سازگار با ابزارهای OpenAI-compatible", "کلید از درگاه واسط"] },
 ];
 REAL.push(...QD_PRODUCTS);
 
@@ -524,7 +594,7 @@ const CB_PRODUCTS: Product[] = [
     howTo: "با ایمیل و رمز وارد اپ‌های آفیس شو (تا ۵ کامپیوتر). ماه اول گارانتی دارد؛ ۱۱ ماه بعد هدیه است و تضمینی نیست.",
     includes: ["Word، Excel، PowerPoint و OneNote", "۱۰۰ گیگ OneDrive", "۱ ماه گارانتی + ۱۱ ماه هدیه"] },
   // ----- API keys (relay gateways compatible with OpenAI / Anthropic clients) -----
-  { id: "claude-api", source: "کلید API از درگاه واسط", tier: "Claude", name: "Claude API", maker: "Anthropic", category: "code", kind: "account", monogram: "AN", etaMinutes: 0, warranty: "گارانتی تا پایان اعتبار کلید",
+  { id: "claude-api", source: "کلید API از درگاه واسط", tier: "Claude", name: "Claude API", maker: "Anthropic", category: "api", kind: "account", monogram: "AN", etaMinutes: 0, warranty: "گارانتی تا پایان اعتبار کلید",
     description: "کد اعتبار API برای مدل‌های Opus و Sonnet، برای Claude Code، Cursor و VS Code", use: "کدنویسی با Claude، بدون اکانت خارجی",
     axis: "حجم اعتبار", labels: { "10m": "۱۰ میلیون توکن، ۱ روز", "100m": "۱۰۰ میلیون توکن، ۳ روز", "100usd": "۱۰۰ دلار اعتبار، ۲۵ روز", "500usd": "۵۰۰ دلار اعتبار، ۳۰ روز" },
     plans: { "10m": { code: 0 }, "100m": { code: 0 }, "100usd": { code: 0 }, "500usd": { code: 0 } },
@@ -533,7 +603,7 @@ const CB_PRODUCTS: Product[] = [
     deliver: "کد فعال‌سازی اعتبار API " + CB_INSTANT,
     howTo: "بسته‌های توکنی: کد را در miraiapi.com/usage بخش Redeem وارد کن و از بخش Config کلید و آدرس API را برای Claude Code، Cursor یا VS Code بگیر. بسته‌های دلاری: در api.mwapi.dev ثبت‌نام کن و کد را آنجا فعال کن. اعتبار از لحظه فعال‌سازی شروع می‌شود.",
     includes: ["مدل‌های Claude Opus و Sonnet", "سازگار با Claude Code، Cursor و VS Code", "کلید از یک درگاه واسط (سازگار با OpenAI و Anthropic) است، نه از حساب رسمی سازنده"] },
-  { id: "codex-api", source: "کلید API از درگاه واسط", family: "claude-api", tier: "Codex", name: "Codex API", maker: "OpenAI", category: "code", kind: "account", monogram: "CX", etaMinutes: 0, warranty: "گارانتی تا پایان اعتبار کلید",
+  { id: "codex-api", source: "کلید API از درگاه واسط", family: "claude-api", tier: "Codex", name: "Codex API", maker: "OpenAI", category: "api", kind: "account", monogram: "CX", etaMinutes: 0, warranty: "گارانتی تا پایان اعتبار کلید",
     description: "اعتبار API مدل‌های GPT و Codex برای Codex CLI، Cursor و VS Code", use: "کدنویسی با Codex",
     axis: "حجم اعتبار", labels: { "10m": "۱۰ میلیون توکن، ۱ روز", "50m": "۵۰ میلیون توکن، ۲ روز", "100m": "۱۰۰ میلیون توکن، ۳ روز" },
     plans: { "10m": { code: 0 }, "50m": { code: 0 }, "100m": { code: 0 } }, usdt: { "10m": 3.9, "50m": 5.9, "100m": 9.9 },
@@ -541,7 +611,7 @@ const CB_PRODUCTS: Product[] = [
     deliver: "کد یا کلید API به‌همراه لینک راهنمای نصب " + CB_INSTANT,
     howTo: "بسته‌های ۵۰ و ۱۰۰ میلیونی: کد را در miraiapi.com/usage بخش Redeem فعال کن و از Config کلید بگیر. بسته ۱۰ میلیونی: کد را در zendigikey.shop/check به کلید تبدیل کن و با ابزار نصب ZendiKeySetup تنظیمش کن.",
     includes: ["مدل‌های GPT و Codex", "سازگار با Codex CLI، Cursor و VS Code", "کلید از یک درگاه واسط (سازگار با OpenAI و Anthropic) است، نه از حساب رسمی سازنده"] },
-  { id: "grok-api", source: "کلید API از درگاه واسط", family: "claude-api", tier: "Grok", name: "Grok API", maker: "xAI", category: "code", kind: "account", monogram: "GK", etaMinutes: 0, warranty: "گارانتی تا پایان اعتبار کلید",
+  { id: "grok-api", source: "کلید API از درگاه واسط", family: "claude-api", tier: "Grok", name: "Grok API", maker: "xAI", category: "api", kind: "account", monogram: "GK", etaMinutes: 0, warranty: "گارانتی تا پایان اعتبار کلید",
     description: "اعتبار API مدل‌های Grok 4.x با آدرس سازگار با OpenAI", use: "API گراک، ارزان",
     axis: "حجم اعتبار", labels: { "10m": "۱۰ میلیون توکن، ۳ روز", "30m": "۳۰ میلیون توکن، ۱ ماه", "100m": "۱۰۰ میلیون توکن، ۱ ماه" },
     plans: { "10m": { code: 0 }, "30m": { code: 0 }, "100m": { code: 0 } }, usdt: { "10m": 3.9, "30m": 5.5, "100m": 12.9 },
@@ -549,14 +619,14 @@ const CB_PRODUCTS: Product[] = [
     deliver: "کد اعتبار API " + CB_INSTANT,
     howTo: "کد را در redeem.teamsoclo.site به کلید تبدیل کن. آدرس API: gpt.teamsoclo.site/v1 (سازگار با OpenAI)؛ مدل‌ها grok-4.5 تا grok-4.7. راهنما: docs.teamsoclo.site",
     includes: ["مدل‌های Grok 4.5 تا 4.7", "سازگار با کتابخانه‌ها و ابزارهای OpenAI", "کلید از یک درگاه واسط (سازگار با OpenAI و Anthropic) است، نه از حساب رسمی سازنده"] },
-  { id: "gemini-api", source: "کلید API از درگاه واسط", family: "claude-api", tier: "Gemini", name: "Gemini API", maker: "Google", category: "code", kind: "account", monogram: "GE", etaMinutes: 0, warranty: "گارانتی ۱ روزه کلید",
+  { id: "gemini-api", source: "کلید API از درگاه واسط", family: "claude-api", tier: "Gemini", name: "Gemini API", maker: "Google", category: "api", kind: "account", monogram: "GE", etaMinutes: 0, warranty: "گارانتی ۱ روزه کلید",
     description: "کلید API جمنای برای Claude Code، Codex CLI و ابزارهای سازگار، یک روز", use: "API جمنای برای یک روز کار سنگین",
     axis: "حجم اعتبار", labels: { "1d": "۲۰ تا ۴۰ میلیون توکن، ۱ روز" },
     plans: { "1d": { code: 0 } }, usdt: { "1d": 5.5 }, cb: { "1d": { id: "6ae8ad885edeecad99dd1d3e", cost: 3 } },
     deliver: "کلید API و لینک راهنمای نصب " + CB_INSTANT,
     howTo: "راهنمای نصب در daily.bddevlab.buzz/redeem.html است. حدود ۲۰ میلیون توکن با Gemini Argon یا ۴۰ میلیون با Gemini Flash؛ کلید یک روز بعد از صدور یا با تمام شدن توکن‌ها قطع می‌شود.",
     includes: ["Gemini Argon و Gemini Flash", "سازگار با Claude Code و Codex CLI", "کلید از یک درگاه واسط (سازگار با OpenAI و Anthropic) است، نه از حساب رسمی سازنده"] },
-  { id: "deepseek-api", source: "کلید API از درگاه واسط", family: "claude-api", tier: "DeepSeek", name: "DeepSeek، Kimi و Qwen API", maker: "DeepSeek", category: "code", kind: "account", monogram: "DS", etaMinutes: 0, warranty: "گارانتی تا پایان اعتبار کلید",
+  { id: "deepseek-api", source: "کلید API از درگاه واسط", family: "claude-api", tier: "DeepSeek", name: "DeepSeek، Kimi و Qwen API", maker: "DeepSeek", category: "api", kind: "account", monogram: "DS", etaMinutes: 0, warranty: "گارانتی تا پایان اعتبار کلید",
     description: "یک کلید برای DeepSeek V4، Kimi K3، Qwen و GLM", use: "مدل‌های چینی، یک‌جا",
     axis: "حجم اعتبار", labels: { "50m": "۵۰ میلیون توکن، ۲ روز", "100m": "۱۰۰ میلیون توکن، ۴ روز" },
     plans: { "50m": { code: 0 }, "100m": { code: 0 } }, usdt: { "50m": 6.5, "100m": 9.9 },
@@ -565,7 +635,7 @@ const CB_PRODUCTS: Product[] = [
     howTo: "کد را در miraiapi.com/usage فعال کن. آدرس API: api.miraiapi.com/v1 (سازگار با OpenAI).",
     includes: ["DeepSeek V4 Pro و Flash، Kimi K3، Qwen 3.8 Max، GLM", "سازگار با ابزارهای OpenAI", "کلید از یک درگاه واسط (سازگار با OpenAI و Anthropic) است، نه از حساب رسمی سازنده"] },
   // ----- AI voice, video and photo -----
-  { id: "elevenlabs-vibi", family: "elevenlabs", tier: "اعتبار Vibi", name: "ElevenLabs Credits (Vibi)", maker: "ElevenLabs", category: "ai", kind: "account", monogram: "11", etaMinutes: 0, warranty: "گارانتی فعال‌سازی",
+  { id: "elevenlabs-vibi", name: "ElevenLabs Credits (Vibi)", maker: "ElevenLabs", category: "api", kind: "account", monogram: "11", etaMinutes: 0, warranty: "گارانتی فعال‌سازی",
     description: "اعتبار صدای ElevenLabs و MiniMax در Vibi.pro، بدون انقضای ماهانه", use: "صداگذاری با ElevenLabs، بدون اشتراک",
     axis: "مقدار اعتبار", labels: { "131k": "۱۳۱ هزار اعتبار", "300k": "۳۰۰ هزار اعتبار" },
     plans: { "131k": { code: 0 }, "300k": { code: 0 } }, usdt: { "131k": 5.9, "300k": 9.9 },
@@ -621,7 +691,7 @@ const CB_PRODUCTS: Product[] = [
 ];
 REAL.push(...CB_PRODUCTS);
 
-for (const p of REAL) for (const [k, v] of Object.entries(p.usdt ?? {})) p.plans[k] = { ...p.plans[k], code: tomanAt(v, BASE_RATE) };
+for (const p of [...REAL, ...SAMPLES]) for (const [k, v] of Object.entries(p.usdt ?? {})) p.plans[k] = planAt(p.plans[k], v, BASE_RATE);
 
 /** Limited-price weekly drops, shown as a slider on the home page. Empty until real offers are set. */
 const DROP_LIST: Drop[] = [];
@@ -636,7 +706,7 @@ export const isSub = (p: Product) => kindOf(p) === "sub";
 export const optionLabel = (p: Product, key: string) => (livePlan(key) ? livePlanLabel(key) : p.labels?.[key] ?? duration(key));
 export const axisOf = (p: Product) => p.axis ?? "مدت اشتراک";
 /** «فوری» or «حدود ۱۰ دقیقه». */
-export const etaText = (p: Product) => (p.etaMinutes === 0 ? "خودکار" : `حدود ${fa(p.etaMinutes)} دقیقه`);
+export const etaText = (p: Product) => (p.etaMinutes === 0 ? "خودکار" : p.etaMinutes >= 120 ? `حدود ${fa(Math.round(p.etaMinutes / 60))} ساعت` : `حدود ${fa(p.etaMinutes)} دقیقه`);
 /** Short noun for what is bought: «اشتراک», «گیفت‌کارت»… */
 export const nounOf = (p: Product) => ({ sub: "اشتراک", gift: "گیفت‌کارت", account: "اکانت", qty: "استارز", number: "شماره" })[kindOf(p)];
 
@@ -713,8 +783,10 @@ export const deliveryOf = (p: Product | undefined, t: DeliveryType) => ({ ...DEL
 export function deliveryExplain(p: Product, t: DeliveryType) {
   const own = p.types?.[t]?.explain;
   if (own) return own;
+  if (t !== "code" && p.deliver && deliveryTypes(p).length === 1) return p.deliver;
   switch (t) {
-    case "own": return `ایمیل اکانت ${p.maker} خودت را می‌دهی و اشتراک روی همان فعال می‌شود. رمز نمی‌خواهیم و تاریخچه‌ات می‌ماند.`;
+    case "own": return p.ask ? `${p.ask.short} اکانت ${p.maker} خودت را می‌دهی و اشتراک روی همان فعال می‌شود. رمز نمی‌خواهیم و تاریخچه‌ات می‌ماند.` : `ایمیل اکانت ${p.maker} خودت را می‌دهی و اشتراک روی همان فعال می‌شود. رمز نمی‌خواهیم و تاریخچه‌ات می‌ماند.`;
+    case "shared": return "اطلاعات ورود یک اکانت آماده تحویل می‌گیری که با چند نفر دیگر مشترک است. ارزان‌ترین راه است؛ رمز را عوض نکن و تاریخچه‌ات برای بقیه هم دیده می‌شود.";
     case "ready": return isSub(p) ? "یک اکانت تازه با ایمیل و رمز تحویل می‌گیری که فقط مال توست. ارزان‌تر و سریع‌تر است." : "یک اکانت تازه با ایمیل، رمز و اطلاعات امنیتی تحویل می‌گیری که فقط مال توست و می‌توانی رمزش را عوض کنی.";
     case "username": return "فقط یوزرنیم تلگرامت را وارد می‌کنی و به‌صورت هدیه روی همان آیدی فعال می‌شود. نه کد ورود می‌خواهیم، نه رمز.";
     case "code": return p.deliver ?? (kindOf(p) === "gift"
