@@ -444,44 +444,90 @@ export function Concierge() {
   );
 }
 
+/** Support hours are 9:00–24:00 Tehran time; the footer shows a live dot while someone is at the desk. */
+function useSupportOnline() {
+  const [on, setOn] = useState<boolean | null>(null);
+  useEffect(() => {
+    const check = () => {
+      const h = Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hour12: false, timeZone: "Asia/Tehran" }).format(new Date()));
+      setOn(h >= 9 && h < 24);
+    };
+    check();
+    const t = setInterval(check, 60_000);
+    return () => clearInterval(t);
+  }, []);
+  return on;
+}
+
+const TelegramIcon = () => (
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M21.9 4.3 18.7 19.4c-.2 1-.9 1.3-1.7.8l-4.8-3.6-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.9 8.9-8c.4-.3-.1-.5-.6-.2L6.5 13.1 1.8 11.6c-1-.3-1-1 .2-1.5L20.5 3c.9-.3 1.6.2 1.4 1.3Z" /></svg>
+);
+const InstagramIcon = () => (
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><circle cx="17.5" cy="6.5" r=".8" fill="currentColor" stroke="none" /></svg>
+);
+
 export function Footer() {
   const { notify } = useStore();
+  const online = useSupportOnline();
   const popular = listed().slice(0, 8);
+  const toTop = () => window.scrollTo({ top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   return (
     <footer className="ft">
+      <div className="ft-aura" aria-hidden />
       <div className="wrap">
         <div className="ft-cta">
-          <div>
-            <b>سؤالی داری؟ یک آدم جواب می‌دهد.</b>
+          <div className="ft-cta-t">
+            <span className={`ft-live ${online ? "on" : online === false ? "off" : ""}`}>
+              <i />{online === false ? "پشتیبانی از ۹ صبح" : "پشتیبانی آنلاین است"}
+            </span>
+            <b>سؤالی داری؟<br /><em>یک آدم جواب می‌دهد.</em></b>
             <small>هر روز ۹ صبح تا ۱۲ شب، در چت آنلاین یا تیکت.</small>
           </div>
           <div className="ft-cta-a">
-            <button className="btn btn-paper" onClick={openChat}><Icon id="chat" />چت با پشتیبانی</button>
+            <button className="btn ft-chat" onClick={openChat}><Icon id="chat" />چت با پشتیبانی</button>
             <form className="ft-news" onSubmit={(e) => { e.preventDefault(); e.currentTarget.reset(); notify("ثبت شد؛ دراپ‌های بعدی را پیامک می‌کنیم."); }}>
-              <input type="tel" inputMode="numeric" placeholder="موبایل برای خبر دراپ‌ها" aria-label="شماره موبایل" required pattern="0?9[0-9]{9}" />
+              <label className="sr" htmlFor="ft-news-m">شماره موبایل برای خبر دراپ‌ها</label>
+              <input id="ft-news-m" type="tel" inputMode="numeric" placeholder="موبایل برای خبر دراپ‌ها" required pattern="0?9[0-9]{9}" />
               <button>عضویت</button>
             </form>
+            <small className="ft-news-n">فقط تخفیف‌ها و دراپ‌ها؛ هر وقت خواستی لغو کن.</small>
           </div>
         </div>
+
+        <ul className="ft-trust">
+          <li><Icon id="clock" /><span><b>تحویل خودکار</b><small>حتی نیمه‌شب، در صفحه سفارش</small></span></li>
+          <li><Icon id="shield" /><span><b>گارانتی شفاف</b><small>مدتش قبل از خرید معلوم است</small></span></li>
+          <li><Icon id="lock" /><span><b>پرداخت تومانی</b><small>کارت بانکی یا ارز دیجیتال</small></span></li>
+          <li><Icon id="chat" /><span><b>پشتیبانی فارسی</b><small>یک آدم واقعی، نه ربات</small></span></li>
+        </ul>
 
         <div className="ft-g">
           <div className="ft-brand">
             <Wordmark className="ft-wm" />
             <p>اکانت، اشتراک، گیفت‌کارت و شماره مجازی خارجی، با تومان. تحویل خودکار، گارانتی شفاف برای هر محصول و پشتیبانی فارسی.</p>
             <div className="ft-social">
-              <a href="#" aria-label="تلگرام">تلگرام</a><a href="#" aria-label="اینستاگرام">اینستاگرام</a><a href="mailto:hello@accdrop.ir" className="en">hello@accdrop.ir</a>
+              <a href="#" aria-label="تلگرام"><TelegramIcon /></a>
+              <a href="#" aria-label="اینستاگرام"><InstagramIcon /></a>
+              <a href="mailto:hello@accdrop.ir" className="en ft-mail">hello@accdrop.ir</a>
             </div>
             <div className="ft-badges" aria-label="نمادها"><span>نماد اعتماد<br />الکترونیکی</span><span>ساماندهی<br />کسب‌وکار</span></div>
           </div>
           <nav aria-label="دسته‌ها"><h5>دسته‌ها</h5><ul>{(Object.keys(CATEGORIES) as (keyof typeof CATEGORIES)[]).filter((c) => c !== "all" && listed().some((p) => p.category === c)).map((c) => <li key={c}><Link href={`/services?c=${c}`}>{CATEGORIES[c]}</Link></li>)}</ul></nav>
-          <nav aria-label="پرفروش‌ها"><h5>پرفروش‌ها</h5><ul>{popular.map((p) => <li key={p.id}><Link href={productHref(p)} className="en">{p.name}</Link></li>)}</ul></nav>
+          <nav aria-label="پرفروش‌ها"><h5>پرفروش‌ها</h5><ul>{popular.map((p) => <li key={p.id}><Link href={productHref(p)} className="en"><BrandLogo id={p.id} size={14} />{p.name}</Link></li>)}</ul></nav>
           <nav aria-label="راهنما"><h5>راهنما</h5><ul><li><Link href="/account/orders">پیگیری سفارش</Link></li><li><Link href="/guarantee">گارانتی همه محصولات</Link></li><li><Link href="/packs">کمبو پک‌ها</Link></li><li><Link href="/group">خرید گروهی</Link></li><li><Link href="/#concierge">سؤالات پرتکرار</Link></li><li><Link href="/account/tickets">تیکت پشتیبانی</Link></li><li><Link href="/terms">قوانین و مقررات</Link></li></ul></nav>
           <nav aria-label="اک‌دراپ"><h5>اک‌دراپ</h5><ul><li><Link href="/blog">بلاگ</Link></li>{liveDrops().length > 0 && <li><Link href="/#drop">دراپ‌ها</Link></li>}<li><Link href="/reseller">نمایندگی فروش</Link></li><li><Link href="/contact">تماس با ما</Link></li></ul></nav>
         </div>
 
         <div className="ft-pay">
           <span>روش‌های پرداخت:</span><i>کارت‌های عضو شتاب</i><i>درگاه زرین‌پال</i><i className="en">USDT · BTC · TRX</i>
+          <button type="button" className="ft-top" onClick={toTop}>بازگشت به بالا<Icon id="arrow" /></button>
         </div>
+      </div>
+
+      <div className="ft-giant" aria-hidden>
+        <Wordmark className="ft-giant-wm" />
+      </div>
+      <div className="wrap">
         <div className="legal"><span>© ۱۴۰۵ اک‌دراپ · همه حقوق محفوظ است.</span><span className="en">accdrop.ir</span></div>
       </div>
     </footer>
