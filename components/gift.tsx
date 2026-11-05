@@ -509,3 +509,24 @@ export function useCreditBalance(signedIn: boolean) {
   useEffect(() => { if (signedIn) api<{ balance: number }>("/api/credit").then((r) => setBalance(r.balance ?? 0)); else setBalance(0); }, [signedIn]);
   return balance;
 }
+
+/** Home page: the gift card in one striking strip. */
+export function GiftPromo() {
+  return (
+    <section className="gp">
+      <div className="wrap gp-g">
+        <div className="gp-copy">
+          <span className="gb-eyebrow"><Dots size={4} /> کارت هدیه اک‌دراپ</span>
+          <h2>هدیه بده،<br /><em>انتخاب با خودش.</em></h2>
+          <p>اعتبار اک‌دراپ با طرح و پیام خودت؛ همین الان یا نیمه‌شب تولدش پیامک می‌شود و هر سرویسی را که بخواهد برمی‌دارد.</p>
+          <Link className="btn btn-paper" href="/gift">ساختن کارت هدیه <Icon id="arrow" className="arrow" /></Link>
+        </div>
+        <Link href="/gift" className="gp-fan" aria-label="ساختن کارت هدیه">
+          <GiftCard theme="birthday" amount={500_000} tilt={false} className="gp-c gp-c1" />
+          <GiftCard theme="drop" amount={2_000_000} tilt={false} className="gp-c gp-c2" />
+          <GiftCard theme="yalda" amount={1_000_000} toName="تو" tilt={false} className="gp-c gp-c3" />
+        </Link>
+      </div>
+    </section>
+  );
+}

@@ -49,7 +49,7 @@ export function Header() {
       <div className="wrap">
         <a href="/" aria-label="اک‌دراپ، صفحه اصلی"><Wordmark /></a>
         <nav aria-label="منوی اصلی">
-          <MegaMenu /><Link href="/finder" className="hd-fd">ابزاریاب<i aria-hidden /></Link><Link href="/group">خرید گروهی</Link>{liveDrops().length > 0 && <Link href="/#drop">دراپ‌ها</Link>}<Link href="/guarantee">گارانتی</Link><Link href="/account/orders">پیگیری سفارش</Link><Link href="/contact">پشتیبانی</Link>
+          <MegaMenu /><Link href="/finder" className="hd-fd">ابزاریاب<i aria-hidden /></Link><Link href="/gift">کارت هدیه</Link><Link href="/group">خرید گروهی</Link>{liveDrops().length > 0 && <Link href="/#drop">دراپ‌ها</Link>}<Link href="/guarantee">گارانتی</Link><Link href="/account/orders">پیگیری سفارش</Link><Link href="/contact">پشتیبانی</Link>
         </nav>
         <div className="sp" />
         <div className="tools">

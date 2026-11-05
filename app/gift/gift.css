@@ -259,3 +259,29 @@
   .gr-confetti{display:none}
   .gr-card-in,.gr-side{animation:none}
 }
+
+/* ---------- home strip ---------- */
+.gp{position:relative;overflow:hidden;padding:110px 0;border-top:1px solid var(--hair)}
+.gp::before{content:"";position:absolute;inset:auto auto -40% -10%;width:60%;aspect-ratio:1;border-radius:50%;pointer-events:none;background:radial-gradient(closest-side,rgba(255,77,94,.14),transparent 70%)}
+.gp-g{position:relative;display:grid;grid-template-columns:1fr 1.1fr;gap:56px;align-items:center}
+.gp-copy{display:grid;gap:18px;justify-items:start}
+.gp h2{font-size:clamp(34px,4.4vw,58px);line-height:1.15;font-weight:800;letter-spacing:-.02em}
+.gp h2 em{font-style:normal;color:var(--lime)}
+.gp p{color:var(--gray-d);font-size:16px;max-width:460px}
+.gp .btn{border-radius:14px}
+.gp-fan{position:relative;display:block;height:clamp(260px,30vw,380px)}
+.gp-c{position:absolute;width:min(74%,420px);top:50%;left:50%;transition:transform .6s var(--ease)}
+.gp-c1{transform:translate(-50%,-50%) translate(-26%,-8%) rotate(-12deg)}
+.gp-c2{transform:translate(-50%,-50%) translate(24%,-14%) rotate(9deg)}
+.gp-c3{transform:translate(-50%,-50%) translate(0,10%) rotate(-2deg)}
+@media (hover:hover){
+  .gp-fan:hover .gp-c1{transform:translate(-50%,-50%) translate(-36%,-12%) rotate(-16deg)}
+  .gp-fan:hover .gp-c2{transform:translate(-50%,-50%) translate(34%,-18%) rotate(13deg)}
+  .gp-fan:hover .gp-c3{transform:translate(-50%,-50%) translate(0,6%) rotate(0deg) scale(1.03)}
+}
+@media (max-width:900px){
+  .gp{padding:64px 0}
+  .gp-g{grid-template-columns:1fr;gap:28px}
+  .gp-fan{order:-1;height:62vw}
+  .gp-c{width:72%}
+}

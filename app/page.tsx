@@ -1,6 +1,7 @@
 "use client";
 
 import { Collection, Concierge, DropSection, Hero, Shield, Steps, useReveal } from "@/components/sections";
+import { GiftPromo } from "@/components/gift";
 
 export default function Home() {
   useReveal();
@@ -10,6 +11,7 @@ export default function Home() {
       <Collection />
       <Steps />
       <DropSection />
+      <GiftPromo />
       <Shield />
       <Concierge />
     </main>
