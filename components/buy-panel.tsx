@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { DELIVERY, MAX_QTY, MAX_SEATS, axisOf, deliveryTypes, dropOf, etaText, groupOff, isSub, linePrice, minPrice, nounOf, optionLabel, planKeys, priceOf, variantsOf, type DeliveryType, type Months, type Product, type Selection, deliveryOf } from "@/lib/catalog";
+import { isOut, DELIVERY, MAX_QTY, MAX_SEATS, axisOf, deliveryTypes, dropOf, etaText, groupOff, isSub, linePrice, minPrice, nounOf, optionLabel, planKeys, priceOf, variantsOf, type DeliveryType, type Months, type Product, type Selection, deliveryOf } from "@/lib/catalog";
 import { productHref } from "@/lib/content";
 import { api } from "./account";
 import { fa, money } from "@/lib/format";
@@ -15,6 +15,8 @@ import { receiveOf, warrantyOf, whenOf } from "@/lib/facts";
 function initial(p: Product): Selection {
   const d = dropOf(p.id);
   if (d) return { id: p.id, plan: d.plan, type: d.type };
+  // First option in stock (the first option when everything is out).
+  for (const plan of planKeys(p)) for (const t of Object.keys(p.plans[plan] ?? {})) if (!isOut(p, plan, t)) return { id: p.id, plan, type: t as DeliveryType };
   const plan = planKeys(p)[0];
   return { id: p.id, plan, type: Object.keys(p.plans[plan] ?? {})[0] as DeliveryType };
 }
@@ -28,7 +30,8 @@ export function BuyPanel({ product: p }: { product: Product }) {
   const [sel, setSel] = useState<Selection>(() => initial(p));
   const months = planKeys(p);
   const types = deliveryTypes(p);
-  const offers = p.plans[sel.plan] ?? {};
+  const offers = Object.fromEntries(Object.entries(p.plans[sel.plan] ?? {}).filter(([t]) => !isOut(p, sel.plan, t))) as Partial<Record<DeliveryType, number>>;
+  const unavailable = isOut(p, sel.plan, sel.type);
   const perMonth = months.map((m) => lowest(p, m) / Number(m));
   const unit = priceOf(sel);
   const seats = sel.seats ?? 1;
@@ -78,7 +81,7 @@ export function BuyPanel({ product: p }: { product: Product }) {
   const choose = (patch: Partial<Selection>) => setSel((s) => {
     const next = { ...s, ...patch };
     const o = p.plans[next.plan] ?? {};
-    if (!o[next.type]) next.type = Object.keys(o)[0] as DeliveryType;
+    if (!o[next.type] || isOut(p, next.plan, next.type)) next.type = (Object.keys(o).find((t) => !isOut(p, next.plan, t)) ?? Object.keys(o)[0]) as DeliveryType;
     return next;
   });
   const startDong = async () => {
@@ -120,14 +123,15 @@ export function BuyPanel({ product: p }: { product: Product }) {
           {months.map((m, i) => {
             const save = isSub(p) && i > 0 ? Math.round((1 - perMonth[i] / perMonth[0]) * 100) : 0;
             const on = m === sel.plan;
-            const t = p.plans[m]?.[sel.type] ? sel.type : (Object.keys(p.plans[m] ?? {})[0] as DeliveryType);
+            const open = Object.keys(p.plans[m] ?? {}).filter((x) => !isOut(p, m, x));
+            const t = (open.includes(sel.type) ? sel.type : open[0] ?? Object.keys(p.plans[m] ?? {})[0]) as DeliveryType;
             const pr = priceOf({ id: p.id, plan: m, type: t }).price;
             return (
               <label key={m} className={`bx-s ${on ? "on" : ""}`}>
                 <input type="radio" name="plan" checked={on} onChange={() => choose({ plan: m })} />
                 {save > 0 && <span className="bx-tag">{fa(save)}٪ ارزان‌تر</span>}
                 <b>{optionLabel(p, m)}</b>
-                <small className="num">{money(pr)}</small>
+                <small className="num">{open.length ? money(pr) : "ناموجود"}</small>
               </label>
             );
           })}
@@ -143,7 +147,7 @@ export function BuyPanel({ product: p }: { product: Product }) {
             <label key={t} className={`bx-o bx-o2 ${on ? "on" : ""} ${amount ? "" : "dis"}`}>
               <input type="radio" name="type" checked={on} disabled={!amount} onChange={() => choose({ type: t })} />
               <span className="bx-r" aria-hidden="true" />
-              <span className="bx-l"><b>{deliveryOf(p, t).title}</b><small>{amount ? deliveryOf(p, t).detail : "برای این گزینه موجود نیست"}</small></span>
+              <span className="bx-l"><b>{deliveryOf(p, t).title}</b><small>{amount ? deliveryOf(p, t).detail : p.plans[sel.plan]?.[t] ? "فعلاً ناموجود؛ به‌زودی برمی‌گردد" : "برای این گزینه موجود نیست"}</small></span>
               {types.length > 1 && amount ? <span className="bx-p num">{money(priceOf({ id: p.id, plan: sel.plan, type: t }).price)}</span> : null}
             </label>
           );
@@ -236,14 +240,15 @@ export function BuyPanel({ product: p }: { product: Product }) {
           : <div className="bx-row"><span>مبلغ قابل پرداخت</span><span>{was ? <s className="num">{money(was)}</s> : null}<b className="num">{money(price)}</b> <small>تومان</small></span></div>}
       </div>
 
+      {unavailable ? <button ref={cta} className="btn btn-paper btn-block bx-cta" disabled>فعلاً ناموجود</button> : <>
       <button ref={cta} className="btn btn-paper btn-block bx-cta" onClick={buy} disabled={making}>{group && dong ? (making ? "در حال ساخت گروه…" : "ساخت گروه و گرفتن لینک") : "ادامه خرید"} <Icon id="arrow" className="arrow" /></button>
-      {!(group && dong) && <button className="add-link" onClick={add}>افزودن به سبد خرید</button>}
+      {!(group && dong) && <button className="add-link" onClick={add}>افزودن به سبد خرید</button>}</>}
 
       <p className="bx-help2">قبل از خرید سؤال داری؟ <button type="button" className="link" onClick={openChat}>از پشتیبانی بپرس</button></p>
 
       <div className={`buybar ${ctaVisible ? "" : "on"}`} role="region" aria-label="خرید سریع">
         <div><small>{optionLabel(p, sel.plan)}{seats > 1 ? (bulk ? ` • ${fa(seats)} عدد` : ` • ${fa(seats)} نفر${dong ? " • دنگی" : ""}`) : ""}</small><b className="num">{money(group && dong ? share : price)} <small>تومان{group && dong ? " / نفر" : ""}</small></b></div>
-        <button className="btn btn-paper" onClick={buy} disabled={making}>{group && dong ? "ساخت گروه" : "ادامه خرید"}</button>
+        <button className="btn btn-paper" onClick={buy} disabled={making || unavailable}>{unavailable ? "ناموجود" : group && dong ? "ساخت گروه" : "ادامه خرید"}</button>
       </div>
     </div>
   );

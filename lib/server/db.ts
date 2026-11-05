@@ -206,6 +206,38 @@ create table if not exists supplier_map (
   supplier_id int not null,
   primary key (product_id, plan)
 );
+create table if not exists supplier_stock (
+  product_id text not null,
+  plan text not null,
+  src text not null,
+  ext_id text not null,
+  cost numeric,
+  base_cost numeric,
+  available boolean not null default true,
+  stock int,
+  note text,
+  state jsonb,
+  checked_at timestamptz not null default now(),
+  changed_at timestamptz not null default now(),
+  primary key (product_id, plan)
+);
+create table if not exists supplier_seen (
+  src text not null,
+  ext_id text not null,
+  name text not null default '',
+  cost numeric,
+  available boolean not null default true,
+  first_seen timestamptz not null default now(),
+  last_seen timestamptz not null default now(),
+  primary key (src, ext_id)
+);
+create table if not exists sync_runs (
+  id serial primary key,
+  started_at timestamptz not null default now(),
+  finished_at timestamptz,
+  trigger text not null default '',
+  summary jsonb
+);
 alter table order_lines add column if not exists supply_ref text;
 alter table order_lines add column if not exists supply_cost numeric;
 alter table order_lines add column if not exists num jsonb;
